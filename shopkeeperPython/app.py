@@ -14,7 +14,6 @@ player_char.roll_stats() # Or set fixed stats for predictability
 player_char.stats = {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 14} # Example
 player_char.base_max_hp = 10 + player_char._calculate_modifier(player_char.stats["CON"],is_base_stat_score=True) * player_char.level
 player_char.hp = player_char.get_effective_max_hp()
-player_char.hit_dice = player_char.max_hit_dice
 # player_char.gold = 250 # Example starting gold for the character
 
 game_manager_instance = GameManager(player_character=player_char, output_stream=output_stream)
