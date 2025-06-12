@@ -40,7 +40,7 @@ class Character:
 
         self.attunement_slots = 3
         self.attuned_items = []
-        self.exhaustion_level = 0
+        self.exhaustion_level = 0 # Ensure this is initialized
         self.inventory = []
         self.gold = 100
         self.skill_points_to_allocate = 0
@@ -128,36 +128,14 @@ class Character:
             self.level += 1
             print(f"{self.name} leveled up to Level {self.level}!")
             con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True)
-            hp_increase_fixed = max(1, 6 + con_modifier)
-            self.base_max_hp += hp_increase_fixed
-            self.hp = self.get_effective_max_hp()
-            self.max_hit_dice = self.level
-            self.hit_dice = self.max_hit_dice
-            self.skill_points_to_allocate += 1
-            print(f"Max HP increased to {self.get_effective_max_hp()}. Hit dice restored to {self.hit_dice}.")
+
             print(f"{self.name} has {self.skill_points_to_allocate} skill point(s) to allocate.")
             next_level_threshold_xp = self.LEVEL_XP_THRESHOLDS.get(self.level + 1, float('inf'))
-
 
     def gain_exhaustion(self, amount: int = 1):
         if amount <= 0: return
         old_level = self.exhaustion_level
-        self.exhaustion_level = min(self.exhaustion_level + amount, 6)
-        print(f"{self.name} gains {amount} level(s) of exhaustion. Current level: {self.exhaustion_level} - {self.get_exhaustion_effects()}")
-        if self.exhaustion_level >= 4 and old_level < 4:
-            print(f"  Max HP is now halved. Current HP: {self.hp}/{self.get_effective_max_hp()}")
-        self.hp = min(self.hp, self.get_effective_max_hp())
-        if self.exhaustion_level >= 6:
-            print(f"{self.name} has died from exhaustion!")
 
-    def remove_exhaustion(self, amount: int = 1):
-        if amount <= 0: return
-        old_level = self.exhaustion_level
-        self.exhaustion_level = max(0, self.exhaustion_level - amount)
-        print(f"{self.name} removes {amount} level(s) of exhaustion. Current level: {self.exhaustion_level} - {self.get_exhaustion_effects()}")
-        if old_level >= 4 and self.exhaustion_level < 4:
-            self.hp = min(self.hp, self.get_effective_max_hp())
-            print(f"  Max HP is no longer halved. Current HP: {self.hp}/{self.get_effective_max_hp()}")
 
     def get_exhaustion_effects(self) -> str:
         return EXHAUSTION_EFFECTS.get(self.exhaustion_level, "Unknown exhaustion level.")
@@ -185,9 +163,7 @@ class Character:
         if not food_available or not drink_available:
             self.gain_exhaustion(1); msg = "Long rest failed: no food/drink. Gained 1 exhaustion."; print(msg)
             return {"success": False, "message": msg}
-        self.hp = self.get_effective_max_hp(); self.hit_dice = self.max_hit_dice; self.remove_exhaustion(1)
-        msg = f"Long rest successful. HP restored to {self.hp}. All HD restored ({self.hit_dice}/{self.max_hit_dice}). Exhaustion reduced."
-        print(msg); return {"success": True, "message": msg}
+
 
     def add_item_to_inventory(self, item: Item): self.inventory.append(item); print(f"{item.name} added to {self.name}'s inventory.")
     def remove_item_from_inventory(self, item_name: str) -> Item | None:
