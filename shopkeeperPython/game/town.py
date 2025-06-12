@@ -75,7 +75,7 @@ class Town:
 if __name__ == "__main__":
     print("--- Town System Test ---")
     town1 = Town(
-        name="เริ่มต้น Village",
+        name="Starting Village",
         properties=["Quiet farming village", "River nearby"],
         nearby_resources=["Fish", "Wheat", "Basic Herbs"],
         unique_npc_crafters=[
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     print(f"  Demand for Simple Dagger: {town1.get_item_price_modifier('Simple Dagger')}") # Expected 1.0 (default)
 
     town2 = Town(
-        name="เหล็กไหล City",
+        name="Steel Flow City",
         properties=["Major mining hub", "Strong warrior tradition"],
         nearby_resources=["Iron Ore", "Coal", "Stone"],
         unique_npc_crafters=[
