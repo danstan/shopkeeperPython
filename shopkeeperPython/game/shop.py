@@ -32,12 +32,17 @@ class Shop:
         self.specialization = "General"
         self.crafting_experience = {}
         self.shop_level = 1
-        self.markup_percentage = 1.2
-        self.buyback_percentage = 0.5
+        self.markup_percentage = 1.2 # Default markup (e.g., 20% over value for player)
+        self.buyback_percentage = 0.5 # Default buyback (e.g., 50% of value for player)
 
     def __repr__(self):
         return (f"Shop(name='{self.name}', owner='{self.owner_name}', town='{self.town.name if self.town else 'None'}', "
                 f"gold={self.gold}, specialization='{self.specialization}', level={self.shop_level})")
+
+    def update_town(self, new_town: 'Town'):
+        """Updates the shop's associated town."""
+        self.town = new_town
+        print(f"Shop '{self.name}' has updated its town to {new_town.name}.")
 
     def add_item_to_inventory(self, item: Item):
         self.inventory.append(item)
@@ -103,14 +108,53 @@ class Shop:
                     item_instance_to_sell = item_in_stock
                     break
         if item_instance_to_sell:
-            selling_price = int(item_instance_to_sell.value * npc_offer_percentage)
-            self.gold += selling_price
+            # Use calculate_sale_price for consistency, assuming npc_offer_percentage is a negotiation result on top of base sale price
+            base_selling_price = self.calculate_sale_price(item_instance_to_sell)
+            final_selling_price = int(base_selling_price * npc_offer_percentage)
+
+            self.gold += final_selling_price
             self.remove_item_from_inventory(item_instance_to_sell.name, specific_item_to_remove=item_instance_to_sell)
-            print(f"Sold {item_instance_to_sell.quality} {item_name} to NPC for {selling_price} gold.")
-            return selling_price # Return the price
+            print(f"Sold {item_instance_to_sell.quality} {item_name} to NPC for {final_selling_price} gold (Base Price: {base_selling_price}, Offer: {npc_offer_percentage*100}%).")
+            return final_selling_price # Return the price
         else:
             print(f"Item '{item_name}' (Quality: {quality_to_sell if quality_to_sell else 'any'}) not found in inventory for sale to NPC.")
             return 0 # Return 0 if no sale
+
+    def calculate_sale_price(self, item_or_item_name: (Item | str)) -> int:
+        """Calculates the sale price of an item, considering town demand and shop markup."""
+        item_instance = None
+        if isinstance(item_or_item_name, str):
+            for item_in_stock in self.inventory: # Search in current inventory
+                if item_in_stock.name == item_or_item_name:
+                    item_instance = item_in_stock
+                    break
+            if not item_instance: # If not in inventory, create a temporary item to get its base value
+                 # This part is tricky if recipes are complex. Assuming base_value is known or simple items.
+                 # For a robust solution, item details (like base_value) should be accessible globally or via Item class static methods.
+                 # Let's assume we can get a temporary Item instance or its base_value for calculation.
+                 # This path is less ideal. Best if an Item object is passed.
+                if item_or_item_name in self.BASIC_RECIPES: # Fallback for known craftable items
+                    item_instance = Item(name=item_or_item_name, base_value=self.BASIC_RECIPES[item_or_item_name]['base_value'], item_type="unknown")
+                else:
+                    # print(f"Warning: Cannot calculate price for unknown item name '{item_or_item_name}' not in inventory without its base value.")
+                    return 0 # Or handle error appropriately
+        elif isinstance(item_or_item_name, Item):
+            item_instance = item_or_item_name
+
+        if not item_instance:
+            # print(f"Error: Could not determine item for price calculation: {item_or_item_name}")
+            return 0
+
+        town_modifier = 1.0
+        if self.town and hasattr(self.town, 'get_item_price_modifier'): # Check if town exists and has the method
+            town_modifier = self.town.get_item_price_modifier(item_instance.name)
+        elif self.town and hasattr(self.town, 'market_demand_modifiers'): # Fallback to direct dict access
+             town_modifier = self.town.market_demand_modifiers.get(item_instance.name, 1.0)
+
+
+        # Price for player buying from shop (Shop sells high)
+        price = int(item_instance.value * town_modifier * self.markup_percentage) # Changed get_value() to .value
+        return price
 
     def sell_item_to_character(self, item_name: str, character_wanting_to_buy: 'Character') -> Tuple[Item | None, int]:
         item_instance_for_sale = None
@@ -122,8 +166,7 @@ class Shop:
             print(f"SHOP: {self.name} does not have '{item_name}' in stock.")
             return None, 0
 
-        town_modifier = self.town.get_item_price_modifier(item_instance_for_sale.name) if self.town else 1.0
-        price_to_character = int(item_instance_for_sale.value * town_modifier * self.markup_percentage)
+        price_to_character = self.calculate_sale_price(item_instance_for_sale)
 
         if character_wanting_to_buy.gold < price_to_character:
             print(f"SHOP: {character_wanting_to_buy.name} cannot afford {item_name} (Cost: {price_to_character}, Has: {character_wanting_to_buy.gold}).")
@@ -143,11 +186,17 @@ class Shop:
             return None, 0
 
     def buy_item_from_character(self, item_to_buy: Item, character_selling: 'Character') -> int:
-        town_modifier = self.town.get_item_price_modifier(item_to_buy.name) if self.town else 1.0
-        price_paid_by_shop = int(item_to_buy.value * town_modifier * self.buyback_percentage)
+        # Calculate price shop pays (Shop buys low)
+        town_modifier = 1.0
+        if self.town and hasattr(self.town, 'get_item_price_modifier'):
+            town_modifier = self.town.get_item_price_modifier(item_to_buy.name)
+        elif self.town and hasattr(self.town, 'market_demand_modifiers'):
+             town_modifier = self.town.market_demand_modifiers.get(item_to_buy.name, 1.0)
+
+        price_paid_by_shop = int(item_to_buy.value * town_modifier * self.buyback_percentage) # Changed get_value() to .value
 
         if self.gold < price_paid_by_shop:
-            print(f"SHOP: {self.name} cannot afford to buy {item_to_buy.name} (Price: {price_paid_by_shop}, Shop Gold: {self.gold}).")
+            print(f"SHOP: {self.name} cannot afford to buy {item_to_buy.name} (Offered: {price_paid_by_shop}, Shop Gold: {self.gold}).")
             return 0
 
         self.add_item_to_inventory(item_to_buy)

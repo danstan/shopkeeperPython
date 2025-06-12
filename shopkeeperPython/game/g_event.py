@@ -9,14 +9,63 @@ except ImportError:
 
 
 class Event:
-    def __init__(self, name: str, description: str, outcomes: dict, skill_check: dict = None):
+    def __init__(self, name: str, description: str, outcomes: dict, skill_check: dict = None,
+                 effects: dict = None, duration: int = 0, event_type: str = "generic", is_active: bool = False): # Added new parameters from_dict might use
         self.name = name
         self.description = description
         self.skill_check = skill_check
-        self.outcomes = outcomes
+        self.outcomes = outcomes # This should be outcome definitions, not applied effects.
+        # Direct effects of the event itself, if any, separate from outcomes.
+        # However, the current resolve_event primarily uses outcomes.
+        # For from_dict, we'll store them but current logic might not use them directly from self.effects.
+        self.effects = effects if effects else {}
+        self.duration = duration
+        self.event_type = event_type
+        self.is_active = is_active
+
 
     def __repr__(self):
         return f"Event(name='{self.name}', description='{self.description[:50]}...', skill_check={self.skill_check is not None})"
+
+    @staticmethod
+    def from_dict(data: dict) -> 'Event':
+        direct_effects = data.get("effects")
+        outcomes = data.get("outcomes")
+
+        # If direct effects are provided in the data dict, and no specific outcomes structure is given,
+        # create a default 'success' outcome that includes these direct effects.
+        # This allows a simpler dict structure for events that don't have skill checks or multiple outcomes.
+        if direct_effects and not outcomes:
+            outcomes = {
+                "success": {"message": data.get("description", "Event occurred."), "effects": direct_effects},
+                # Optionally, a default failure if not specified, though less relevant if no skill check
+                # "failure": {"message": "Event did not occur as expected.", "effects": {}}
+            }
+        elif not outcomes: # Ensure outcomes is always a dict, even if empty or default
+            outcomes = {
+                "success": {"message": "Event succeeded by default.", "effects": {}},
+                "failure": {"message": "Event failed by default.", "effects": {}}
+            }
+
+        # The 'effects' parameter in Event.__init__ is for event-level direct effects,
+        # not necessarily the ones tied to outcomes.
+        # For this use case, we are packaging what was 'effects' in the dict into an 'outcome'.
+        # So, we pass the original data.get("effects") to the constructor's 'effects' param
+        # if there's a separate need for it, otherwise it can be None or {}.
+        # The key is that 'outcomes' passed to Event() now contains the effects for resolve_event.
+
+        return Event(
+            name=data.get("name", "Unnamed Event"),
+            description=data.get("description", ""),
+            outcomes=outcomes, # This now correctly structures the effects for resolve_event
+            skill_check=data.get("skill_check"),
+            # effects=data.get("effects", {}), # Keep if Event itself can have effects outside outcomes
+            duration=data.get("duration", 0),
+            event_type=data.get("event_type", "generic"),
+            is_active=data.get("is_active", False)
+            # Consider if trigger_conditions should be part of from_dict and __init__ too
+            # trigger_conditions=data.get("trigger_conditions", {})
+        )
 
 
 class EventManager:
@@ -61,23 +110,31 @@ class EventManager:
 
         # Apply XP changes using award_xp (for pending XP system)
         xp_change = 0
-        if "xp_reward" in chosen_outcome:
+        if "xp_reward" in chosen_outcome: # This check is for old structure
             xp_change += chosen_outcome["xp_reward"]
-        if "xp_penalty" in chosen_outcome:
+        if "xp_penalty" in chosen_outcome: # This check is for old structure
              xp_change -= chosen_outcome["xp_penalty"]
+
+        # New structure: effects are nested inside chosen_outcome
+        outcome_effects = chosen_outcome.get("effects", {})
+        if "character_xp_gain" in outcome_effects:
+             xp_change += outcome_effects["character_xp_gain"]
+        if "character_xp_loss" in outcome_effects: # Assuming a new effect type for loss
+             xp_change -= outcome_effects["character_xp_loss"]
+
 
         if xp_change != 0 and hasattr(self.character, 'award_xp'):
             self.character.award_xp(xp_change) # award_xp handles positive/negative
         elif xp_change !=0:
              print(f"  Error: Character has no 'award_xp' method for XP change of {xp_change}.")
 
-
-        if "item_reward" in chosen_outcome and hasattr(self.character, 'add_item_to_inventory'):
-            item_details = chosen_outcome["item_reward"]
+        # Handle item rewards from outcome_effects
+        if "item_reward" in outcome_effects and hasattr(self.character, 'add_item_to_inventory'):
+            item_details = outcome_effects["item_reward"]
             item_name = item_details.get("name")
             item_qty = item_details.get("quantity", 1)
 
-            if item_name == "Gold":
+            if item_name == "Gold": # Special case for gold
                  if hasattr(self.character, 'gold'):
                     self.character.gold += item_qty
                     print(f"  Gained {item_qty} Gold. Current Gold: {self.character.gold}")
@@ -92,15 +149,19 @@ class EventManager:
                 except Exception as e:
                     print(f"  Error creating/adding item reward '{item_name}': {e}")
 
-        if "consequence" in chosen_outcome:
-            consequence_type = chosen_outcome["consequence"]
-            consequence_value = chosen_outcome.get("value", 0)
+        # Handle consequences from outcome_effects
+        if "consequence" in outcome_effects: # Assuming consequence is now a sub-dict in effects
+            consequence_details = outcome_effects["consequence"]
+            consequence_type = consequence_details.get("type")
+            consequence_value = consequence_details.get("value", 0)
+
             if consequence_type == "lose_gold" and hasattr(self.character, 'gold'):
                 amount_to_lose = consequence_value
                 self.character.gold = max(0, self.character.gold - amount_to_lose)
                 print(f"  Lost {amount_to_lose} Gold. Current Gold: {self.character.gold}")
             elif consequence_type == "lose_item_value" and hasattr(self.character, 'inventory'):
                 print(f"  Lost an item of value around {consequence_value}. (Actual item removal not implemented here yet).")
+            # Add more consequence handling here if needed
 
 # --- Sample Event Definitions ---
 event_lucky_find = Event(

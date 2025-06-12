@@ -42,7 +42,7 @@ class Character:
         self.max_hit_dice = 1
         self.attunement_slots = 3
         self.attuned_items = []
-        self.exhaustion_level = 0
+        self.exhaustion_level = 0 # Ensure this is initialized
         self.inventory = []
         self.gold = 100
         self.skill_points_to_allocate = 0
@@ -143,41 +143,42 @@ class Character:
             print(f"{self.name} leveled up to Level {self.level}!")
 
             con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True)
-            hp_increase_fixed = max(1, 6 + con_modifier)
-            self.base_max_hp += hp_increase_fixed
-            self.hp = self.get_effective_max_hp()
+            hp_increase_per_level = max(1, 6 + con_modifier) # Example: d8 hit die (avg 4.5 -> 5) + CON. Using 6 for a slightly more robust gain.
+            self.base_max_hp += hp_increase_per_level
+            self.hp += hp_increase_per_level # Also increase current HP by the amount max HP increased
 
-            self.max_hit_dice = self.level
-            self.hit_dice = self.max_hit_dice
+            self.max_hit_dice = self.level # Max HD typically equals level
+            self.hit_dice = self.max_hit_dice # Restore all hit dice on level up
 
-            self.skill_points_to_allocate += 1
-            print(f"Max HP increased to {self.get_effective_max_hp()}. Hit dice restored to {self.hit_dice}.")
+            self.skill_points_to_allocate += 1 # Example: gain a skill point
+            print(f"Max HP increased to {self.get_effective_max_hp()}. HP is now {self.hp}. Hit dice restored to {self.hit_dice}.")
             print(f"{self.name} has {self.skill_points_to_allocate} skill point(s) to allocate.")
             next_level_threshold += 1
-
 
     def gain_exhaustion(self, amount: int = 1):
         if amount <= 0: return
         old_level = self.exhaustion_level
-        self.exhaustion_level = min(self.exhaustion_level + amount, 6)
-        print(f"{self.name} gains {amount} level(s) of exhaustion. Current level: {self.exhaustion_level} - {self.get_exhaustion_effects()}")
+        self.exhaustion_level = min(self.exhaustion_level + amount, 6) # Cap at 6
+        if self.exhaustion_level != old_level: # Only print and adjust HP if level actually changed
+            print(f"{self.name} gains {self.exhaustion_level - old_level} level(s) of exhaustion. Current level: {self.exhaustion_level} - {self.get_exhaustion_effects()}")
+            if self.exhaustion_level >= 4 and old_level < 4: # Crossed threshold for Max HP halving
+                print(f"  Max HP is now halved due to exhaustion. Old Max HP: {self.base_max_hp}, New Max HP: {self.get_effective_max_hp()}. Current HP: {self.hp}")
+            self.hp = min(self.hp, self.get_effective_max_hp()) # Ensure current HP doesn't exceed new max HP
+            if self.exhaustion_level >= 6:
+                print(f"  {EXHAUSTION_EFFECTS[6]}: {self.name} has perished!")
+                # Actual death consequences (e.g., setting a flag, HP to 0) can be handled here or by game manager.
 
-        if self.exhaustion_level >= 4 and old_level < 4:
-            print(f"  Max HP is now halved. Current HP: {self.hp}/{self.get_effective_max_hp()}")
-        self.hp = min(self.hp, self.get_effective_max_hp())
-
-        if self.exhaustion_level >= 6:
-            print(f"{self.name} has died from exhaustion!")
-
-    def remove_exhaustion(self, amount: int = 1):
+    def reduce_exhaustion(self, amount: int = 1): # Renamed for clarity from 'remove_exhaustion'
         if amount <= 0: return
         old_level = self.exhaustion_level
-        self.exhaustion_level = max(0, self.exhaustion_level - amount)
-        print(f"{self.name} removes {amount} level(s) of exhaustion. Current level: {self.exhaustion_level} - {self.get_exhaustion_effects()}")
-
-        if old_level >= 4 and self.exhaustion_level < 4:
-            self.hp = min(self.hp, self.get_effective_max_hp())
-            print(f"  Max HP is no longer halved. Current HP: {self.hp}/{self.get_effective_max_hp()}")
+        self.exhaustion_level = max(0, self.exhaustion_level - amount) # Min 0
+        if self.exhaustion_level != old_level: # Only print if level actually changed
+            print(f"{self.name} reduces exhaustion by {old_level - self.exhaustion_level} level(s). Current level: {self.exhaustion_level} - {self.get_exhaustion_effects()}")
+            if old_level >= 4 and self.exhaustion_level < 4: # No longer has Max HP halved
+                # Max HP is restored, but current HP does not automatically increase beyond the new maximum.
+                # Player needs to heal to regain HP if current HP was below the original max.
+                print(f"  Max HP is no longer halved. Old Max HP: {self.base_max_hp // 2}, New Max HP: {self.get_effective_max_hp()}. Current HP: {self.hp}")
+                # self.hp = min(self.hp, self.get_effective_max_hp()) # Already handled by min() in gain_exhaustion and property.
 
     def get_exhaustion_effects(self) -> str:
         return EXHAUSTION_EFFECTS.get(self.exhaustion_level, "Unknown exhaustion level.")
@@ -221,10 +222,15 @@ class Character:
             msg = "Long rest failed due to lack of food/drink. Gained 1 level of exhaustion."
             print(msg)
             return {"success": False, "message": msg}
-        self.hp = self.get_effective_max_hp()
-        self.hit_dice = self.max_hit_dice
-        self.remove_exhaustion(1)
-        msg = f"Long rest successful. HP fully restored to {self.hp}. All Hit Dice restored (now {self.hit_dice}/{self.max_hit_dice}). Exhaustion reduced."
+        self.hp = self.get_effective_max_hp() # HP restored to current max (which might be halved if exhaustion >=4)
+
+        # Regain half of the total expendable Hit Dice (minimum of 1) as per D&D 5e rules.
+        hit_dice_regained = max(1, self.max_hit_dice // 2)
+        self.hit_dice = min(self.max_hit_dice, self.hit_dice + hit_dice_regained)
+
+        self.reduce_exhaustion(1) # Reduce exhaustion by 1
+
+        msg = f"Long rest successful. HP fully restored to {self.hp}/{self.get_effective_max_hp()}. {hit_dice_regained} Hit Dice recovered (now {self.hit_dice}/{self.max_hit_dice}). Exhaustion reduced by 1."
         print(msg)
         return {"success": True, "message": msg}
 
