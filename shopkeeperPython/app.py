@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 import io
+import json # Added import
 from game.game_manager import GameManager
 from game.character import Character
 # Assuming other necessary imports like Item, Town, etc. are handled within GameManager or not directly needed here yet.
@@ -62,49 +63,52 @@ def display_game_output():
                            )
 
 def parse_action_details(details_str: str) -> dict:
-    details_dict = {}
-    if not details_str:
-        return details_dict
+    """
+    Parses a JSON string representing action details into a dictionary.
+    If details_str is empty, null, or invalid JSON, returns an empty dictionary.
+    """
+    if not details_str or details_str.strip() == "":
+        return {}
     try:
-        pairs = details_str.split(',')
-        for pair in pairs:
-            if '=' in pair:
-                key, value = pair.split('=', 1)
-                details_dict[key.strip()] = value.strip()
-            else:
-                # Handle cases where a detail might not be a key-value pair,
-                # though current actions mostly expect key-value.
-                # For now, we can ignore it or assign a default key.
-                pass # Or log a warning: print(f"Warning: Malformed detail part: {pair}")
-    except Exception as e:
-        # Log parsing error
-        game_manager_instance._print(f"Error parsing action_details string '{details_str}': {e}")
-        # Potentially return a dict with an error key or raise, depending on desired handling
-    return details_dict
+        details_dict = json.loads(details_str)
+        if not isinstance(details_dict, dict):
+            # Ensure the loaded JSON is actually a dictionary
+            game_manager_instance._print(f"Warning: Action details resolved to non-dictionary type: '{details_str}'. Using empty details.")
+            return {}
+        return details_dict
+    except json.JSONDecodeError as e:
+        game_manager_instance._print(f"Error parsing action_details JSON string '{details_str}': {e}. Using empty details.")
+        return {}
+    except TypeError as e: # Catches errors if details_str is not string-like for json.loads
+        game_manager_instance._print(f"Error (TypeError) parsing action_details string '{details_str}': {e}. Using empty details.")
+        return {}
+
 
 @app.route('/action', methods=['POST'])
 def perform_action():
     action_name = request.form.get('action_name')
-    action_details_str = request.form.get('action_details', '')
+    action_details_str = request.form.get('action_details', '{}') # Default to empty JSON object string
 
     # Clear the stream before new action output
     output_stream.truncate(0)
     output_stream.seek(0)
 
     if not action_name:
-        # Handle missing action_name, perhaps by printing to the game_manager's stream
         game_manager_instance._print("Error: No action_name provided.")
         return redirect(url_for('display_game_output'))
 
+    # Use the updated parse_action_details function
     details_dict = parse_action_details(action_details_str)
 
     # Perform the game action
     try:
         game_manager_instance.perform_hourly_action(action_name, details_dict)
     except Exception as e:
-        # Log exceptions from game logic to the game output stream
         game_manager_instance._print(f"An error occurred while performing action '{action_name}': {e}")
-        # Potentially add more robust error handling or logging here
+        # Consider more detailed logging for debug purposes if needed
+        import traceback
+        game_manager_instance._print(f"Traceback: {traceback.format_exc()}")
+
 
     return redirect(url_for('display_game_output'))
 

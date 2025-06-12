@@ -14,6 +14,7 @@ from game.town import Town
 from game.time_system import GameTime
 from game.g_event import EventManager, Event, SAMPLE_EVENTS # Added Event and SAMPLE_EVENTS
 import random # For controlling event chance
+import io # Added for capturing output
 
 class TestGameManager(unittest.TestCase):
 
@@ -35,7 +36,13 @@ class TestGameManager(unittest.TestCase):
         self.player_char.exhaustion_level = 0 # Ensure exhaustion is reset for each test
         self.player_char.gold = 200 # Standard starting gold for tests needing it
 
+        # Each test method will get a fresh GameManager, so output_stream can be set per test if needed
+        # or set here if all tests benefit from a captured stream.
+        # For now, let individual tests that need to check output manage it.
         self.gm = GameManager(player_character=self.player_char)
+        self.output_stream = io.StringIO()
+        self.gm.output_stream = self.output_stream # Redirect gm's output
+
         # Alias for convenience, as gm is used in the problem description
         self.char = self.player_char # Using self.char as per prompt for new tests
         # self.test_item = Item(name="Test Potion", item_type="potion", base_value=10)
@@ -571,6 +578,41 @@ class TestGameManager(unittest.TestCase):
         expected_price_negative_mod = int(item_actual_value * 0.8 * self.gm.shop.markup_percentage)
         self.assertEqual(price_negative_modifier, expected_price_negative_mod,
                                  f"Price with negative modifier incorrect. Expected {expected_price_negative_mod}, Got {price_negative_modifier}")
+
+    def test_action_talk_to_customer(self):
+        """Test the 'talk_to_customer' action."""
+        # Ensure output stream is clean for this test
+        self.output_stream.truncate(0)
+        self.output_stream.seek(0)
+
+        initial_xp = self.char.pending_xp # Assuming XP is awarded to pending_xp
+        initial_dialogue_snippets_count = len(self.gm.daily_customer_dialogue_snippets)
+
+        action_name = "talk_to_customer"
+        action_details = {}
+        self.gm.perform_hourly_action(action_name, action_details)
+
+        # 1. Assert XP was gained
+        # The action_talk_to_customer in GameManager awards 2 XP.
+        self.assertEqual(self.char.pending_xp, initial_xp + 2, "Player should gain 2 XP for talking to a customer.")
+
+        # 2. Assert game log contains a customer dialogue snippet
+        log_output = self.output_stream.getvalue()
+        self.assertIn("You approach a customer. They say:", log_output, "Log output should indicate approaching a customer.")
+        # Check if any known part of a dialogue is present. This is tricky as dialogues are random.
+        # Instead, we'll rely on the daily_customer_dialogue_snippets check.
+        # A more robust check here might involve checking against CUSTOMER_DIALOGUE_TEMPLATES if possible
+        # or ensuring the format "They say: \"...\"" is present.
+        self.assertRegex(log_output, r"They say: \"[\w\s,.!'?-]+\"", "Log output should contain formatted customer dialogue.")
+
+
+        # 3. Assert daily_customer_dialogue_snippets has a new entry
+        self.assertEqual(len(self.gm.daily_customer_dialogue_snippets), initial_dialogue_snippets_count + 1,
+                         "A new dialogue snippet should be added to daily_customer_dialogue_snippets.")
+
+        # Check the content of the added snippet
+        last_snippet = self.gm.daily_customer_dialogue_snippets[-1]
+        self.assertTrue(last_snippet.startswith("(Directly engaged)"), "Snippet should be marked as directly engaged.")
 
 
 if __name__ == '__main__':
