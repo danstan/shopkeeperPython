@@ -33,6 +33,8 @@ class Character:
         self.stat_bonuses = {stat: 0 for stat in self.STAT_NAMES}
         self.ac_bonus = 0
         self.level = 1
+        self.max_hit_dice = self.level # Character starts at level 1
+        self.hit_dice = self.max_hit_dice # Starts with all hit dice available
         self.xp = 0
         self.pending_xp = 0
         self.base_max_hp = 0
@@ -127,6 +129,8 @@ class Character:
         while self.xp >= next_level_threshold_xp:
             self.level += 1
             print(f"{self.name} leveled up to Level {self.level}!")
+            self.max_hit_dice = self.level
+            self.hit_dice = min(self.hit_dice + 1, self.max_hit_dice) # Gain 1 HD, cap at new max
             con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True)
 
             print(f"{self.name} has {self.skill_points_to_allocate} skill point(s) to allocate.")
