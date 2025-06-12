@@ -6,6 +6,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .shop import Shop
 
+# Helper function for stat rolling (4d6 drop lowest)
+def _roll_4d6_drop_lowest():
+    rolls = [random.randint(1, 6) for _ in range(4)]
+    rolls.sort()
+    return sum(rolls[1:])
+
 EXHAUSTION_EFFECTS = {
     0: "No effect",
     1: "Disadvantage on Ability Checks",
@@ -19,18 +25,19 @@ EXHAUSTION_EFFECTS = {
 class Character:
     LEVEL_XP_THRESHOLDS = { 1: 0, 2: 300, 3: 900, 4: 2700, 5: 6500 }
 
-    def __init__(self, name: str):
-        self.name = name
-        self.stats = {"STR": 0, "DEX": 0, "CON": 0, "INT": 0, "WIS": 0, "CHA": 0}
-        self.stat_bonuses = {"STR": 0, "DEX": 0, "CON": 0, "INT": 0, "WIS": 0, "CHA": 0}
+    STAT_NAMES = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+
+    def __init__(self, name: str = None):
+        self.name = name # Can be None initially if using interactive creation
+        self.stats = {stat: 0 for stat in self.STAT_NAMES}
+        self.stat_bonuses = {stat: 0 for stat in self.STAT_NAMES}
         self.ac_bonus = 0
         self.level = 1
         self.xp = 0
         self.pending_xp = 0
         self.base_max_hp = 0
         self.hp = 0
-        self.hit_dice = 1
-        self.max_hit_dice = 1 # Should be updated with level
+
         self.attunement_slots = 3
         self.attuned_items = []
         self.exhaustion_level = 0
@@ -61,20 +68,23 @@ class Character:
         if is_base_stat_score: return (stat_score - 10) // 2
         return (self.get_effective_stat(stat_name_for_effective) - 10) // 2
 
-    def roll_stats(self):
-        stat_names = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
-        for stat in stat_names:
-            rolls = [random.randint(1, 6) for _ in range(4)]
-            rolls.sort()
-            self.stats[stat] = sum(rolls[1:])
-        con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True)
-        self.base_max_hp = 10 + (con_modifier * self.level)
-        self.hp = self.get_effective_max_hp()
-        self.max_hit_dice = self.level # Initialize max_hit_dice based on starting level
-        self.hit_dice = self.max_hit_dice
-        print(f"{self.name} rolled stats: {self.stats}")
-        print(f"Initial HP: {self.hp}/{self.get_effective_max_hp()}, HD: {self.hit_dice}/{self.max_hit_dice}")
+    @staticmethod
+    def roll_single_stat() -> int:
+        """Rolls 4d6 and returns the sum of the highest 3 dice."""
+        return _roll_4d6_drop_lowest()
 
+    @staticmethod
+    def roll_all_stats() -> dict:
+        """Calls roll_single_stat() for all stats and returns a dictionary."""
+        return {stat: Character.roll_single_stat() for stat in Character.STAT_NAMES}
+
+    def roll_stats(self):
+
+        con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True)
+        # Ensure level is at least 1 for this calculation if called early
+        current_level = self.level if self.level > 0 else 1
+        self.base_max_hp = 10 + (con_modifier * current_level)
+        self.hp = self.get_effective_max_hp()
 
     def award_xp(self, amount: int) -> int:
         if amount == 0: return 0
@@ -340,58 +350,3 @@ class Character:
         return char
 
 if __name__ == "__main__":
-    player = Character(name="Elara")
-    player.roll_stats()
-    player.stats["CON"] = 14
-    player.base_max_hp = 10 + player._calculate_modifier(player.stats["CON"],is_base_stat_score=True) * player.level
-    player.hp = player.get_effective_max_hp()
-    player.max_hit_dice = player.level # Ensure max_hit_dice is set based on level
-    player.hit_dice = player.max_hit_dice
-    print(f"Adjusted Elara's CON to 14. HP: {player.hp}/{player.get_effective_max_hp()}, HD: {player.hit_dice}/{player.max_hit_dice}")
-
-    print("\n--- Serialization Test ---")
-    # Add some items for testing serialization
-    player.add_item_to_inventory(Item.from_dict({
-        "name": "Test Potion", "description": "A test potion.", "base_value": 10,
-        "item_type": "potion", "quality": "Common", "is_consumable": True, "effects": {"heal_hp": 5}
-    }))
-    ring_test = Item.from_dict({
-        "name": "Test Ring", "description": "A test ring.", "base_value": 100,
-        "item_type": "ring", "quality": "Uncommon", "is_magical": True, "is_attunement": True, "effects": {"ac_bonus": 1}
-    })
-    player.add_item_to_inventory(ring_test)
-    player.attune_item("Test Ring")
-    player.award_xp(50)
-    player.gain_exhaustion(1)
-
-    char_dict = player.to_dict()
-    print("Character Dict:", char_dict)
-
-    # Create a new character from dict
-    # Need to ensure Item class is available for Item.from_dict
-    new_player = Character.from_dict(char_dict)
-    # Attuned item effects are not automatically reapplied by from_dict alone
-    # This needs to be handled by GameManager or a specific method after loading.
-    print("\n--- Loaded Character (before reapplying effects) ---")
-    new_player.display_character_info()
-
-    print("\n--- Reapplying Attuned Item Effects ---")
-    new_player.reapply_attuned_item_effects() # Test this new method
-    new_player.display_character_info()
-
-    # Basic assertions
-    assert new_player.name == player.name
-    assert new_player.level == player.level
-    assert new_player.xp == player.xp
-    assert new_player.pending_xp == player.pending_xp
-    assert new_player.gold == player.gold
-    assert new_player.exhaustion_level == player.exhaustion_level
-    assert len(new_player.inventory) == len(player.inventory) -1 # -1 because ring moved to attuned
-    assert len(new_player.attuned_items) == len(player.attuned_items)
-    if new_player.attuned_items:
-        assert new_player.attuned_items[0].name == player.attuned_items[0].name
-        assert new_player.ac_bonus > 0 # Check if effect was reapplied
-
-    print("\n--- Character Serialization Test Complete ---")
-
-    # Minimal test for Character.py completed previously is now part of this extended test.
