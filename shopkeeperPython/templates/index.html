@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shopkeeper Adventure UI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .hidden-details {
+            display: none;
+            margin-top: 10px;
+        }
+        .details-section label {
+            display: block;
+            margin-top: 5px;
+        }
+        .details-section input {
+            width: calc(100% - 10px);
+            padding: 5px;
+            margin-top: 2px;
+        }
+    </style>
 </head>
 <body>
     <h1>Shopkeeper Adventure</h1>
@@ -63,26 +78,163 @@
     <div class="log-action-container">
         <div class="log-box">
             <h2>Game Log</h2>
-            <div id="game-output">
+            <div id="game-output" style="white-space: pre-wrap; height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
                 {{ game_output | safe }}
             </div>
         </div>
 
         <div class="action-box">
             <h2>Perform Action</h2>
-            <form action="/action" method="post">
+            <form id="actionForm" action="/action" method="post">
                 <div>
-                    <label for="action_name">Action Name:</label>
-                    <input type="text" id="action_name" name="action_name" value="talk_to_customer" placeholder="e.g., craft, rest_short">
+                    <label for="action_name_select">Action:</label>
+                    <select id="action_name_select" name="action_name">
+                        <option value="wait">Wait</option>
+                        <option value="talk_to_self">Talk to Self</option>
+                        <option value="talk_to_customer" selected>Talk to Customer</option>
+                        <option value="check_shop_inventory">Check Shop Inventory</option>
+                        <option value="check_player_inventory">Check Player Inventory</option>
+                        <option value="craft">Craft Item</option>
+                        <option value="buy_from_own_shop">Buy from Shop</option>
+                        <option value="sell_to_own_shop">Sell to Shop</option>
+                        <option value="sleep_one_hour">Sleep for 1 Hour</option>
+                        <option value="sleep_eight_hours">Sleep for 8 Hours</option>
+                        <option value="explore_town">Explore Town</option>
+                        <option value="research_market">Research Market</option>
+                        <option value="travel_to_town">Travel to Town</option>
+                        <!-- Add other actions here -->
+                    </select>
                 </div>
-                <div>
-                    <label for="action_details">Action Details:</label>
-                    <input type="text" id="action_details" name="action_details" placeholder="e.g., item_name=Minor Healing Potion, dice_to_spend=1">
+
+                <!-- Hidden input to store the JSON string for action_details -->
+                <input type="hidden" id="action_details" name="action_details" value="{}">
+
+                <!-- Dynamic details sections -->
+                <div id="div_craft_details" class="hidden-details details-section">
+                    <label for="craft_item_name">Item Name to Craft:</label>
+                    <input type="text" id="craft_item_name" name="craft_item_name" placeholder="e.g., Minor Healing Potion">
                 </div>
+
+                <div id="div_buy_details" class="hidden-details details-section">
+                    <label for="buy_item_name">Item Name to Buy:</label>
+                    <input type="text" id="buy_item_name" name="buy_item_name" placeholder="e.g., Simple Dagger">
+                    <label for="buy_quantity">Quantity:</label>
+                    <input type="number" id="buy_quantity" name="buy_quantity" value="1" min="1">
+                </div>
+
+                <div id="div_sell_details" class="hidden-details details-section">
+                    <label for="sell_item_name">Item Name to Sell:</label>
+                    <input type="text" id="sell_item_name" name="sell_item_name" placeholder="e.g., Stale Ale">
+                </div>
+
+                <div id="div_travel_details" class="hidden-details details-section">
+                    <label for="travel_town_name">Destination Town Name:</label>
+                    <input type="text" id="travel_town_name" name="travel_town_name" placeholder="e.g., Steel Flow City">
+                </div>
+
                 <input type="submit" value="Perform Action">
             </form>
+            <p style="font-size: 0.9em; margin-top: 10px;">
+                Instructions: Select an action. If the action requires details (like an item name), corresponding fields will appear.
+            </p>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const actionSelect = document.getElementById('action_name_select');
+            const hiddenDetailsInput = document.getElementById('action_details');
+
+            const craftDetailsDiv = document.getElementById('div_craft_details');
+            const craftItemNameInput = document.getElementById('craft_item_name');
+
+            const buyDetailsDiv = document.getElementById('div_buy_details');
+            const buyItemNameInput = document.getElementById('buy_item_name');
+            const buyQuantityInput = document.getElementById('buy_quantity');
+
+            const sellDetailsDiv = document.getElementById('div_sell_details');
+            const sellItemNameInput = document.getElementById('sell_item_name');
+
+            const travelDetailsDiv = document.getElementById('div_travel_details');
+            const travelTownNameInput = document.getElementById('travel_town_name');
+
+            const allDetailDivs = [craftDetailsDiv, buyDetailsDiv, sellDetailsDiv, travelDetailsDiv];
+            const allDetailInputs = [
+                craftItemNameInput,
+                buyItemNameInput, buyQuantityInput,
+                sellItemNameInput,
+                travelTownNameInput
+            ];
+
+            function hideAllDetailDivs() {
+                allDetailDivs.forEach(div => div.style.display = 'none');
+            }
+
+            function compileAndSetActionDetails() {
+                const selectedAction = actionSelect.value;
+                let details = {};
+
+                switch (selectedAction) {
+                    case 'craft':
+                        if (craftItemNameInput.value) {
+                            details.item_name = craftItemNameInput.value;
+                        }
+                        break;
+                    case 'buy_from_own_shop':
+                        if (buyItemNameInput.value) {
+                            details.item_name = buyItemNameInput.value;
+                        }
+                        if (buyQuantityInput.value) {
+                            details.quantity = parseInt(buyQuantityInput.value, 10);
+                        }
+                        break;
+                    case 'sell_to_own_shop':
+                        if (sellItemNameInput.value) {
+                            details.item_name = sellItemNameInput.value;
+                        }
+                        break;
+                    case 'travel_to_town':
+                        if (travelTownNameInput.value) {
+                            details.town_name = travelTownNameInput.value;
+                        }
+                        break;
+                    // Actions that don't require details will result in empty {}
+                }
+                hiddenDetailsInput.value = JSON.stringify(details);
+            }
+
+            actionSelect.addEventListener('change', function() {
+                hideAllDetailDivs();
+                const selectedAction = this.value;
+
+                switch (selectedAction) {
+                    case 'craft':
+                        craftDetailsDiv.style.display = 'block';
+                        break;
+                    case 'buy_from_own_shop':
+                        buyDetailsDiv.style.display = 'block';
+                        break;
+                    case 'sell_to_own_shop':
+                        sellDetailsDiv.style.display = 'block';
+                        break;
+                    case 'travel_to_town':
+                        travelDetailsDiv.style.display = 'block';
+                        break;
+                }
+                compileAndSetActionDetails(); // Update details when action changes
+            });
+
+            // Add event listeners to detail inputs to update JSON in real-time
+            allDetailInputs.forEach(input => {
+                if(input) { //Check if input element exists
+                    input.addEventListener('input', compileAndSetActionDetails);
+                }
+            });
+
+            // Initial setup on page load
+            actionSelect.dispatchEvent(new Event('change'));
+        });
+    </script>
 
 </body>
 </html>

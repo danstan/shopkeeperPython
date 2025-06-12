@@ -105,6 +105,49 @@ class GameManager:
         # self._print("GameManager initialization complete.")
         print("GameManager initialization complete.")
 
+    def action_talk_to_customer(self, details: dict):
+        """
+        Simulates talking to a customer.
+        Prints a random dialogue snippet.
+        """
+        # Similar to _handle_customer_interaction but player initiated
+        if not CUSTOMER_DIALOGUE_TEMPLATES:
+            self._print("  No customer dialogues defined.")
+            return
+
+        # Give a slightly higher chance for positive/neutral if player initiates talk
+        # unless shop is in a very bad state.
+        if self.shop.gold < 100 and len(self.shop.inventory) == 0:
+            snippet_type = "negative"
+        else:
+            snippet_type = random.choice(["positive", "neutral", "positive", "neutral", random.choice(list(CUSTOMER_DIALOGUE_TEMPLATES.keys()))])
+            # Ensure snippet_type is a valid key
+            if snippet_type not in CUSTOMER_DIALOGUE_TEMPLATES:
+                 # Fallback to "neutral" if the random choice from keys wasn't actually a key (e.g. if a list of keys was empty)
+                 # or if the random choice was from an empty list of keys.
+                 snippet_type = "neutral"
+
+
+        if snippet_type not in CUSTOMER_DIALOGUE_TEMPLATES or not CUSTOMER_DIALOGUE_TEMPLATES[snippet_type]:
+            # Fallback if a type is empty or somehow invalid (e.g. "positive" list is empty)
+            self._print(f"  No dialogues for type '{snippet_type}', trying any.")
+            all_snippets = []
+            for dialogues in CUSTOMER_DIALOGUE_TEMPLATES.values():
+                all_snippets.extend(dialogues)
+
+            if not all_snippets:
+                self._print("  No customer dialogues available at all.")
+                return
+            snippet = random.choice(all_snippets)
+        else:
+            snippet = random.choice(CUSTOMER_DIALOGUE_TEMPLATES[snippet_type])
+
+        formatted_snippet = snippet.format(town_name=self.current_town.name)
+        self._print(f"  You approach a customer. They say: \"{formatted_snippet}\"")
+        # Log this specific interaction to daily dialogues
+        self.daily_customer_dialogue_snippets.append(f"(Directly engaged) {formatted_snippet}")
+        # Consider adding a small XP reward for this action in perform_hourly_action
+
     def _print(self, message: str):
         if self.output_stream:
             self.output_stream.write(message + "\n") # Add newline for stream output
@@ -280,6 +323,10 @@ class GameManager:
             crafters = [f"{c['name']} ({c['specialty']})" for c in self.current_town.unique_npc_crafters]
             self._print(f"    Unique NPCs: {', '.join(crafters) if crafters else 'None'}")
             action_xp_reward = 5
+
+        elif action_name == "talk_to_customer":
+            self.action_talk_to_customer(action_details)
+            action_xp_reward = 2 # Small XP for social interaction
 
         # ADD THIS NEW BLOCK (comment moved above)
         elif action_name == "research_market":
