@@ -2,7 +2,7 @@
 from typing import TYPE_CHECKING, Tuple
 if TYPE_CHECKING:
     from .character import Character
-    from .town import Town
+    # from .town import Town # Town for type hinting - already imported below
 
 from .item import Item, QUALITY_TIERS, QUALITY_VALUE_MULTIPLIERS
 from .town import Town
@@ -77,7 +77,7 @@ class Shop:
 
     def craft_item(self, item_name: str) -> Item | None:
         if not self.can_craft(item_name):
-            print(f"Cannot craft {item_name}. Recipe unknown or prerequisites not met.")
+            # print(f"Cannot craft {item_name}. Recipe unknown or prerequisites not met.") # GameManager usually prints this
             return None
         recipe = self.BASIC_RECIPES[item_name]
         self.crafting_experience[item_name] = self.crafting_experience.get(item_name, 0) + 1
@@ -94,7 +94,7 @@ class Shop:
             is_consumable=recipe.get("is_consumable", recipe["type"] in ["potion", "food", "scroll"])
         )
         self.add_item_to_inventory(crafted_item)
-        print(f"Crafted {crafted_item.quality} {item_name}. Experience for {item_name}: {self.crafting_experience[item_name]}.")
+        # print(f"Crafted {crafted_item.quality} {item_name}. Experience for {item_name}: {self.crafting_experience[item_name]}.") # GameManager can print success
         return crafted_item
 
     def stock_item(self, item: Item):
@@ -114,11 +114,10 @@ class Shop:
 
             self.gold += final_selling_price
             self.remove_item_from_inventory(item_instance_to_sell.name, specific_item_to_remove=item_instance_to_sell)
-            print(f"Sold {item_instance_to_sell.quality} {item_name} to NPC for {final_selling_price} gold (Base Price: {base_selling_price}, Offer: {npc_offer_percentage*100}%).")
-            return final_selling_price # Return the price
+
         else:
-            print(f"Item '{item_name}' (Quality: {quality_to_sell if quality_to_sell else 'any'}) not found in inventory for sale to NPC.")
-            return 0 # Return 0 if no sale
+            # print(f"Item '{item_name}' (Quality: {quality_to_sell if quality_to_sell else 'any'}) not found in inventory for sale to NPC.")
+            return 0
 
     def calculate_sale_price(self, item_or_item_name: (Item | str)) -> int:
         """Calculates the sale price of an item, considering town demand and shop markup."""
@@ -219,75 +218,70 @@ class Shop:
             print(f"- {item}")
         print("---------------------------")
 
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "owner_name": self.owner_name,
+            "town_name": self.town.name if self.town else None, # Save town name
+            "inventory": [item.to_dict() for item in self.inventory],
+            "gold": self.gold,
+            "specialization": self.specialization,
+            "crafting_experience": self.crafting_experience.copy(),
+            "shop_level": self.shop_level,
+            "markup_percentage": self.markup_percentage,
+            "buyback_percentage": self.buyback_percentage,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict, town_object: Town) -> 'Shop': # town_object must be supplied
+        if not town_object and data.get("town_name"):
+            # This case should ideally be handled by GameManager: find town by name
+            print(f"Warning: Shop.from_dict called for '{data['name']}' without a Town object, but town_name '{data.get('town_name')}' was in save data. Shop will have no town linkage.")
+            # One could raise an error or create a dummy town if town_object is critical and missing.
+            # For now, we allow it but the shop might not function correctly if town is needed later.
+
+        shop = cls(data["name"], data["owner_name"], town_object, initial_gold=data["gold"])
+        shop.inventory = [Item.from_dict(item_data) for item_data in data.get("inventory", [])]
+        shop.specialization = data.get("specialization", "General")
+        shop.crafting_experience = data.get("crafting_experience", {})
+        shop.shop_level = data.get("shop_level", 1)
+        shop.markup_percentage = data.get("markup_percentage", 1.2)
+        shop.buyback_percentage = data.get("buyback_percentage", 0.5)
+        return shop
+
 if __name__ == "__main__":
-    class MockTown:
-        def __init__(self, name="Default Test Town"):
-            self.name = name
-            self.market_demand_modifiers = {}
-        def get_item_price_modifier(self, item_name):
-            return self.market_demand_modifiers.get(item_name, 1.0)
+    # Dummy Town for testing Shop if run directly
+    class MockTown(Town): # Inherit from Town to satisfy type hint
+        def __init__(self, name="Default Test Town", market_demand_modifiers=None):
+            super().__init__(name, [], [], [], market_demand_modifiers if market_demand_modifiers else {})
 
     default_town = MockTown()
-    my_shop = Shop(name="The Prancing Pony", owner_name="Barliman Butterbur", town=default_town)
-    print(my_shop)
+    shop_in_default = Shop(name="The Prancing Pony", owner_name="Barliman Butterbur", town=default_town)
 
-    town_with_mods = MockTown("Whiterun")
-    town_with_mods.market_demand_modifiers = {"Minor Healing Potion": 1.5, "Simple Dagger": 0.8}
+    # Test with a town that has modifiers
+    town_with_mods = MockTown("Whiterun", market_demand_modifiers={"Minor Healing Potion": 1.5, "Simple Dagger": 0.8})
     shop_in_whiterun = Shop(name="Warmaiden's", owner_name="Adrianne", town=town_with_mods)
-    print(shop_in_whiterun)
 
-    print("\n--- Crafting Initial Items ---")
+    print("\n--- Crafting Initial Items for Serialization Test ---")
     crafted_potion = shop_in_whiterun.craft_item("Minor Healing Potion")
-    crafted_dagger = shop_in_whiterun.craft_item("Simple Dagger")
     shop_in_whiterun.display_inventory()
-    print(f"Shop Gold: {shop_in_whiterun.gold}")
 
-    class MockCharacter:
-        def __init__(self, name="Mock Buyer", gold=100):
-            self.name = name
-            self.gold = gold
-            self.inventory = []
-        def add_item_to_inventory(self, item): self.inventory.append(item)
+    print("\n--- Serialization Test for Shop ---")
+    shop_dict = shop_in_whiterun.to_dict()
+    print(f"Serialized Shop: {shop_dict}")
 
-    mock_buyer = MockCharacter(gold=100)
+    # For from_dict, we need the actual Town object. GameManager would handle this.
+    # Here, we'll reuse town_with_mods for simplicity of the test.
+    loaded_shop = Shop.from_dict(shop_dict, town_with_mods)
+    print(f"Deserialized Shop: {loaded_shop}")
+    loaded_shop.display_inventory()
 
-    print("\n--- Testing sell_item_to_character with town modifiers ---")
-    if crafted_potion:
-        item_sold, price = shop_in_whiterun.sell_item_to_character(crafted_potion.name, mock_buyer)
-        if item_sold:
-            print(f"Mock Buyer gold after buying potion: {mock_buyer.gold}")
-            mock_buyer.add_item_to_inventory(item_sold)
+    assert loaded_shop.name == shop_in_whiterun.name
+    assert loaded_shop.town.name == shop_in_whiterun.town.name
+    assert len(loaded_shop.inventory) == len(shop_in_whiterun.inventory)
+    if loaded_shop.inventory:
+        assert loaded_shop.inventory[0].name == shop_in_whiterun.inventory[0].name
+    assert loaded_shop.gold == shop_in_whiterun.gold
+    assert loaded_shop.crafting_experience == shop_in_whiterun.crafting_experience
 
-    # Dagger is now the first item if potion was sold and inventory[0] is used below.
-    # Better to check by name or use the specific object if available.
-    # Let's assume crafted_dagger is the one we want to target.
-    if crafted_dagger:
-        item_sold_dagger, price_dagger = shop_in_whiterun.sell_item_to_character(crafted_dagger.name, mock_buyer)
-        if item_sold_dagger:
-             print(f"Mock Buyer gold after buying dagger: {mock_buyer.gold}")
-             mock_buyer.add_item_to_inventory(item_sold_dagger)
-
-    shop_in_whiterun.display_inventory()
-    print(f"Shop Gold: {shop_in_whiterun.gold}")
-
-    print("\n--- Testing buy_item_from_character with town modifiers ---")
-    if mock_buyer.inventory:
-        # Find the potion to sell back, assuming it was bought.
-        potion_to_sell_back = None
-        for item_in_inv in mock_buyer.inventory:
-            if item_in_inv.name == "Minor Healing Potion":
-                potion_to_sell_back = item_in_inv
-                break
-
-        if potion_to_sell_back:
-            price_paid = shop_in_whiterun.buy_item_from_character(potion_to_sell_back, mock_buyer)
-            if price_paid > 0:
-                # Remove from mock buyer's inventory manually for test
-                mock_buyer.inventory.remove(potion_to_sell_back)
-                print(f"Mock Buyer gold after selling potion: {mock_buyer.gold}")
-                print(f"Shop Gold: {shop_in_whiterun.gold}")
-        else:
-            print("Mock buyer did not have 'Minor Healing Potion' to sell back.")
-
-    shop_in_whiterun.display_inventory()
-    print("--- Shop System Test with Town Complete ---")
+    print("\n--- Shop Serialization Test Complete ---")
