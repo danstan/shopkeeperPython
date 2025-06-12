@@ -56,25 +56,29 @@ class GameManager:
 
         self.character.display_character_info()
 
-        town_เริ่มต้น = Town(
-            name="เริ่มต้น Village",
+        town_starting = Town(
+            name="Starting Village",
             properties=["Quiet farming village", "River nearby"],
             nearby_resources=["Fish", "Wheat", "Basic Herbs"],
             unique_npc_crafters=[{"name": "Old Man Hemlock", "specialty": "Herbalism", "services": ["Identifies Herbs"], "quests_available": []}],
             market_demand_modifiers={"Minor Healing Potion": 1.1, "Bread": 0.9, "Fish": 1.05}
         )
-        town_เหล็กไหล = Town(
-            name="เหล็กไหล City",
+        town_steel_flow = Town(
+            name="Steel Flow City",
             properties=["Major mining hub", "Strong warrior tradition"],
             nearby_resources=["Iron Ore", "Coal", "Stone"],
             unique_npc_crafters=[{"name": "Borin Stonebeard", "specialty": "Blacksmithing", "services": ["Repairs Gear", "Sells Metal Ingots"], "quests_available": ["Clear Mine Pests"]}],
             market_demand_modifiers={"Simple Dagger": 1.25, "Iron Sword": 1.3, "Minor Healing Potion": 1.15, "Stale Ale": 0.8}
         )
-        self.towns = [town_เริ่มต้น, town_เหล็กไหล]
-        self.towns_map = {town.name: town for town in self.towns}
-        self.current_town = town_เริ่มต้น
+
+        self.towns = [town_starting, town_steel_flow]
+        self.towns_map = {town.name: town for town in self.towns} # For easy lookup by name
+
+        self.current_town = town_starting
+
         # self._print(f"Player starting in {self.current_town.name}.")
         print(f"Player starting in {self.current_town.name}.")
+
 
         self.shop = Shop(name=f"{self.character.name}'s Emporium", owner_name=self.character.name, town=self.current_town)
         # self._print(f"Shop '{self.shop.name}' initialized in {self.current_town.name}.")
