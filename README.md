@@ -2,12 +2,17 @@
 
 This project is a Python-based implementation of a whimsical, high-fantasy, turn-based, multiplayer shopkeeper RPG.
 
-## How to Run the Game
+## Running the Game
 
-Currently, the game is not runnable as the main entry point, `shopkeeperPython/main.py`, has not yet been implemented.
+### Command-Line Interface (CLI)
 
-Once `shopkeeperPython/main.py` is implemented, you will be able to run the game by executing the following command in your terminal:
+The game can be run by executing the command `python main.py` from the root directory of the project.
 
-```bash
-python shopkeeperPython/main.py
-```
+### Web Interface
+
+To run the web interface:
+
+1. Navigate to the `shopkeeperPython` directory.
+2. Install dependencies: `pip install -r requirements.txt`
+3. Run the game: `python app.py` or `flask run`
+4. Access the web interface at `http://localhost:5001`.
