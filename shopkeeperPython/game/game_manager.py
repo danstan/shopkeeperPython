@@ -32,7 +32,7 @@ CUSTOMER_DIALOGUE_TEMPLATES = {
 }
 
 class GameManager:
-    def __init__(self): # player_character argument removed
+
         self.time = GameTime()
 
         # Character creation is now handled by the Character class interactively
@@ -63,8 +63,7 @@ class GameManager:
         self.event_manager = EventManager(self.character)
         self.base_event_chance = 0.05
         self._reset_daily_trackers()
-        # The character's name is now available after interactive creation
-        print(f"GameManager initialized. {self.character.name}'s shop established in {self.current_town.name}.")
+
 
     def _reset_daily_trackers(self):
         self.daily_gold_earned_from_sales = 0
@@ -79,7 +78,7 @@ class GameManager:
         self.daily_special_events = []
         self.daily_customer_dialogue_snippets = []
         self.tracking_day = self.time.current_day
-        print(f"[{self.time.get_time_string()}] Daily trackers have been reset for Day {self.tracking_day}.")
+        self._print(f"[{self.time.get_time_string()}] Daily trackers have been reset for Day {self.tracking_day}.")
 
     def _handle_customer_interaction(self, is_sale_or_purchase_by_player_shop:bool = False):
         self.daily_visitors += 1
@@ -95,7 +94,7 @@ class GameManager:
             snippet = random.choice(CUSTOMER_DIALOGUE_TEMPLATES[snippet_type])
             formatted_snippet = snippet.format(town_name=self.current_town.name)
             self.daily_customer_dialogue_snippets.append(formatted_snippet)
-            print(f"  Overheard: \"{formatted_snippet}\"")
+            self._print(f"  Overheard: \"{formatted_snippet}\"")
 
     def perform_hourly_action(self, action_name: str, action_details: dict = None):
         action_details = action_details if action_details else {}
@@ -106,13 +105,13 @@ class GameManager:
         # If it's already midnight when starting the action, it means a new day just began due to a previous long rest.
         # The recap for the *previous* day should have already happened.
         if self.time.current_hour == 0 and self.tracking_day != self.time.current_day :
-             print(f"DEBUG: New day {self.time.current_day} started. Previous tracking day was {self.tracking_day}.")
+             self._print(f"DEBUG: New day {self.time.current_day} started. Previous tracking day was {self.tracking_day}.")
              # This indicates trackers should have been reset, or recap for tracking_day is due.
              # However, recap is for the day that *just ended*.
              # The main recap trigger is *after* time advances.
 
         current_time_str = self.time.get_time_string()
-        print(f"\n[{current_time_str}] {self.character.name} (in {self.current_town.name}) performs action: {action_name}")
+        self._print(f"\n[{current_time_str}] {self.character.name} (in {self.current_town.name}) performs action: {action_name}")
         action_xp_reward = 0
 
         if action_name == "craft":
@@ -121,16 +120,16 @@ class GameManager:
                 crafted_item = self.shop.craft_item(item_name)
                 if crafted_item:
                     self.daily_items_crafted.append(crafted_item.name)
-            else: print("  Crafting action chosen, but no item_name specified.")
+            else: self._print("  Crafting action chosen, but no item_name specified.")
 
         elif action_name == "rest_short":
             self.character.take_short_rest(action_details.get("dice_to_spend", 1))
 
         elif action_name == "sleep_one_hour":
-            print(f"  {self.character.name} sleeps for an hour in {self.current_town.name}...")
+            self._print(f"  {self.character.name} sleeps for an hour in {self.current_town.name}...")
 
         elif action_name == "talk_to_customer":
-            print(f"  {self.character.name} spends an hour at {self.shop.name} attending to the shop.")
+            self._print(f"  {self.character.name} spends an hour at {self.shop.name} attending to the shop.")
             self._handle_customer_interaction(is_sale_or_purchase_by_player_shop=False)
             if self.shop.inventory and random.random() < 0.3:
                 item_to_sell_to_npc = random.choice(self.shop.inventory)
@@ -138,18 +137,18 @@ class GameManager:
                 if sale_price > 0:
                     self.daily_items_sold_by_shop_to_npcs.append(item_to_sell_to_npc.name)
                     self.daily_gold_earned_from_sales += sale_price
-                    print(f"  DEBUG: daily_gold_earned_from_sales updated to: {self.daily_gold_earned_from_sales} after sale of {sale_price}g")
+                    self._print(f"  DEBUG: daily_gold_earned_from_sales updated to: {self.daily_gold_earned_from_sales} after sale of {sale_price}g")
                     self._handle_customer_interaction(is_sale_or_purchase_by_player_shop=True)
 
         elif action_name == "research_market":
-            print(f"  {self.character.name} conducting market research in {self.current_town.name}...")
-            print(f"    Current demand modifiers: {self.current_town.market_demand_modifiers}")
-            print(f"    Nearby resources: {self.current_town.nearby_resources}")
+            self._print(f"  {self.character.name} conducting market research in {self.current_town.name}...")
+            self._print(f"    Current demand modifiers: {self.current_town.market_demand_modifiers}")
+            self._print(f"    Nearby resources: {self.current_town.nearby_resources}")
             if self.current_town.market_demand_modifiers:
                 high_demand_items = {item: mod for item, mod in self.current_town.market_demand_modifiers.items() if mod > 1.1}
                 if high_demand_items:
                     random_high_demand_item = random.choice(list(high_demand_items.keys()))
-                    print(f"    Insight: There seems to be high demand for '{random_high_demand_item}' right now!")
+                    self._print(f"    Insight: There seems to be high demand for '{random_high_demand_item}' right now!")
             action_xp_reward = 5
 
         elif action_name == "buy_from_own_shop":
@@ -162,22 +161,22 @@ class GameManager:
                         self.daily_items_player_bought_from_shop.append(bought_items[0].name)
                         self.daily_gold_spent_on_purchases_by_player += total_cost
                         self._handle_customer_interaction(is_sale_or_purchase_by_player_shop=True)
-                else: print(f"  {self.shop.name} does not have {item_name_to_buy} to be bought by {self.character.name}.")
-            else: print("  'buy_from_own_shop' action chosen, but no item_name specified.")
+                else: self._print(f"  {self.shop.name} does not have {item_name_to_buy} to be bought by {self.character.name}.")
+            else: self._print("  'buy_from_own_shop' action chosen, but no item_name specified.")
         else:
-            print(f"  Action '{action_name}' is recognized but has no specific implementation yet.")
+            self._print(f"  Action '{action_name}' is recognized but has no specific implementation yet.")
 
         if action_xp_reward > 0:
             xp_awarded = self.character.award_xp(action_xp_reward)
             # self.daily_xp_awarded_this_day += xp_awarded # This is now handled by commit_pending_xp in recap
 
         if random.random() < self.base_event_chance:
-            print(f"![EVENT CHANCE MET AFTER ACTION {action_name}]!")
+            self._print(f"![EVENT CHANCE MET AFTER ACTION {action_name}]!")
             if SAMPLE_EVENTS:
                 triggered_event_name = self.event_manager.trigger_random_event(SAMPLE_EVENTS)
                 if triggered_event_name:
                      self.daily_special_events.append(triggered_event_name)
-            else: print("  (No sample events defined to trigger)")
+            else: self._print("  (No sample events defined to trigger)")
 
         days_advanced, new_hour = self.time.advance_hour(1)
 
@@ -188,75 +187,75 @@ class GameManager:
 
     def start_long_rest(self, food_available: bool = True, drink_available: bool = True):
         start_time_str = self.time.get_time_string()
-        print(f"\n[{start_time_str}] {self.character.name} is starting a long rest (8 hours) in {self.current_town.name}.")
+        self._print(f"\n[{start_time_str}] {self.character.name} is starting a long rest (8 hours) in {self.current_town.name}.")
         base_interruption_chance = 0.1
 
         for i in range(8):
             # The perform_hourly_action will handle recap if midnight is crossed
             self.perform_hourly_action("sleep_one_hour")
             if self.character.exhaustion_level >=6:
-                print(f"  {self.character.name} perished during rest due to exhaustion.")
+                self._print(f"  {self.character.name} perished during rest due to exhaustion.")
                 return
 
         end_time_str = self.time.get_time_string()
-        print(f"  The long rest period (8 hours of sleep actions) concludes at {end_time_str}.")
+        self._print(f"  The long rest period (8 hours of sleep actions) concludes at {end_time_str}.")
 
         if self.character.exhaustion_level < 6:
             result = self.character.attempt_long_rest(
                 food_available=food_available, drink_available=drink_available,
                 interruption_chance=base_interruption_chance, hours_of_rest=8
             )
-            print(f"  Long rest benefits result: {result.get('message', 'No specific result message.')}")
+            self._print(f"  Long rest benefits result: {result.get('message', 'No specific result message.')}")
         else:
-            print(f"  {self.character.name} cannot gain benefits of rest due to prior death.")
+            self._print(f"  {self.character.name} cannot gain benefits of rest due to prior death.")
 
     def generate_end_of_day_recap(self, day_number: int):
         # Ensure this recap is for the trackers of the day that just ended.
         if day_number != self.tracking_day:
-            print(f"Warning: Recap called for Day {day_number} but current tracking is for Day {self.tracking_day}. This might indicate a logic issue if not intended.")
+            self._print(f"Warning: Recap called for Day {day_number} but current tracking is for Day {self.tracking_day}. This might indicate a logic issue if not intended.")
             # Still proceed, but use day_number for the printout. Trackers should be for self.tracking_day.
 
-        print(f"\n--- End of Day Recap: Day {day_number} ---")
+        self._print(f"\n--- End of Day Recap: Day {day_number} ---")
 
         committed_xp = self.character.commit_pending_xp()
         self.daily_xp_awarded_this_day = committed_xp
 
-        print(f"Gold Earned (Shop Sales to NPCs): {self.daily_gold_earned_from_sales} G")
-        print(f"Gold Spent (Player Buying from Own Shop): {self.daily_gold_spent_on_purchases_by_player} G")
-        print(f"Gold Earned (Player Selling Items): {self.daily_gold_player_earned_selling_to_shop} G")
-        print(f"Shop Visitors: {self.daily_visitors}")
-        print(f"Experience Points Awarded: {self.daily_xp_awarded_this_day} XP")
+        self._print(f"Gold Earned (Shop Sales to NPCs): {self.daily_gold_earned_from_sales} G")
+        self._print(f"Gold Spent (Player Buying from Own Shop): {self.daily_gold_spent_on_purchases_by_player} G")
+        self._print(f"Gold Earned (Player Selling Items): {self.daily_gold_player_earned_selling_to_shop} G")
+        self._print(f"Shop Visitors: {self.daily_visitors}")
+        self._print(f"Experience Points Awarded: {self.daily_xp_awarded_this_day} XP")
 
-        print("\nItems Crafted Today:")
+        self._print("\nItems Crafted Today:")
         if self.daily_items_crafted:
-            for item_name in self.daily_items_crafted: print(f"- {item_name}")
-        else: print("- None")
+            for item_name in self.daily_items_crafted: self._print(f"- {item_name}")
+        else: self._print("- None")
 
-        print("\nItems Sold by Shop Today (to NPCs):")
+        self._print("\nItems Sold by Shop Today (to NPCs):")
         if self.daily_items_sold_by_shop_to_npcs:
-            for item_name in self.daily_items_sold_by_shop_to_npcs: print(f"- {item_name}")
-        else: print("- None")
+            for item_name in self.daily_items_sold_by_shop_to_npcs: self._print(f"- {item_name}")
+        else: self._print("- None")
 
-        print("\nItems Player Bought from Shop Today:")
+        self._print("\nItems Player Bought from Shop Today:")
         if self.daily_items_player_bought_from_shop:
-            for item_name in self.daily_items_player_bought_from_shop: print(f"- {item_name}")
-        else: print("- None")
+            for item_name in self.daily_items_player_bought_from_shop: self._print(f"- {item_name}")
+        else: self._print("- None")
 
-        print("\nItems Player Sold to Shop Today:") # Corrected: was missing from previous output
+        self._print("\nItems Player Sold to Shop Today:") # Corrected: was missing from previous output
         if self.daily_items_player_sold_to_shop:
-            for item_name in self.daily_items_player_sold_to_shop: print(f"- {item_name}")
-        else: print("- None")
+            for item_name in self.daily_items_player_sold_to_shop: self._print(f"- {item_name}")
+        else: self._print("- None")
 
-        print("\nSpecial Events Today:")
+        self._print("\nSpecial Events Today:")
         if self.daily_special_events:
-            for event_summary in self.daily_special_events: print(f"- {event_summary}")
-        else: print("- None")
+            for event_summary in self.daily_special_events: self._print(f"- {event_summary}")
+        else: self._print("- None")
 
-        print("\nOverheard Customer Dialogue:")
+        self._print("\nOverheard Customer Dialogue:")
         if self.daily_customer_dialogue_snippets:
-            for snippet in self.daily_customer_dialogue_snippets: print(f"- \"{snippet}\"")
-        else: print("- None")
-        print("-----------------------------------------")
+            for snippet in self.daily_customer_dialogue_snippets: self._print(f"- \"{snippet}\"")
+        else: self._print("- None")
+        self._print("-----------------------------------------")
 
         # Reset trackers for the *new* current day (which GameTime.current_day already reflects)
         self._reset_daily_trackers()
@@ -298,13 +297,22 @@ class GameManager:
 
 
     def simulate_hours(self, num_hours: int, base_action:str = "talk_to_customer", action_details:dict=None):
-        print(f"\n--- Simulating {num_hours} hours, primarily '{base_action}' ---")
+        self._print(f"\n--- Simulating {num_hours} hours, primarily '{base_action}' ---")
         for _ in range(num_hours):
             self.perform_hourly_action(base_action, action_details)
 
 
 if __name__ == "__main__":
-    print("--- GameManager Test with Daily Recap ---")
+    # This block will now use standard print, as no output_stream is passed by default here.
+    # To test output_stream, you'd do:
+    # import io
+    # string_io = io.StringIO()
+    # player_char = Character(name="Recap Player")
+    # gm = GameManager(player_character=player_char, output_stream=string_io)
+    # ... run game logic ...
+    # print(string_io.getvalue())
+
+    print("--- GameManager Test with Daily Recap (using standard print) ---")
     try:
         from .character import Character
         from .shop import Shop
@@ -313,43 +321,20 @@ if __name__ == "__main__":
         print("Successfully imported components for GameManager test.")
     except ImportError as e:
         print(f"Import error during test setup: {e}")
-        from character import Character
-        from shop import Shop
-        from item import Item
-        from town import Town
-        print("Attempted direct imports.")
-
-    # player_char = Character(name="Recap Player") # Old character creation removed
-    # player_char.roll_stats() # Stats are now rolled interactively
-    # player_char.stats = {"STR": 12, "DEX": 12, "CON": 12, "INT": 12, "WIS": 12, "CHA": 12} # Manual setting removed
-    # player_char.base_max_hp = 10 + player_char._calculate_modifier(player_char.stats["CON"],is_base_stat_score=True) * player_char.level # HP calc is now internal
-    # player_char.hp = player_char.get_effective_max_hp()
-    # player_char.hit_dice = player_char.max_hit_dice # Hit dice also internal
-
-    # GameManager now handles character creation internally.
-    # This will trigger the interactive prompts if __main__ is run.
-    gm = GameManager() # No longer takes player_character argument
-
-    # Grant XP to ensure level up for testing skill allocation
-    xp_to_grant_for_level_up = 295 # Level 2 is 300 XP. research_market gives 5 XP.
-    print(f"\n(Test Setup: Granting {gm.character.name} {xp_to_grant_for_level_up} XP to ensure level up for skill allocation test)")
-    gm.character.award_xp(xp_to_grant_for_level_up)
-    # Committing XP here would trigger level up before the day starts.
-    # We want it to happen at End of Day Recap.
-
-    # The Lucky Charm can be added after character creation if needed for testing specific scenarios,
-    # but for a standard run, inventory starts empty unless modified by character creation itself.
-    # For now, let's assume the test proceeds without automatically adding it,
-    # or it could be added via a game event or initial shop stock.
-    # If direct addition for testing is needed:
-    # lucky_charm = Item(name="Lucky Charm", description="Reroll", base_value=0, item_type="trinket", quality="Rare", effects={"allow_reroll": True}, is_consumable=True)
-    # gm.character.add_item_to_inventory(lucky_charm)
-    # print(f"  (Test setup: Added Lucky Charm to {gm.character.name}'s inventory)")
+        # Attempt relative imports for running as a module, then direct for script execution
+        try:
+            from character import Character
+            from shop import Shop
+            from item import Item
+            from town import Town
+            print("Attempted direct imports for script execution.")
+        except ImportError:
+            print(f"Failed direct imports as well: {e}")
+            raise # Re-raise the initial error if all attempts fail
 
 
-    gm.base_event_chance = 0.15 # Adjusted for more predictable testing
 
-    print(f"\n--- Starting Day {gm.time.current_day} Simulation for {gm.character.name} (target 16 actions + 8 sleep) ---")
+
 
     # Day 1 Activities (16 hours of actions)
     # Hour: 07:00 (Start)
@@ -366,18 +351,7 @@ if __name__ == "__main__":
 
     gm.perform_hourly_action("craft", {"item_name": "Stale Ale"}) # 14->15
 
-    stale_ale_to_sell = None
-    # Attempt to find Stale Ale if the shop crafted it.
-    # The shop inventory might not have it if crafting failed or was not chosen.
-    if "Stale Ale" in gm.daily_items_crafted: # Check if it was crafted today
-        for item_in_shop_inv in gm.shop.inventory:
-            if item_in_shop_inv.name == "Stale Ale":
-                # Simulate player acquiring it for selling test.
-                stale_ale_to_sell = gm.shop.remove_item_from_inventory("Stale Ale", specific_item_to_remove=item_in_shop_inv)
-                if stale_ale_to_sell:
-                    gm.character.add_item_to_inventory(stale_ale_to_sell) # Use gm.character
-                    print(f"  (Test setup: Player {gm.character.name} acquired {stale_ale_to_sell.name} from shop to sell back)")
-                break
+
 
     if stale_ale_to_sell:
         # Player sells the item. The action itself does not advance time here.
@@ -405,61 +379,7 @@ if __name__ == "__main__":
             # Looking at Character.sell_item_to_shop, it doesn't update GameManager's trackers.
             gm.daily_gold_player_earned_selling_to_shop += gold_earned
             gm.daily_items_player_sold_to_shop.append(stale_ale_to_sell.name)
-            print(f"  Action: Sell item {stale_ale_to_sell.name} (completed within current hour). Gold earned: {gold_earned}")
-        else:
-            print(f"  Action: Sell item {stale_ale_to_sell.name} failed or item was not sold.")
-            # If selling failed, put it back in player inventory for test consistency if needed, or handle as lost.
-            # For now, assume it's gone or sale failed as per method.
-            # If it failed, it should still be in player's inventory.
-            if stale_ale_to_sell not in gm.character.inventory: # If it was removed by a partial sell attempt
-                 gm.character.add_item_to_inventory(stale_ale_to_sell) # Put it back for test consistency
-                 print(f"  (Test info: {stale_ale_to_sell.name} re-added to player inventory after failed sale attempt)")
 
-
-    else: # If shop didn't have Stale Ale or it wasn't transferred
-        print(f"  (Test info: {gm.character.name} does not have Stale Ale to sell, or item not found in shop. Skipping player selling action.)")
-        # This hour (15->16) would then proceed with its original action if selling was meant to be "instead of"
-        # The original code had this as an else block for a perform_hourly_action.
-        # Let's assume the selling attempt was part of the 15->16 hour block.
-        # If selling didn't happen, the hour is still spent.
-
-    # The original test had gm.perform_hourly_action("talk_to_customer") in the else block.
-    # If selling is a quick part of an hour, the main action for that hour still happens.
-    # For simplicity, let's assume the hour 15->16 was "manage shop / attempt sale".
-    # So, we'll just advance time with a generic action if no sale was made.
-    # This part of the test logic needs to be robust to whether the item exists.
-    # The hour 15->16 was originally the sell action. We'll call a generic action if sell didn't happen.
-    if not stale_ale_to_sell or gold_earned == 0 :
-         gm.perform_hourly_action("talk_to_customer") # 15->16 (if sale didn't occur or wasn't primary action)
-    else:
-        # If sale happened, the hour was still used. We need to ensure time advances.
-        # The original test implies the sale itself was the action for that hour.
-        # So, if sale was successful, that WAS the 15->16 action.
-        # We need to make sure an action is performed for each hour.
-        # The structure was:
-        # IF stale_ale_to_sell:
-        #   player_char.sell_item_to_shop(...) -> THIS WAS THE ACTION
-        # ELSE:
-        #   gm.perform_hourly_action("talk_to_customer") -> THIS WAS THE ACTION
-        # So, if the sale attempt happened (regardless of success), that was the hour's "event".
-        # We need to ensure an `perform_hourly_action` is called or time is advanced.
-        # Let's assume "attempt_sell_item" could be an action.
-        # For now, if a sale was attempted, we'll consider that the hour's activity.
-        # The time advancement is handled by perform_hourly_action.
-        # The original code is a bit ambiguous here. Let's ensure an action always consumes the hour.
-        # If selling was the action for 15->16:
-        if stale_ale_to_sell: # i.e. an attempt was made
-            # We need to ensure the time advances for this hour.
-            # The original code did not call perform_hourly_action if a sale was made.
-            # This is a gap. Let's fix it by wrapping the sell in an action or just advancing time.
-            # Simplest: if a sale was attempted, that was the hour's main focus.
-            # We'll assume the sell_item_to_shop itself doesn't advance time system.
-            # So, we still need perform_hourly_action for time progression and events.
-            # Let's make "managing inventory/sales" the action for this hour.
-            gm.perform_hourly_action("manage_inventory_sales") # 15->16
-        # This means the `else` block for `talk_to_customer` was correct if no sale attempt.
-
-    gm.perform_hourly_action("research_market") # 16->17 (This should be hour after selling attempt)
     gm.perform_hourly_action("talk_to_customer") # 17->18
     gm.perform_hourly_action("craft", {"item_name": "Minor Healing Potion"}) # 18->19
     gm.perform_hourly_action("talk_to_customer") # 19->20
@@ -474,14 +394,18 @@ if __name__ == "__main__":
     gm.start_long_rest(food_available=True, drink_available=True)
 
     # Actions for Day 2
-    print(f"\n--- Starting Day {gm.time.current_day} Actions ---")
+    gm._print(f"\n--- Starting Day {gm.time.current_day} Actions ---")
     gm.perform_hourly_action("research_market") # Day 2, 07:00 -> 08:00 (after long rest)
     gm.perform_hourly_action("talk_to_customer") # Day 2, 08:00 -> 09:00
 
     # Manually generate recap for Day 2 if simulation ends before midnight
     # This is primarily for test visibility, as the automatic one would only trigger at next midnight.
     if gm.time.current_hour != 0:
-        print("\nManually generating recap for current day (Day 2) for testing purposes.")
+        gm._print("\nManually generating recap for current day (Day 2) for testing purposes.")
         gm.generate_end_of_day_recap(day_number=gm.time.current_day)
 
-    print("\n--- GameManager Test with Daily Recap Complete ---")
+    gm._print("\n--- GameManager Test with Daily Recap Complete ---")
+    # if test_io_stream:
+    #     print("\n--- Captured output from test_io_stream: ---")
+    #     print(test_io_stream.getvalue())
+    #     test_io_stream.close()
