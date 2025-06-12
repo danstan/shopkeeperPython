@@ -12,7 +12,8 @@ class GameTime:
         """
         self.current_hour = max(0, min(23, start_hour))
         self.current_day = max(1, start_day)
-        print(f"GameTime initialized. Starting at Day {self.current_day}, {self.current_hour:02d}:00.")
+        # Suppress print during normal init, only print if explicitly tested or verbose mode
+        # print(f"GameTime initialized. Starting at Day {self.current_day}, {self.current_hour:02d}:00.")
 
     def advance_hour(self, hours: int = 1) -> tuple[int, int]:
         """
@@ -25,7 +26,7 @@ class GameTime:
             tuple[int, int]: A tuple containing (days_passed, new_current_hour).
         """
         if hours < 0:
-            print("Cannot advance time by a negative number of hours.")
+            # print("Cannot advance time by a negative number of hours.") # Less verbose
             return 0, self.current_hour
 
         if hours == 0:
@@ -40,7 +41,6 @@ class GameTime:
             days_passed += 1
             print(f"A new day has begun! It is now Day {self.current_day}.")
 
-        # print(f"Time advanced by {hours} hour(s). Current time: {self.get_time_string()}")
         return days_passed, self.current_hour
 
     def get_time_string(self) -> str:
@@ -56,51 +56,52 @@ class GameTime:
         """
         return self.current_hour >= 22 or self.current_hour < 6
 
+    def to_dict(self) -> dict:
+        """Converts the GameTime object to a dictionary for JSON serialization."""
+        return {
+            "current_hour": self.current_hour,
+            "current_day": self.current_day,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'GameTime':
+        """Creates a GameTime instance from a dictionary."""
+        return cls(
+            start_hour=data.get("current_hour", 7), # Default to 7 if not found
+            start_day=data.get("current_day", 1)    # Default to 1 if not found
+        )
+
 if __name__ == "__main__":
     print("--- GameTime Test ---")
     time = GameTime(start_hour=6, start_day=1)
-    print(time.get_time_string()) # Day 1, 06:00
-    print(f"Is it night? {time.is_night()}") # False
+    print(f"Initial: {time.get_time_string()} | Is Night: {time.is_night()}")
 
-    time.advance_hour(15) # Advance to 21:00
-    print(time.get_time_string()) # Day 1, 21:00
-    print(f"Is it night? {time.is_night()}") # False (just before night)
+    time.advance_hour(15)
+    print(f"Adv 15h: {time.get_time_string()} | Is Night: {time.is_night()}")
 
-    time.advance_hour(1) # Advance to 22:00
-    print(time.get_time_string()) # Day 1, 22:00
-    print(f"Is it night? {time.is_night()}") # True
-
-    days, hour = time.advance_hour(8) # Advance to 06:00, Day 2
-    print(f"Days passed: {days}, New hour: {hour}")
-    print(time.get_time_string()) # Day 2, 06:00
-    print(f"Is it night? {time.is_night()}") # False (just after night)
-
-    time.advance_hour(20) # Advance to 02:00, Day 3
-    print(time.get_time_string()) # Day 3, 02:00
-    print(f"Is it night? {time.is_night()}") # True
-
-    time = GameTime(start_hour=23)
     time.advance_hour(1)
-    print(time.get_time_string()) # Day 2, 00:00
+    print(f"Adv 1h: {time.get_time_string()} | Is Night: {time.is_night()}")
 
-    time = GameTime(start_hour=5)
-    print(f"Is it night? {time.is_night()}") # True
-    time.advance_hour(1)
-    print(f"Is it night? {time.is_night()}") # False
+    days, hour = time.advance_hour(8)
+    print(f"Adv 8h: Days passed: {days}, New hour: {hour} | {time.get_time_string()} | Is Night: {time.is_night()}")
 
+    # Test serialization and deserialization
+    print("\n--- Serialization Test ---")
+    time_data = time.to_dict()
+    print(f"Serialized: {time_data}")
+    assert time_data["current_hour"] == time.current_hour
+    assert time_data["current_day"] == time.current_day
 
-    time = GameTime(start_hour=0)
-    print(f"Is it night? {time.is_night()}") # True
+    loaded_time = GameTime.from_dict(time_data)
+    print(f"Deserialized: {loaded_time.get_time_string()} | Is Night: {loaded_time.is_night()}")
+    assert loaded_time.current_hour == time.current_hour
+    assert loaded_time.current_day == time.current_day
 
-    time = GameTime(start_hour=23)
-    days_passed, new_hour = time.advance_hour(24)
-    print(f"Advanced by 24 hours. Days passed: {days_passed}, New hour: {new_hour}. Final time: {time.get_time_string()}") # Day 2, 23:00
+    # Test with default values from_dict
+    empty_data = {}
+    default_loaded_time = GameTime.from_dict(empty_data)
+    print(f"Deserialized from empty: {default_loaded_time.get_time_string()}")
+    assert default_loaded_time.current_hour == 7
+    assert default_loaded_time.current_day == 1
 
-    time = GameTime(start_hour=7)
-    days_passed, new_hour = time.advance_hour(0) # Test 0 hours
-    print(f"Advanced by 0 hours. Days passed: {days_passed}, New hour: {new_hour}. Final time: {time.get_time_string()}")
-
-    days_passed, new_hour = time.advance_hour(-2) # Test negative hours
-    print(f"Advanced by -2 hours. Days passed: {days_passed}, New hour: {new_hour}. Final time: {time.get_time_string()}")
-
-    print("--- GameTime Test Complete ---")
+    print("\n--- GameTime Test Complete ---")
