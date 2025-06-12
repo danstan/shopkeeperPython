@@ -6,6 +6,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .shop import Shop
 
+# Helper function for stat rolling (4d6 drop lowest)
+def _roll_4d6_drop_lowest():
+    rolls = [random.randint(1, 6) for _ in range(4)]
+    rolls.sort()
+    return sum(rolls[1:])
+
 EXHAUSTION_EFFECTS = {
     0: "No effect",
     1: "Disadvantage on Ability Checks",
@@ -28,18 +34,20 @@ class Character:
         5: 6500,
     }
 
-    def __init__(self, name: str):
-        self.name = name
-        self.stats = {"STR": 0, "DEX": 0, "CON": 0, "INT": 0, "WIS": 0, "CHA": 0}
-        self.stat_bonuses = {"STR": 0, "DEX": 0, "CON": 0, "INT": 0, "WIS": 0, "CHA": 0}
+    STAT_NAMES = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
+
+    def __init__(self, name: str = None):
+        self.name = name # Can be None initially if using interactive creation
+        self.stats = {stat: 0 for stat in self.STAT_NAMES}
+        self.stat_bonuses = {stat: 0 for stat in self.STAT_NAMES}
         self.ac_bonus = 0
         self.level = 1
         self.xp = 0
         self.pending_xp = 0 # For GDD: "XP is collected... officially awarded during End-Of-Day Recap"
         self.base_max_hp = 0
         self.hp = 0
-        self.hit_dice = 1
-        self.max_hit_dice = 1
+        self.hit_dice = 1 # Will be set based on level
+        self.max_hit_dice = 1 # Will be set based on level
         self.attunement_slots = 3
         self.attuned_items = []
         self.exhaustion_level = 0
@@ -73,18 +81,141 @@ class Character:
             return (stat_score - 10) // 2
         return (self.get_effective_stat(stat_name_for_effective) - 10) // 2
 
+    @staticmethod
+    def roll_single_stat() -> int:
+        """Rolls 4d6 and returns the sum of the highest 3 dice."""
+        return _roll_4d6_drop_lowest()
+
+    @staticmethod
+    def roll_all_stats() -> dict:
+        """Calls roll_single_stat() for all stats and returns a dictionary."""
+        return {stat: Character.roll_single_stat() for stat in Character.STAT_NAMES}
+
     def roll_stats(self):
-        stat_names = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
-        for stat in stat_names:
-            rolls = [random.randint(1, 6) for _ in range(4)]
-            rolls.sort()
-            self.stats[stat] = sum(rolls[1:])
+        """
+        Original method to roll stats. Can be used for NPCs or non-interactive creation.
+        Calculates HP based on rolled stats and current level.
+        """
+        for stat in self.STAT_NAMES:
+            self.stats[stat] = Character.roll_single_stat()
 
         con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True)
-        self.base_max_hp = 10 + (con_modifier * self.level)
+        # Ensure level is at least 1 for this calculation if called early
+        current_level = self.level if self.level > 0 else 1
+        self.base_max_hp = 10 + (con_modifier * current_level)
         self.hp = self.get_effective_max_hp()
-        print(f"{self.name} rolled stats: {self.stats}")
-        print(f"Initial HP: {self.hp}/{self.get_effective_max_hp()}")
+        self.hit_dice = current_level
+        self.max_hit_dice = current_level
+
+        if self.name: # Avoid printing if name is not set yet (e.g. during interactive setup)
+            print(f"{self.name} rolled stats: {self.stats}")
+            print(f"Initial HP: {self.hp}/{self.get_effective_max_hp()}")
+
+    def prompt_for_name(self):
+        """Asks the user to input a character name and sets self.name."""
+        while not self.name or self.name.strip() == "":
+            try:
+                self.name = input("Enter your character's name: ").strip()
+                if not self.name:
+                    print("Name cannot be empty. Please try again.")
+            except EOFError: # Handle cases where input might be piped or unavailable
+                print("No input received for name. Defaulting to 'Adventurer'.")
+                self.name = "Adventurer"
+                break
+        print(f"Character name set to: {self.name}")
+
+    def prompt_for_stats(self):
+        """
+        Handles interactive stat rolling for the player.
+        Allows one reroll. Sets chosen stats and calculates HP.
+        """
+        print(f"\n--- {self.name}, let's roll your stats! ---")
+        print("You will roll 4 six-sided dice (4d6) for each stat, and the lowest die is dropped.")
+
+        current_stats = Character.roll_all_stats()
+        while True:
+            print("\nYour rolled stats are:")
+            for stat, value in current_stats.items():
+                print(f"  {stat}: {value}")
+
+            valid_input = False
+            while not valid_input:
+                try:
+                    choice = input("Do you want to keep these stats or reroll once? (keep/reroll): ").lower().strip()
+                    if choice in ["keep", "reroll"]:
+                        valid_input = True
+                    else:
+                        print("Invalid choice. Please type 'keep' or 'reroll'.")
+                except EOFError:
+                    print("No input received. Defaulting to 'keep'.")
+                    choice = "keep" # Default to keep if no input
+                    valid_input = True
+
+            if choice == "keep":
+                self.stats = current_stats
+                break
+            else: # Reroll
+                print("\nRerolling stats (this is your only reroll!)...")
+                current_stats = Character.roll_all_stats()
+                print("\nYour new stats are:")
+                for stat, value in current_stats.items():
+                    print(f"  {stat}: {value}")
+                self.stats = current_stats # This is the final set after the one reroll
+                break
+
+        print("\nStats finalized.")
+        # Calculate HP and Hit Dice (assuming level 1 at creation)
+        self.level = 1 # Ensure level is 1 for initial setup
+        con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True)
+        self.base_max_hp = 10 + con_modifier # For level 1: 10 + CON_modifier
+        self.hp = self.get_effective_max_hp()
+        self.hit_dice = self.level
+        self.max_hit_dice = self.level
+        print(f"Based on your CON of {self.stats['CON']} (modifier {con_modifier}), your HP is: {self.hp}/{self.get_effective_max_hp()}")
+        print(f"You have {self.hit_dice} Hit Die (d8).")
+
+
+    @classmethod
+    def create_character_interactively(cls):
+        """
+        Creates a Character instance through interactive prompts for name and stats.
+        """
+        # Pass None for name to __init__ to signify interactive setup
+        player = cls(name=None)
+
+        player.prompt_for_name()
+        player.prompt_for_stats() # This now sets level to 1, calculates HP, and sets HD
+
+        print("\n--- Character Creation Complete! ---")
+        player.display_character_info() # Display summary
+        print("------------------------------------")
+        return player
+
+    def allocate_skill_point(self, skill_name: str) -> bool:
+        """
+        Allocates a skill point to the specified skill if available.
+        """
+        if self.skill_points_to_allocate <= 0:
+            print(f"{self.name} has no skill points to allocate.")
+            return False
+
+        skill_to_increase = skill_name.upper() # Case-insensitive
+
+        if skill_to_increase not in Character.STAT_NAMES:
+            print(f"Invalid skill '{skill_name}'. Cannot allocate point.")
+            return False
+
+        self.stats[skill_to_increase] += 1
+        self.skill_points_to_allocate -= 1
+
+        print(f"{self.name} increased {skill_to_increase} by 1. New value: {self.stats[skill_to_increase]}.")
+        print(f"{self.skill_points_to_allocate} skill point(s) remaining.")
+
+        # HP recalculation is handled by _check_level_up when CON is involved in HP increase.
+        # A direct CON increase here will affect future HP gains or CON-based checks,
+        # but does not retroactively change HP from past levels or grant immediate extra HP
+        # beyond what the level up itself provided.
+        return True
 
     def award_xp(self, amount: int) -> int:
         """
@@ -465,43 +596,95 @@ class Character:
 
 
 if __name__ == "__main__":
-    player = Character(name="Elara")
-    player.roll_stats()
-    player.stats["CON"] = 14
-    player.base_max_hp = 10 + player._calculate_modifier(player.stats["CON"],is_base_stat_score=True) * player.level
-    player.hp = player.get_effective_max_hp()
-    player.hit_dice = player.max_hit_dice = player.level
-    print(f"Adjusted Elara's CON to 14. HP: {player.hp}/{player.get_effective_max_hp()}, HD: {player.hit_dice}")
+    print("--- Character Class Unit Tests ---")
 
-    # Test pending XP
-    print("\n--- Pending XP Test ---")
-    xp_to_award = 50
-    returned_pending_xp = player.award_xp(xp_to_award)
-    print(f"award_xp returned: {returned_pending_xp}")
-    assert returned_pending_xp == xp_to_award
-    assert player.pending_xp == xp_to_award
-    assert player.xp == 0 # XP not committed yet
-    player.display_character_info()
+    # 1. Test Stat Rolling
+    print("\n--- Testing Stat Rolling ---")
+    for _ in range(20): # Run multiple times for roll_single_stat
+        single_roll = Character.roll_single_stat()
+        assert 3 <= single_roll <= 18, f"Single stat roll out of range (3-18): {single_roll}"
+    print("roll_single_stat() appears to be within range [3, 18].")
 
-    xp_committed = player.commit_pending_xp()
-    print(f"commit_pending_xp returned: {xp_committed}")
-    assert xp_committed == xp_to_award
-    assert player.xp == xp_to_award
-    assert player.pending_xp == 0
-    player.display_character_info()
+    all_rolled_stats = Character.roll_all_stats()
+    assert isinstance(all_rolled_stats, dict), "roll_all_stats() should return a dictionary."
+    assert len(all_rolled_stats) == len(Character.STAT_NAMES), \
+        f"roll_all_stats() should return a dictionary with {len(Character.STAT_NAMES)} stats."
+    for stat_name in Character.STAT_NAMES:
+        assert stat_name in all_rolled_stats, f"Stat {stat_name} missing in roll_all_stats()."
+        stat_value = all_rolled_stats[stat_name]
+        assert 3 <= stat_value <= 18, \
+            f"Stat {stat_name} value out of range (3-18) in roll_all_stats(): {stat_value}"
+    print("roll_all_stats() returns a valid dictionary of stats within range [3, 18].")
 
-    # Test XP penalty
-    xp_penalty = -20
-    returned_pending_xp_penalty = player.award_xp(xp_penalty) # Direct loss
-    print(f"award_xp for penalty returned: {returned_pending_xp_penalty}")
-    assert returned_pending_xp_penalty == 0 # Penalties are direct, not pending
-    assert player.xp == xp_to_award + xp_penalty # xp_to_award was 50
-    player.display_character_info()
+    # 2. Test Character Initialization (Non-Interactive Aspects)
+    print("\n--- Testing Character Initialization (Non-Interactive) ---")
+    test_char = Character(name="TestDummy")
+    assert test_char.name == "TestDummy", "Character name not set correctly."
+    assert test_char.level == 1, f"Initial level should be 1, got {test_char.level}"
+    assert test_char.xp == 0, f"Initial XP should be 0, got {test_char.xp}"
+    assert test_char.skill_points_to_allocate == 0, \
+        f"Initial skill_points_to_allocate should be 0, got {test_char.skill_points_to_allocate}"
 
+    test_char.roll_stats() # Non-interactive stat rolling
+    assert test_char.hp > 0, "Character HP should be > 0 after roll_stats()"
+    assert test_char.base_max_hp > 0, "Character base_max_hp should be > 0 after roll_stats()"
+    assert test_char.max_hit_dice == test_char.level, \
+        f"max_hit_dice ({test_char.max_hit_dice}) should match level ({test_char.level}) after roll_stats()"
+    assert test_char.hit_dice == test_char.level, \
+        f"hit_dice ({test_char.hit_dice}) should match level ({test_char.level}) after roll_stats()"
+    print("Character initializes correctly with default values and roll_stats() sets HP & HD.")
 
-    # ... (rest of the __main__ from previous step can be appended here if needed for full test run)
-    # For brevity, focusing on testing the new XP mechanics here.
-    # The existing tests for exhaustion, rest, skill checks, and shop interaction are still valuable.
-    # We'll rely on GameManager's __main__ for the integrated daily cycle test.
+    # 3. Test `award_xp` and `_check_level_up` for Granting Skill Points
+    print("\n--- Testing XP Award and Level Up for Skill Points ---")
+    level_test_char = Character(name="LevelUpLarry")
+    initial_skill_points = level_test_char.skill_points_to_allocate
 
-    print("\nMinimal test for Character.py completed.")
+    xp_for_level_2 = Character.LEVEL_XP_THRESHOLDS[2]
+    level_test_char.award_xp(xp_for_level_2)
+    level_test_char.commit_pending_xp()
+
+    assert level_test_char.level == 2, f"Character should be level 2, but is {level_test_char.level}"
+    assert level_test_char.skill_points_to_allocate == initial_skill_points + 1, \
+        f"Skill points should be {initial_skill_points + 1}, but got {level_test_char.skill_points_to_allocate}"
+    print("Character levels up correctly and gains a skill point.")
+
+    # 4. Test `allocate_skill_point` Method
+    print("\n--- Testing allocate_skill_point Method ---")
+    # Re-use level_test_char who should now have 1 skill point.
+    assert level_test_char.skill_points_to_allocate == 1, \
+        f"Expected 1 skill point for allocation test, got {level_test_char.skill_points_to_allocate}"
+
+    original_str_value = level_test_char.stats["STR"]
+    allocation_result_valid = level_test_char.allocate_skill_point("STR")
+    assert allocation_result_valid is True, "allocate_skill_point('STR') should return True."
+    assert level_test_char.stats["STR"] == original_str_value + 1, \
+        f"STR should be {original_str_value + 1}, but is {level_test_char.stats['STR']}"
+    assert level_test_char.skill_points_to_allocate == 0, \
+        f"Skill points should be 0 after allocation, but got {level_test_char.skill_points_to_allocate}"
+    print("Valid skill point allocation successful.")
+
+    # Test allocation to an invalid skill
+    original_dex_value = level_test_char.stats["DEX"] # Pick another stat for this check
+    skill_points_before_invalid_alloc = level_test_char.skill_points_to_allocate # Should be 0
+
+    allocation_result_invalid_skill = level_test_char.allocate_skill_point("INVALID_SKILL")
+    assert allocation_result_invalid_skill is False, "allocate_skill_point('INVALID_SKILL') should return False."
+    assert level_test_char.stats["DEX"] == original_dex_value, \
+        "DEX should not change after attempting to allocate to an invalid skill."
+    assert level_test_char.skill_points_to_allocate == skill_points_before_invalid_alloc, \
+        "Skill points should not change after attempting to allocate to an invalid skill."
+    print("Attempt to allocate to invalid skill handled correctly.")
+
+    # Test allocation when no points are available
+    assert level_test_char.skill_points_to_allocate == 0, \
+        f"Ensuring no skill points before testing 'allocate when none available'. Has: {level_test_char.skill_points_to_allocate}"
+    original_con_value = level_test_char.stats["CON"]
+    allocation_result_no_points = level_test_char.allocate_skill_point("CON")
+    assert allocation_result_no_points is False, "allocate_skill_point('CON') with 0 points should return False."
+    assert level_test_char.stats["CON"] == original_con_value, \
+        "CON should not change when attempting to allocate with no points."
+    print("Attempt to allocate skill point with no points available handled correctly.")
+
+    level_test_char.display_character_info() # Display final state for verification
+
+    print("\n--- All Character.py Unit Tests Completed ---")

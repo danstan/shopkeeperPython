@@ -32,9 +32,13 @@ CUSTOMER_DIALOGUE_TEMPLATES = {
 }
 
 class GameManager:
-    def __init__(self, player_character: Character):
+    def __init__(self): # player_character argument removed
         self.time = GameTime()
-        self.character = player_character
+
+        # Character creation is now handled by the Character class interactively
+        print("--- Starting Character Creation ---")
+        self.character = Character.create_character_interactively()
+        print("--- Character Creation Finished ---")
 
         town_เริ่มต้น = Town(
             name="เริ่มต้น Village",
@@ -52,12 +56,15 @@ class GameManager:
         )
         self.towns = [town_เริ่มต้น, town_เหล็กไหล]
         self.current_town = town_เริ่มต้น
-        self.shop = Shop(name=f"{player_character.name}'s Emporium", owner_name=player_character.name, town=self.current_town)
+
+        # Shop initialization now uses the created character's name
+        self.shop = Shop(name=f"{self.character.name}'s Emporium", owner_name=self.character.name, town=self.current_town)
 
         self.event_manager = EventManager(self.character)
         self.base_event_chance = 0.05
         self._reset_daily_trackers()
-        print(f"GameManager initialized. {player_character.name}'s shop established in {self.current_town.name}.")
+        # The character's name is now available after interactive creation
+        print(f"GameManager initialized. {self.character.name}'s shop established in {self.current_town.name}.")
 
     def _reset_daily_trackers(self):
         self.daily_gold_earned_from_sales = 0
@@ -254,6 +261,41 @@ class GameManager:
         # Reset trackers for the *new* current day (which GameTime.current_day already reflects)
         self._reset_daily_trackers()
 
+        # Prompt for skill allocation if points are available
+        if self.character.skill_points_to_allocate > 0:
+            self._prompt_skill_allocation()
+
+
+    def _prompt_skill_allocation(self):
+        """
+        Prompts the player to allocate skill points if available.
+        """
+        print(f"\n--- Skill Point Allocation for {self.character.name} ---")
+        while self.character.skill_points_to_allocate > 0:
+            print(f"\nYou have {self.character.skill_points_to_allocate} skill point(s) to allocate.")
+            self.character.display_character_info() # Show current stats for context
+
+            stat_options = ", ".join(Character.STAT_NAMES)
+            prompt_message = f"Choose a skill to increase ({stat_options}), or type 'help' for current stats: "
+
+            try:
+                choice = input(prompt_message).strip().upper()
+            except (EOFError, KeyboardInterrupt):
+                print("\nSkill allocation interrupted. You can allocate points later.")
+                return # Exit if input stream is closed or interrupted
+
+            if choice == 'HELP':
+                continue # Loop will re-display stats
+
+            if self.character.allocate_skill_point(choice):
+                print(f"Successfully allocated point to {choice}.")
+                if self.character.skill_points_to_allocate == 0:
+                    print("All skill points allocated.")
+            else:
+                # allocate_skill_point already prints error messages for invalid skill or no points
+                print("Please try again or type 'help'.")
+        print("--- Skill Point Allocation Finished ---")
+
 
     def simulate_hours(self, num_hours: int, base_action:str = "talk_to_customer", action_details:dict=None):
         print(f"\n--- Simulating {num_hours} hours, primarily '{base_action}' ---")
@@ -277,20 +319,37 @@ if __name__ == "__main__":
         from town import Town
         print("Attempted direct imports.")
 
-    player_char = Character(name="Recap Player")
-    player_char.roll_stats()
-    player_char.stats = {"STR": 12, "DEX": 12, "CON": 12, "INT": 12, "WIS": 12, "CHA": 12}
-    player_char.base_max_hp = 10 + player_char._calculate_modifier(player_char.stats["CON"],is_base_stat_score=True) * player_char.level
-    player_char.hp = player_char.get_effective_max_hp()
-    player_char.hit_dice = player_char.max_hit_dice
+    # player_char = Character(name="Recap Player") # Old character creation removed
+    # player_char.roll_stats() # Stats are now rolled interactively
+    # player_char.stats = {"STR": 12, "DEX": 12, "CON": 12, "INT": 12, "WIS": 12, "CHA": 12} # Manual setting removed
+    # player_char.base_max_hp = 10 + player_char._calculate_modifier(player_char.stats["CON"],is_base_stat_score=True) * player_char.level # HP calc is now internal
+    # player_char.hp = player_char.get_effective_max_hp()
+    # player_char.hit_dice = player_char.max_hit_dice # Hit dice also internal
 
-    lucky_charm = Item(name="Lucky Charm", description="Reroll", base_value=0, item_type="trinket", quality="Rare", effects={"allow_reroll": True}, is_consumable=True)
-    player_char.add_item_to_inventory(lucky_charm)
+    # GameManager now handles character creation internally.
+    # This will trigger the interactive prompts if __main__ is run.
+    gm = GameManager() # No longer takes player_character argument
 
-    gm = GameManager(player_character=player_char)
+    # Grant XP to ensure level up for testing skill allocation
+    xp_to_grant_for_level_up = 295 # Level 2 is 300 XP. research_market gives 5 XP.
+    print(f"\n(Test Setup: Granting {gm.character.name} {xp_to_grant_for_level_up} XP to ensure level up for skill allocation test)")
+    gm.character.award_xp(xp_to_grant_for_level_up)
+    # Committing XP here would trigger level up before the day starts.
+    # We want it to happen at End of Day Recap.
+
+    # The Lucky Charm can be added after character creation if needed for testing specific scenarios,
+    # but for a standard run, inventory starts empty unless modified by character creation itself.
+    # For now, let's assume the test proceeds without automatically adding it,
+    # or it could be added via a game event or initial shop stock.
+    # If direct addition for testing is needed:
+    # lucky_charm = Item(name="Lucky Charm", description="Reroll", base_value=0, item_type="trinket", quality="Rare", effects={"allow_reroll": True}, is_consumable=True)
+    # gm.character.add_item_to_inventory(lucky_charm)
+    # print(f"  (Test setup: Added Lucky Charm to {gm.character.name}'s inventory)")
+
+
     gm.base_event_chance = 0.15 # Adjusted for more predictable testing
 
-    print(f"\n--- Starting Day {gm.time.current_day} Simulation (target 16 actions + 8 sleep) ---")
+    print(f"\n--- Starting Day {gm.time.current_day} Simulation for {gm.character.name} (target 16 actions + 8 sleep) ---")
 
     # Day 1 Activities (16 hours of actions)
     # Hour: 07:00 (Start)
@@ -307,28 +366,100 @@ if __name__ == "__main__":
 
     gm.perform_hourly_action("craft", {"item_name": "Stale Ale"}) # 14->15
 
-    stale_ale_to_sell = None # Find the Stale Ale the shop just crafted
-    for item_in_shop_inv in gm.shop.inventory:
-        if item_in_shop_inv.name == "Stale Ale":
-            # To test player selling, player needs the item. Let's simulate player acquiring it.
-            # This is a bit artificial for the test, normally player would craft/find it themselves.
-            stale_ale_to_sell = gm.shop.remove_item_from_inventory("Stale Ale", specific_item_to_remove=item_in_shop_inv)
-            if stale_ale_to_sell:
-                player_char.add_item_to_inventory(stale_ale_to_sell)
-                print(f"  (Test setup: Player acquired {stale_ale_to_sell.name} from shop to sell back)")
-            break
+    stale_ale_to_sell = None
+    # Attempt to find Stale Ale if the shop crafted it.
+    # The shop inventory might not have it if crafting failed or was not chosen.
+    if "Stale Ale" in gm.daily_items_crafted: # Check if it was crafted today
+        for item_in_shop_inv in gm.shop.inventory:
+            if item_in_shop_inv.name == "Stale Ale":
+                # Simulate player acquiring it for selling test.
+                stale_ale_to_sell = gm.shop.remove_item_from_inventory("Stale Ale", specific_item_to_remove=item_in_shop_inv)
+                if stale_ale_to_sell:
+                    gm.character.add_item_to_inventory(stale_ale_to_sell) # Use gm.character
+                    print(f"  (Test setup: Player {gm.character.name} acquired {stale_ale_to_sell.name} from shop to sell back)")
+                break
 
     if stale_ale_to_sell:
-        gold_earned = player_char.sell_item_to_shop(stale_ale_to_sell, gm.shop) # 15->16
+        # Player sells the item. The action itself does not advance time here.
+        # The original code had sell_item_to_shop as part of an hour, let's make it an explicit action.
+        # For now, we'll assume selling it is part of the "talk_to_customer" or a dedicated "manage_inventory" hour.
+        # To keep the hour structure, let's wrap this in a conceptual action or assume it's quick.
+        # The original test structure implies this was part of hour 15->16.
+        # We'll log it but not explicitly make it a separate perform_hourly_action call unless necessary.
+        # The gold/item tracking should be done within sell_item_to_shop.
+
+        # The original test structure did this:
+        # gold_earned = player_char.sell_item_to_shop(stale_ale_to_sell, gm.shop) # 15->16
+        # if gold_earned > 0:
+        #     gm.daily_gold_player_earned_selling_to_shop += gold_earned
+        #     gm.daily_items_player_sold_to_shop.append(stale_ale_to_sell.name)
+        # This logic is now mostly within character.sell_item_to_shop and shop.buy_item_from_character
+        # We just need to ensure the daily trackers are updated.
+
+        # Let's make selling an explicit action for clarity in the test, even if it's quick.
+        print(f"  [{gm.time.get_time_string()}] {gm.character.name} will now attempt to sell {stale_ale_to_sell.name}.")
+        gold_earned = gm.character.sell_item_to_shop(stale_ale_to_sell, gm.shop)
         if gold_earned > 0:
+            # These trackers should ideally be updated by the sell_item_to_shop or a wrapper in GameManager
+            # For now, let's assume the test needs to update them if sell_item_to_shop doesn't.
+            # Looking at Character.sell_item_to_shop, it doesn't update GameManager's trackers.
             gm.daily_gold_player_earned_selling_to_shop += gold_earned
             gm.daily_items_player_sold_to_shop.append(stale_ale_to_sell.name)
-    else: # If shop didn't have Stale Ale (e.g. if crafting failed), just do a default action
-        print("  (Test setup: Stale Ale not found in shop to transfer to player for selling test, doing 'talk' instead)")
-        gm.perform_hourly_action("talk_to_customer") # 15->16
+            print(f"  Action: Sell item {stale_ale_to_sell.name} (completed within current hour). Gold earned: {gold_earned}")
+        else:
+            print(f"  Action: Sell item {stale_ale_to_sell.name} failed or item was not sold.")
+            # If selling failed, put it back in player inventory for test consistency if needed, or handle as lost.
+            # For now, assume it's gone or sale failed as per method.
+            # If it failed, it should still be in player's inventory.
+            if stale_ale_to_sell not in gm.character.inventory: # If it was removed by a partial sell attempt
+                 gm.character.add_item_to_inventory(stale_ale_to_sell) # Put it back for test consistency
+                 print(f"  (Test info: {stale_ale_to_sell.name} re-added to player inventory after failed sale attempt)")
 
 
-    gm.perform_hourly_action("research_market") # 16->17
+    else: # If shop didn't have Stale Ale or it wasn't transferred
+        print(f"  (Test info: {gm.character.name} does not have Stale Ale to sell, or item not found in shop. Skipping player selling action.)")
+        # This hour (15->16) would then proceed with its original action if selling was meant to be "instead of"
+        # The original code had this as an else block for a perform_hourly_action.
+        # Let's assume the selling attempt was part of the 15->16 hour block.
+        # If selling didn't happen, the hour is still spent.
+
+    # The original test had gm.perform_hourly_action("talk_to_customer") in the else block.
+    # If selling is a quick part of an hour, the main action for that hour still happens.
+    # For simplicity, let's assume the hour 15->16 was "manage shop / attempt sale".
+    # So, we'll just advance time with a generic action if no sale was made.
+    # This part of the test logic needs to be robust to whether the item exists.
+    # The hour 15->16 was originally the sell action. We'll call a generic action if sell didn't happen.
+    if not stale_ale_to_sell or gold_earned == 0 :
+         gm.perform_hourly_action("talk_to_customer") # 15->16 (if sale didn't occur or wasn't primary action)
+    else:
+        # If sale happened, the hour was still used. We need to ensure time advances.
+        # The original test implies the sale itself was the action for that hour.
+        # So, if sale was successful, that WAS the 15->16 action.
+        # We need to make sure an action is performed for each hour.
+        # The structure was:
+        # IF stale_ale_to_sell:
+        #   player_char.sell_item_to_shop(...) -> THIS WAS THE ACTION
+        # ELSE:
+        #   gm.perform_hourly_action("talk_to_customer") -> THIS WAS THE ACTION
+        # So, if the sale attempt happened (regardless of success), that was the hour's "event".
+        # We need to ensure an `perform_hourly_action` is called or time is advanced.
+        # Let's assume "attempt_sell_item" could be an action.
+        # For now, if a sale was attempted, we'll consider that the hour's activity.
+        # The time advancement is handled by perform_hourly_action.
+        # The original code is a bit ambiguous here. Let's ensure an action always consumes the hour.
+        # If selling was the action for 15->16:
+        if stale_ale_to_sell: # i.e. an attempt was made
+            # We need to ensure the time advances for this hour.
+            # The original code did not call perform_hourly_action if a sale was made.
+            # This is a gap. Let's fix it by wrapping the sell in an action or just advancing time.
+            # Simplest: if a sale was attempted, that was the hour's main focus.
+            # We'll assume the sell_item_to_shop itself doesn't advance time system.
+            # So, we still need perform_hourly_action for time progression and events.
+            # Let's make "managing inventory/sales" the action for this hour.
+            gm.perform_hourly_action("manage_inventory_sales") # 15->16
+        # This means the `else` block for `talk_to_customer` was correct if no sale attempt.
+
+    gm.perform_hourly_action("research_market") # 16->17 (This should be hour after selling attempt)
     gm.perform_hourly_action("talk_to_customer") # 17->18
     gm.perform_hourly_action("craft", {"item_name": "Minor Healing Potion"}) # 18->19
     gm.perform_hourly_action("talk_to_customer") # 19->20
