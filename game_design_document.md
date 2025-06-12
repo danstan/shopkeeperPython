@@ -1,0 +1,74 @@
+# Game Design Document
+
+## Game Overview
+Welcome to a whimsical, high-fantasy world where players take on the role of magical merchants running their own unique shops. This game is a turn-based, multiplayer shopkeeper RPG, drawing inspiration from classic D&D mechanics. It aims to capture the interest of fans of classic kid-friendly online games (such as EverQuest, RuneScape, and Neopets), as well as enthusiasts of D&D-style mechanics, economic simulation, crafting, social interaction, and item collection.
+
+The core gameplay revolves around several key pillars:
+
+*   **Character Management:** Players create their merchant characters by choosing a name and rolling for initial stats, with one reroll permitted. Progression follows a D&D 5e-aligned XP and leveling system, where each level grants increased Hit Points and a +1 bonus to a chosen skill.
+*   **Shopkeeping:** Players start their entrepreneurial journey with a small shop in a randomly assigned town. The primary activity involves crafting a diverse range of items, including potions and scrolls, with product quality (from Common to Mythical) improving based on the frequency of crafting specific items. Interaction with NPC customers includes opportunities for haggling. Players can expand and specialize their shops (e.g., focusing on weapons, food, or potions), strategically catering to customer preferences and market demands.
+*   **Economy & Itemization:** The game features a gold-based economy. Players can buy, sell, and equip various items. Characters have three attunement slots for magical items that provide persistent effects, alongside a system for consumable items.
+*   **Event System:** Dynamic random scenarios, both positive and negative, will occur. Some events may interrupt player actions or rests. These are resolved through skill checks (comparing a roll against a Difficulty Class, applying modifiers), with opportunities to use items for rerolls. Successful event resolution provides XP and contributes to the evolving story.
+*   **Rest Mechanics:** Players can take short rests to spend Hit Dice and recover health. Long rests fully restore HP and Hit Dice, and remove levels of exhaustion, but require adequate food and drink. Long rests can be interrupted by security threats (like theft or arson) or significant town-wide events.
+*   **Time System:** The game operates on a 24-hour in-game day. Players can perform one significant action per hour, with 8 hours typically allocated for sleep as part of a long rest.
+*   **World Interaction:** The game world consists of randomly generated towns, each with unique properties such as specific nearby resources, unique NPC crafters, and distinct local events. These properties influence local market demands, affecting item pricing through percentage modifiers. Players can also dedicate hourly actions to conduct active market research.
+
+Social interaction is encouraged through features like moderated chat, emotes, direct player-to-player trading, and planned co-operative activities such as dungeons and special events. Players can also use 'Message' or 'Sending'-style spells to communicate with friends.
+
+The technical foundation consists of a C# backend utilizing ASP.NET Core Web API, with an HTML/CSS/JavaScript frontend. Player save states will be managed using JSON.
+
+Looking towards the future, potential expansions include a 'Dungeon Crawl' mode for adventure and resource gathering, a 'Market Overhaul' tab for deeper economic insights, advanced multiplayer interactions, and eventual integration with Unity for enhanced visuals and cross-platform play.
+
+The overall tone of the game is whimsical and high fantasy, designed to be kid-friendly and to emphasize player freedom and creativity in their shopkeeping endeavors.
+
+## Core Mechanics
+
+### Character Progression
+XP is collected by the player throughout the in-game day and is officially awarded during the 'End-Of-Day Recap Report'. XP thresholds for character leveling will align with the standard D&D 5e XP progression table. This alignment includes the principle of scaling XP thresholds, meaning it requires more total XP to advance from level 2 to 3 than it did from level 1 to 2, and so on. Each level grants a +1 modifier to a player-chosen skill. This is the defined scope for the V1 implementation. More complex progression mechanics (such as detailed skill trees or more elaborate ability score improvement schedules) are acknowledged as potential future expansions but are not part of the current core design. For the initial implementation, XP sources are primarily limited to events (including those during hourly actions), combat (especially in any 'Dungeon Crawl Mode' if implemented), and other activities that contribute to the summary in the 'End-Of-Day Recap Report'. This list could be expanded in future development.
+
+### Time System
+An in-game day consists of 24 hours. 'Sleep' (typically as part of a long rest) consumes 8 of these hours. During the remaining time, players can perform one significant 'action' per hour. Each action carries a chance for an event to occur. Examples of 'significant actions' that consume one hour include tasks like brewing a batch of potions, or forging a sword. It's also important to note that a significant action may be interrupted by an unexpected event, such as a time-traveling wizard appearing suddenly in your shop, which could derail the player's current task and present new opportunities or challenges. The base probability of an event occurring during any given hourly action is approximately 5%. This base chance can be modified by various factors, including player behavior (e.g., consistently engaging in risky actions might attract negative attention), specific shop upgrades (e.g., enhanced security might lower the chance of theft-related events), and the current state or stability of the town. For instance, a town located in or near a warzone might have a higher overall chance of disruptive or catastrophic events, while a town during a peaceful festival could see more frequent fun and whimsical events.
+
+### Resting
+
+#### Short Rests & Hit Dice
+Players can take short rests to regain hit points. During a short rest, players can spend Hit Dice. Each player has a number of Hit Dice equal to their character level. Hit Dice are recovered automatically after a player successfully completes a long rest. Additionally, some consumable items, potentially found as loot in dungeons or other dangerous areas, can also restore spent Hit Dice.
+
+#### Long Rests & Exhaustion
+Players can take long rests to fully recover hit points and remove exhaustion levels. A failed long rest (e.g., due to interruptions or poor conditions) can lead to gaining a level of exhaustion. Exhaustion effects will align closely with D&D 5e core exhaustion rules, including aspects like disadvantage on ability checks, skill checks, saving throws, and attack rolls, as well as speed reduction at higher levels. Long rests can be interrupted by events such as theft, arson, or robbery. These interruptions might stem from a lack of shop/personal security, perceived player vulnerability, or even sabotage by rival merchants/shopkeepers. Other examples of interrupting factors could include a monster running loose in town, a gang of raiders causing a widespread disturbance, or a massive storm flooding the streets, any of which could make a safe, uninterrupted rest impossible.
+
+### Crafting & Selling
+
+#### Shop Specialization & Quality
+Players can choose a specialization for their shop (e.g., blacksmithing, alchemy, enchanting) without any prerequisites. The quality of products within the chosen specialty will improve as the player crafts more items of that type. The quality improvement is based on the number of times a player has crafted that specific type of item. The more a specific item (e.g., 'Minor Healing Potion') is crafted, the better the player becomes at making that particular item, leading to higher quality versions of it. Item quality is quantified by rarity tiers: Common, Uncommon, Rare, Very Rare, Legendary, and Mythical. Higher tiers can also provide numerical bonuses to item stats, distinct color variations for visual distinction, and unique special properties. Players begin with access to simple crafting specializations, such as creating stale ale, basic wine, simple food, low-rarity potions (e.g., basic healing potions), or simple daggers. This implies a progression system towards more complex and higher-quality crafting options as the player gains experience and resources. While there are no direct mechanical penalties (like a gold cost or skill loss) for switching specializations, there can be an indirect consequence: the existing customer base, accustomed to particular items, might show less interest in new product lines if the shop's focus changes significantly.
+
+#### Market Demands Communication
+Information about current market demands, item popularity, and potential shortages will be communicated to the player through an "End-Of-Day Recap Report." This report will also include:
+*   Gold earned that day.
+*   Number of visitors to the shop.
+*   Experience Points (XP) earned.
+*   List of items crafted and sold.
+*   Summary of any special events that occurred (e.g., festivals, visiting dignitaries).
+*   Snippets of overheard customer dialogue, potentially hinting at needs or upcoming trends. These snippets are inspired by systems like the 'Guest Thoughts' in RollerCoaster Tycoon 2. Examples could include: "Shopkeeper always has the potions I'm looking for!", "I like the decor in this shop", or "The food here is bland!". Their purpose is to provide player feedback on shop aspects like item availability, decor, and product quality, acting as hints for improvement or validation of success. To reiterate and emphasize, the generation and style of these snippets should be modeled as closely as possible on the 'Guest Thoughts' mechanics from RollerCoaster Tycoon 2. The primary focus is on providing player-readable feedback that is both informative and flavorful, helping them understand customer perceptions. Regarding their connection to game mechanics, the desired approach is to link some dialogue snippets to quantifiable game mechanics. For example, a 'bland food' comment could be triggered if an item's quality is below a certain threshold, or a 'nice decor' comment might appear once a specific shop upgrade level related to aesthetics is reached. This system of direct feedback can be iterated upon and expanded in the future if more complex connections or a wider variety of triggers are desired, but these examples represent the target for the initial implementation.
+
+Beyond the recap report, players can use one of their hourly actions (as defined in the 'Time System') to actively 'conduct field research' or 'survey customers'. This provides more immediate insights into current market demands, supplementing the end-of-day information.
+
+## World Details
+
+### Towns
+
+#### Unique Town Properties
+Towns within the game world can possess unique characteristics that differentiate them and offer distinct opportunities or challenges. These properties may include:
+*   **Specific Nearby Resources:** Access to rare or abundant raw materials (e.g., a town near a mithril mine, or a forest with unique magical herbs).
+*   **Unique NPC Crafters:** Master artisans or individuals with specialized knowledge who might offer quests, training, or rare components. Interactions with these NPCs will be a mix of services offered for a fee (e.g., crafting a specific item if materials are provided) and opportunities (e.g., new recipes, access to rare materials) unlocked or progressed through quests.
+*   **Recurring Local Events:** Festivals, market days, seasonal occurrences, or even monster migration patterns that can impact trade, resource availability, or introduce new quests. These events are varied in nature; some can be positive (e.g., a multi-day festival that significantly increases tourist foot traffic and demand for certain goods), while others can be negative (e.g., an outbreak of war or a natural disaster that leads to barricaded roads, reducing customer traffic and making ingredients scarcer or more expensive). The duration of these events can span several days, and their type, frequency, and specific effects are often dependent on the unique qualities and circumstances of the town. The frequency of these events will follow a mixed model: most will occur based on a random chance per day or week (influenced by town properties and ongoing game conditions), while some, like specific seasonal festivals, will be fixed to particular times of the in-game year. Duration is also highly variable: a festival might last for an in-game week, a period of civil unrest or a nearby war could affect a town for a few months, while a severe storm might only disrupt things for a day or two.
+These properties directly affect local resource availability and can influence crafting options or event types. For example:
+*   A town by a river might offer greater access to fish as a resource.
+*   A town near a forest could provide more berries and mushrooms.
+*   A town in the mountains might be closer to dungeons that yield more or better quality loot.
+*   A town near active dungeons or warzones might have a consistently higher demand for healing potions, potentially allowing for higher selling prices for such items.
+*   A town surrounded by fertile farmland could boast an abundance of cheap, fresh ingredients. If this town also experiences high tourism (perhaps due to another unique property or event), it might support numerous restaurants, creating a demand for specific food items or ingredients.
+When town properties influence item pricing (e.g., higher demand for healing potions near a warzone), this will likely be implemented using percentage modifiers on base prices. Similarly, the availability of certain crafting recipes will be logically tied to the local environment; for example, a coastal town might have many unique seafood dish recipes, whereas a desert town would logically have none of these but might have recipes adapted to arid conditions.
+
+## Open Questions
+(All questions addressed - this section is now intentionally empty.)
