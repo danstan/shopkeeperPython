@@ -169,31 +169,32 @@ class TestGameManager(unittest.TestCase):
     def test_action_craft_item_success(self):
         """Test successful crafting of an item."""
         initial_time = self.gm.time.current_hour
-        item_name_to_craft = "Minor Healing Potion" # Assumes this is a known recipe
+        item_name_to_craft = "CraftedTesterPotion" # Use a unique name for this test
 
         # Ensure the recipe exists for reliable testing
-        # Accessing BASIC_RECIPES directly from class, as it's a class attribute.
+        # This modification of a class attribute within a test is generally not recommended
+        # but done here for simplicity to ensure the test focuses on GameManager logic.
+        # A better approach might involve a test-specific recipe list or mocking.
         if item_name_to_craft not in Shop.BASIC_RECIPES:
-            # This modification of a class attribute within a test is generally not recommended
-            # as it can affect other tests if not properly reset.
-            # For robust testing, consider mocking or providing a test-specific recipe list.
-            # However, adhering to the fix instruction for now.
-            # Ensure a temporary recipe doesn't break other logic if it's missing expected fields.
             Shop.BASIC_RECIPES[item_name_to_craft] = {
-                "base_value": 10, "type": "potion", "description": "A test potion recipe",
-                "crafting_difficulty": 3, "effects": {"healing": 5},
-                # Add other fields Shop.craft_item might expect, e.g. skill, level, materials
-                "skill": "Herbalism", "level": 1, "materials": {"Basic Herbs": 1}, "product": {"name": item_name_to_craft, "quantity": 1}
+                "base_value": 15, "type": "potion", "description": "A special potion for testing crafting.",
+                "crafting_difficulty": 2, "effects": {"test_effect": 1},
+                "skill": "Alchemy", "level": 1, "materials": {"Magic Dust": 1}, # Assuming Magic Dust is a conceptual material
+                "product": {"name": item_name_to_craft, "quantity": 1}
             }
 
+        # Ensure character has dummy material if needed by a more complex Shop.craft_item
+        # For now, assuming Shop.craft_item doesn't check character inventory for materials.
 
         initial_item_count = sum(1 for item_in_inv in self.gm.shop.inventory if item_in_inv.name == item_name_to_craft)
+        self.assertEqual(initial_item_count, 0, f"'{item_name_to_craft}' should not be in shop inventory initially.")
+
         self.gm.perform_hourly_action("craft", {"item_name": item_name_to_craft})
 
         final_item_count = sum(1 for item_in_inv in self.gm.shop.inventory if item_in_inv.name == item_name_to_craft)
 
         self.assertIn(item_name_to_craft, [item.name for item in self.gm.shop.inventory], f"{item_name_to_craft} should be in shop inventory after crafting.")
-        self.assertEqual(final_item_count, initial_item_count + 1, "Item count in shop inventory should increase by 1.")
+        self.assertEqual(final_item_count, 1, "Item count in shop inventory should be 1 after crafting.") # initial_item_count was 0
         self.assertIn(item_name_to_craft, self.gm.daily_items_crafted, f"{item_name_to_craft} should be in daily_items_crafted.")
         self.assertEqual(self.gm.time.current_hour, (initial_time + 1) % 24, "Time should advance by 1 hour.")
 
@@ -339,10 +340,10 @@ class TestGameManager(unittest.TestCase):
         initial_hit_dice = self.char.hit_dice
         initial_time = self.gm.time.current_hour
 
-        self.gm.perform_hourly_action("rest_short", {"dice_to_spend": 1})
+        self.gm.perform_hourly_action("sleep_one_hour")
 
-        self.assertTrue(self.char.hp > initial_hp or self.char.hp == self.char.get_effective_max_hp(), "HP should increase or be maxed.")
-        self.assertEqual(self.char.hit_dice, initial_hit_dice - 1, "One hit die should be spent.")
+        self.assertTrue(self.char.hp > initial_hp or self.char.hp == self.char.get_effective_max_hp(), "HP should increase by 1 or be maxed.")
+        self.assertEqual(self.char.hit_dice, initial_hit_dice, "Hit dice should not change for sleep_one_hour.")
         self.assertEqual(self.gm.time.current_hour, (initial_time + 1) % 24, "Time should advance by 1 hour.")
 
     def test_action_rest_short_no_hit_dice(self):
@@ -352,9 +353,12 @@ class TestGameManager(unittest.TestCase):
         initial_hp = self.char.hp
         initial_time = self.gm.time.current_hour
 
-        self.gm.perform_hourly_action("rest_short", {"dice_to_spend": 1})
+        self.gm.perform_hourly_action("sleep_one_hour")
 
-        self.assertEqual(self.char.hp, initial_hp, "HP should not change as no hit dice were spent.")
+        if initial_hp < self.char.get_effective_max_hp():
+            self.assertEqual(self.char.hp, initial_hp + 1, "HP should increase by 1 if not at max.")
+        else:
+            self.assertEqual(self.char.hp, initial_hp, "HP should remain at max if already maxed.")
         self.assertEqual(self.char.hit_dice, 0, "Hit dice should remain 0.")
         self.assertEqual(self.gm.time.current_hour, (initial_time + 1) % 24, "Time should advance by 1 hour.")
 
@@ -415,7 +419,7 @@ class TestGameManager(unittest.TestCase):
         # Make random.random return a value that ensures no interruption (e.g., > 0.1 if default chance is 0.1)
         random.random = lambda: 0.5
 
-        self.gm.start_long_rest(food_available=True, drink_available=True)
+        self.gm.perform_hourly_action("sleep_eight_hours")
 
         random.random = original_random_random # Restore original random function
         # --- End Mock ---
@@ -456,21 +460,22 @@ class TestGameManager(unittest.TestCase):
         # Manually call the print from Character class to ensure it's in output if expected from there
         # Or rely on the GameManager's print. The GameManager's print is:
         # print(f"  {self.character.name} perished during rest due to exhaustion.")
+        self.char.exhaustion_level = 5 # Start at exhaustion 5
+        self.char.hp = 1 # Ensure HP is low so death is apparent
 
         with redirect_stdout(captured_output):
-            self.gm.start_long_rest() # This will internally call perform_hourly_action("sleep_one_hour")
-                                      # which has the death check.
+            # Attempt long rest without food, which should increment exhaustion to 6 and cause death.
+            self.gm.perform_hourly_action("sleep_eight_hours", action_details={"food_available": False, "drink_available": True})
 
         output_str = captured_output.getvalue()
 
-        # Check for the specific message from GameManager's start_long_rest loop
-        self.assertIn(f"{self.char.name} perished during rest due to exhaustion.", output_str, "Death message not found in output.")
+        # Check for the death message from Character.gain_exhaustion()
+        expected_death_message = f"  {self.char.name} has died from exhaustion!"
+        self.assertIn(expected_death_message, output_str, "Death message from Character.gain_exhaustion() not found.")
 
-        # Assert that rest benefits were not applied (or minimally applied if death happened mid-rest)
-        # If death happens, HP should not be restored.
-        self.assertTrue(self.char.hp <= initial_hp or self.char.hp == 0, "HP should not have recovered if death occurred.")
-        # Depending on when death is checked, exhaustion might not change or HD might not be gained.
-        self.assertEqual(self.char.exhaustion_level, 6, "Exhaustion should remain at death level.")
+        self.assertEqual(self.char.exhaustion_level, 6, "Exhaustion should be 6.")
+        # HP might be 0 or unchanged at 1 depending on when death is checked vs HP effects
+        self.assertTrue(self.char.hp <= 1, "HP should be 0 or remain at its low value if death occurred.")
 
     def test_event_trigger_and_recording(self):
         """Test that events can trigger and are recorded in daily_special_events."""

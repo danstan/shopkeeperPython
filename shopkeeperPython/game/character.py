@@ -135,7 +135,19 @@ class Character:
     def gain_exhaustion(self, amount: int = 1):
         if amount <= 0: return
         old_level = self.exhaustion_level
+        self.exhaustion_level += amount
+        self.exhaustion_level = min(self.exhaustion_level, 6) # Cap at 6
 
+        if self.exhaustion_level > old_level:
+            print(f"  {self.name} gains {amount} level(s) of exhaustion. New level: {self.exhaustion_level} ({self.get_exhaustion_effects()})")
+            if self.exhaustion_level >= 4 and old_level < 4: # HP max halved effect
+                self.hp = min(self.hp, self.get_effective_max_hp()) # Adjust current HP if it exceeds new max
+                print(f"  HP maximum now {self.get_effective_max_hp()}. Current HP adjusted to {self.hp}.")
+            if self.exhaustion_level >= 6:
+                print(f"  {self.name} has died from exhaustion!")
+        elif self.exhaustion_level == old_level and self.exhaustion_level < 6 and amount > 0 : # Only print if change was attempted but resulted in no actual level change (e.g. already at 5, tried to gain 0 but code path led here)
+             print(f"  {self.name}'s exhaustion level remains {self.exhaustion_level} ({self.get_exhaustion_effects()}). No effective change from this event, though gain was attempted.")
+        # No message if already at 6 and trying to add more, as it's capped and previous condition handles the 5->6 transition.
 
     def get_exhaustion_effects(self) -> str:
         return EXHAUSTION_EFFECTS.get(self.exhaustion_level, "Unknown exhaustion level.")
@@ -163,7 +175,32 @@ class Character:
         if not food_available or not drink_available:
             self.gain_exhaustion(1); msg = "Long rest failed: no food/drink. Gained 1 exhaustion."; print(msg)
             return {"success": False, "message": msg}
+        # Successful long rest benefits should be applied here before returning
+        self.hp = self.get_effective_max_hp()
+        self.hit_dice = min(self.max_hit_dice, self.hit_dice + max(1, self.max_hit_dice // 2))
+        if self.exhaustion_level > 0:
+            self.exhaustion_level -=1 # Reduce exhaustion by 1 on a successful long rest
+            print(f"  {self.name} feels less exhausted. New level: {self.exhaustion_level} ({self.get_exhaustion_effects()})")
+        else: # Already at 0 exhaustion
+             pass # No change, no message needed unless specific "well rested" buff applies
 
+        # Placeholder for other D&D 5e long rest rules like spell slot recovery
+        print(f"  {self.name} completed a long rest. HP restored. Hit Dice recovered. Exhaustion reduced.")
+        return {"success": True, "message": "Long rest completed successfully."}
+
+    def heal_hp(self, amount_to_heal: int) -> int:
+        if amount_to_heal <= 0:
+            return 0
+
+        old_hp = self.hp
+        self.hp = min(self.get_effective_max_hp(), self.hp + amount_to_heal)
+        healed_amount = self.hp - old_hp
+
+        if healed_amount > 0:
+            # Optional: print a message here if desired, or let the caller handle it.
+            # print(f"{self.name} healed for {healed_amount} HP. Current HP: {self.hp}/{self.get_effective_max_hp()}")
+            pass
+        return healed_amount
 
     def add_item_to_inventory(self, item: Item): self.inventory.append(item); print(f"{item.name} added to {self.name}'s inventory.")
     def remove_item_from_inventory(self, item_name: str) -> Item | None:
@@ -291,7 +328,7 @@ class Character:
             "hit_dice": self.hit_dice,
             "max_hit_dice": self.max_hit_dice,
             "attunement_slots": self.attunement_slots, # Though fixed, good to save
-            "attuned_items": [item.to_dict() for item in self.attuned_items],
+            "attuned_.items": [item.to_dict() for item in self.attuned_items],
             "exhaustion_level": self.exhaustion_level,
             "inventory": [item.to_dict() for item in self.inventory],
             "gold": self.gold,
@@ -326,3 +363,4 @@ class Character:
         return char
 
 if __name__ == "__main__":
+    pass
