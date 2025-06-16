@@ -47,6 +47,7 @@ class Character:
         self.gold = 100
         self.skill_points_to_allocate = 0
         self.speed = 30
+        self.is_dead = False # Added for perma-death
 
     @property
     def max_hp(self):
@@ -147,11 +148,13 @@ class Character:
             if self.exhaustion_level >= 4 and old_level < 4: # HP max halved effect
                 self.hp = min(self.hp, self.get_effective_max_hp()) # Adjust current HP if it exceeds new max
                 print(f"  HP maximum now {self.get_effective_max_hp()}. Current HP adjusted to {self.hp}.")
-            if self.exhaustion_level >= 6:
-                print(f"  {self.name} has died from exhaustion!")
-        elif self.exhaustion_level == old_level and self.exhaustion_level < 6 and amount > 0 : # Only print if change was attempted but resulted in no actual level change (e.g. already at 5, tried to gain 0 but code path led here)
+            if self.exhaustion_level >= 6 and not self.is_dead : # Check not already dead to print message once
+                self.is_dead = True
+                self.hp = 0 # Explicitly set HP to 0 on death
+                print(f"  {self.name} has succumbed to their ailments and is now dead.")
+        elif self.exhaustion_level == old_level and self.exhaustion_level < 6 and amount > 0 and not self.is_dead:
              print(f"  {self.name}'s exhaustion level remains {self.exhaustion_level} ({self.get_exhaustion_effects()}). No effective change from this event, though gain was attempted.")
-        # No message if already at 6 and trying to add more, as it's capped and previous condition handles the 5->6 transition.
+        # No message if already at 6 and trying to add more, as it's capped.
 
     def get_exhaustion_effects(self) -> str:
         return EXHAUSTION_EFFECTS.get(self.exhaustion_level, "Unknown exhaustion level.")
@@ -338,32 +341,36 @@ class Character:
             "gold": self.gold,
             "skill_points_to_allocate": self.skill_points_to_allocate,
             "speed": self.speed,
+            "is_dead": self.is_dead, # Added for perma-death
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> 'Character':
         char = cls(data["name"])
         char.stats = data["stats"]
-        char.stat_bonuses = data.get("stat_bonuses", {key: 0 for key in char.stats}) # Ensure all keys exist
+        char.stat_bonuses = data.get("stat_bonuses", {key: 0 for key in char.stats})
         char.ac_bonus = data.get("ac_bonus", 0)
         char.level = data["level"]
         char.xp = data["xp"]
         char.pending_xp = data.get("pending_xp", 0)
         char.base_max_hp = data["base_max_hp"]
-        char.hp = data["hp"] # This will be capped by effective_max_hp on load if needed
-        char.max_hit_dice = data.get("max_hit_dice", char.level) # Default to level if not in save
+        char.hp = data["hp"]
+        char.max_hit_dice = data.get("max_hit_dice", char.level)
         char.hit_dice = data["hit_dice"]
         char.attunement_slots = data.get("attunement_slots", 3)
         char.inventory = [Item.from_dict(item_data) for item_data in data.get("inventory", [])]
-        # Attuned items are loaded but effects need reapplication
         char.attuned_items = [Item.from_dict(item_data) for item_data in data.get("attuned_items", [])]
         char.exhaustion_level = data["exhaustion_level"]
         char.gold = data["gold"]
         char.skill_points_to_allocate = data.get("skill_points_to_allocate", 0)
         char.speed = data.get("speed", 30)
+        char.is_dead = data.get("is_dead", False) # Added for perma-death
 
-        # Ensure HP is capped by current effective max HP after loading exhaustion
-        char.hp = min(char.hp, char.get_effective_max_hp())
+        # If character is dead, ensure HP is 0.
+        if char.is_dead:
+            char.hp = 0
+        else: # Ensure HP is capped by current effective max HP after loading exhaustion
+            char.hp = min(char.hp, char.get_effective_max_hp())
         return char
 
 if __name__ == "__main__":

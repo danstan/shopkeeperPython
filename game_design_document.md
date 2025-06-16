@@ -5,17 +5,25 @@ Welcome to a whimsical, high-fantasy world where players take on the role of mag
 
 The core gameplay revolves around several key pillars:
 
-*   **Character Management:** Players create their merchant characters by choosing a name and rolling for initial stats, with one reroll permitted. Progression follows a D&D 5e-aligned XP and leveling system, where each level grants increased Hit Points and a +1 bonus to a chosen skill.
-*   **Shopkeeping:** Players start their entrepreneurial journey with a small shop in a randomly assigned town. The primary activity involves crafting a diverse range of items, including potions and scrolls, with product quality (from Common to Mythical) improving based on the frequency of crafting specific items. Interaction with NPC customers includes opportunities for haggling. Players can expand and specialize their shops (e.g., focusing on weapons, food, or potions), strategically catering to customer preferences and market demands.
+*   **User Account and Character Management:**
+    *   **User Accounts:** Before playing, individuals must create a user account by providing a unique username and a password. This account serves as their persistent identity in the game world.
+    *   **Character Slots:** Each user account is allocated two character slots. This allows a player to have up to two distinct merchant characters, each with their own progression, shop, and story.
+    *   **Initial Character Creation:** Upon selecting an available character slot, players are guided to a character creation screen. Here, they will:
+        1.  Enter a unique name for their character.
+        2.  Roll for initial ability stats (STR, DEX, CON, INT, WIS, CHA). The ideal stat generation method is "4d6 drop the lowest die" for each of an array of six stats.
+        3.  The player is permitted to reroll *one* of these initial stats *once*.
+    *   **Progression:** Character progression follows a D&D 5e-aligned XP and leveling system, where each level grants increased Hit Points and a +1 bonus to a chosen skill.
+    *   **Perma-death:** Characters face the risk of permanent death, primarily through reaching the maximum level of exhaustion (6 levels). A character that dies is marked as deceased and can no longer be played. The dead character continues to occupy one of the account's two character slots. (Future enhancements might explore options for freeing up or memorializing these slots.)
+*   **Shopkeeping:** Once a character is created and selected, players start their entrepreneurial journey with a small shop in a randomly assigned town. The primary activity involves crafting a diverse range of items, including potions and scrolls, with product quality (from Common to Mythical) improving based on the frequency of crafting specific items. Interaction with NPC customers includes opportunities for haggling. Players can expand and specialize their shops (e.g., focusing on weapons, food, or potions), strategically catering to customer preferences and market demands.
 *   **Economy & Itemization:** The game features a gold-based economy. Players can buy, sell, and equip various items. Characters have three attunement slots for magical items that provide persistent effects, alongside a system for consumable items.
 *   **Event System:** Dynamic random scenarios, both positive and negative, will occur. Some events may interrupt player actions or rests. These are resolved through skill checks (comparing a roll against a Difficulty Class, applying modifiers), with opportunities to use items for rerolls. Successful event resolution provides XP and contributes to the evolving story.
 *   **Rest Mechanics:** Players can take short rests to spend Hit Dice and recover health. Long rests fully restore HP and Hit Dice, and remove levels of exhaustion, but require adequate food and drink. Long rests can be interrupted by security threats (like theft or arson) or significant town-wide events.
 *   **Time System:** The game operates on a 24-hour in-game day. Players can perform one significant action per hour, with 8 hours typically allocated for sleep as part of a long rest.
 *   **World Interaction:** The game world consists of randomly generated towns, each with unique properties such as specific nearby resources, unique NPC crafters, and distinct local events. These properties influence local market demands, affecting item pricing through percentage modifiers. Players can also dedicate hourly actions to conduct active market research.
 
-Social interaction is encouraged through features like moderated chat, emotes, direct player-to-player trading, and planned co-operative activities such as dungeons and special events. Players can also use 'Message' or 'Sending'-style spells to communicate with friends.
+Social interaction is encouraged through features like moderated chat, emotes, direct player-to-player trading, and planned co-operative activities such as dungeons and special events. Players can also use 'Message' or 'Sending'-style spells to communicate with friends. The initial player experience involves logging into their account, then selecting an existing character or creating a new one if a slot is available.
 
-The technical foundation consists of a C# backend utilizing ASP.NET Core Web API, with an HTML/CSS/JavaScript frontend. Player save states will be managed using JSON.
+The technical foundation consists of a C# backend utilizing ASP.NET Core Web API, with an HTML/CSS/JavaScript frontend. User accounts and their associated character data (player save states) are managed persistently using JSON files on the server.
 
 Looking towards the future, potential expansions include a 'Dungeon Crawl' mode for adventure and resource gathering, a 'Market Overhaul' tab for deeper economic insights, advanced multiplayer interactions, and eventual integration with Unity for enhanced visuals and cross-platform play.
 

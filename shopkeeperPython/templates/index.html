@@ -19,9 +19,317 @@
             padding: 5px;
             margin-top: 2px;
         }
+        /* Styles for character creation */
+        .character-creation-container {
+            width: 50%;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .character-creation-container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .character-creation-container div {
+            margin-bottom: 10px;
+        }
+        .character-creation-container label {
+            display: inline-block;
+            width: 150px;
+        }
+        .character-creation-container input[type="text"],
+        .character-creation-container input[type="number"] { /* Added number for consistency if used later */
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: calc(100% - 170px); /* Adjust based on label width and padding */
+        }
+        .character-creation-container button, .login-container button { /* Apply to login button too */
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .character-creation-container button:hover, .login-container button:hover { /* Apply to login button too */
+            background-color: #0056b3;
+        }
+        .character-creation-container button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        /* Styles for login container */
+        .login-container {
+            width: 300px;
+            margin: 50px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+        .login-container h2 {
+            margin-bottom: 20px;
+        }
+        .login-container input[type="text"],
+        .login-container input[type="password"] {
+            width: calc(100% - 22px); /* Full width minus padding and border */
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .login-container p {
+            margin-top: 15px;
+        }
+
+        /* Styles for character selection */
+        .character-selection-container {
+            width: 50%;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            text-align: center; /* Center h2 and p */
+        }
+        .character-selection-container h2 {
+            margin-bottom: 20px;
+        }
+        .character-selection-container ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .character-selection-container li {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .character-selection-container li a {
+            text-decoration: none;
+            padding: 8px 15px;
+            background-color: #28a745; /* Green for select */
+            color: white;
+            border-radius: 4px;
+        }
+        .character-selection-container li a:hover {
+            background-color: #218838;
+        }
+        .character-selection-container .create-new-link {
+            display: inline-block; /* To allow margin auto if needed, or just text-align center on parent */
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: #007bff; /* Blue for create new */
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .character-selection-container .create-new-link:hover {
+            background-color: #0056b3;
+        }
+
+
+        .character-creation-container #stats_container div {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+        .character-creation-container #stats_container span {
+            flex-grow: 1;
+        }
     </style>
 </head>
 <body>
+    {% if not user_logged_in %}
+    <div class="login-container">
+        <h2>Login</h2>
+        <form action="{{ url_for('login_route') }}" method="post">
+            <div>
+                <input type="text" name="username" placeholder="Username" required>
+            </div>
+            <div>
+                <input type="password" name="password" placeholder="Password" required>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+        <p>Don't have an account? <a href="{{ url_for('register_page') }}">Register here</a></p>
+        {# Display ALL flash messages #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <p class="flash-{{ category }}">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    {% elif show_character_selection %}
+    <div class="character-selection-container">
+        <h2>Select Character</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %} {# Show flashes here too #}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <p class="flash-{{ category }}">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <ul>
+            {% for char_info in characters_for_selection %}
+            <li>
+                <span>{{ char_info.name }} (Level {{ char_info.level }})</span>
+                {% if char_info.is_dead %}
+                    <span style="color: red; font-weight: bold;">DECEASED</span>
+                {% else %}
+                    <a href="{{ url_for('select_character_route', slot_index=char_info.slot_index) }}">Select</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {# The logic for showing "Create New Character" link:
+           A user can always attempt to go to the creation screen if they have less than MAX_CHARS_PER_USER *total* slots filled.
+           The app.py's /create_character route will enforce the final check on whether a new character can actually be stored.
+           The display_game_output with action='create_new_char' also checks slot availability before showing the form.
+        #}
+        {% if characters_for_selection | length < MAX_CHARS_PER_USER %}
+            <p><a href="{{ url_for('display_game_output', action='create_new_char') }}" class="create-new-link">Create New Character Slot</a></p>
+        {% elif characters_for_selection | length >= MAX_CHARS_PER_USER %}
+            <p>All character slots ({{ MAX_CHARS_PER_USER }}) are currently filled. A dead character occupies a slot.</p>
+            {# Optionally, if we wanted to allow replacing a dead character (more complex):
+               {% set living_chars = characters_for_selection | selectattr('is_dead', 'false') | list %}
+               {% if living_chars | length < MAX_CHARS_PER_USER and (characters_for_selection | length == MAX_CHARS_PER_USER) %}
+                 <p><a href="{{ url_for('display_game_output', action='create_new_char_replace_dead_prompt_logic_needed_in_app_py') }}" class="create-new-link">Create New Character (Replace Dead)</a></p>
+               {% endif %}
+            #}
+        {% endif %}
+         <p><a href="{{ url_for('logout_route') }}">Logout</a></p>
+    </div>
+
+    {% elif show_character_creation_form %}
+    <div class="character-creation-container">
+        <h2>Create Your Character</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %} {# And here #}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <p class="flash-{{ category }}">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form id="characterCreationForm" action="{{ url_for('create_character_route') }}" method="post">
+            <div>
+                <label for="character_name">Character Name:</label>
+                <input type="text" id="character_name" name="character_name" required>
+            </div>
+
+            <h3>Character Stats:</h3>
+            <p>Roll for your initial stats. You can reroll <em>one</em> stat <em>once</em>.</p>
+            <div id="stats_container">
+                <div>
+                    <span>STR: <span id="stat_str_value">--</span></span>
+                    <button type="button" class="reroll-stat-button" data-stat="STR">Reroll STR</button>
+                </div>
+                <div>
+                    <span>DEX: <span id="stat_dex_value">--</span></span>
+                    <button type="button" class="reroll-stat-button" data-stat="DEX">Reroll DEX</button>
+                </div>
+                <div>
+                    <span>CON: <span id="stat_con_value">--</span></span>
+                    <button type="button" class="reroll-stat-button" data-stat="CON">Reroll CON</button>
+                </div>
+                <div>
+                    <span>INT: <span id="stat_int_value">--</span></span>
+                    <button type="button" class="reroll-stat-button" data-stat="INT">Reroll INT</button>
+                </div>
+                <div>
+                    <span>WIS: <span id="stat_wis_value">--</span></span>
+                    <button type="button" class="reroll-stat-button" data-stat="WIS">Reroll WIS</button>
+                </div>
+                <div>
+                    <span>CHA: <span id="stat_cha_value">--</span></span>
+                    <button type="button" class="reroll-stat-button" data-stat="CHA">Reroll CHA</button>
+                </div>
+            </div>
+            <input type="hidden" id="rerolled_stat_name" name="rerolled_stat_name" value="">
+            <input type="hidden" id="rerolled_stat_value" name="rerolled_stat_value" value="">
+
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button type="submit" id="createCharacterButton">Create Character</button>
+            </div>
+        </form>
+    </div>
+    <script>
+    // Character Creation Script (relevant only if this block is rendered)
+    // This script should ideally be loaded conditionally or be specific to this section
+    // For simplicity, keeping it here, but note it might run even if form not visible without further checks
+    if (document.getElementById('characterCreationForm')) {
+        let rerollUsed = false;
+        const rerollButtons = document.querySelectorAll('.reroll-stat-button');
+        const rerolledStatNameInput = document.getElementById('rerolled_stat_name');
+        const rerolledStatValueInput = document.getElementById('rerolled_stat_value');
+        // const createCharacterButton = document.getElementById('createCharacterButton'); // Already declared by form
+
+        function rollStat() {
+            return Math.floor(Math.random() * 6) + 1 +
+                   Math.floor(Math.random() * 6) + 1 +
+                   Math.floor(Math.random() * 6) + 1;
+        }
+
+        const stats = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
+        let currentStats = {};
+
+        stats.forEach(stat => {
+            const rolledValue = rollStat();
+            currentStats[stat] = rolledValue;
+            const statValueElement = document.getElementById(`stat_${stat.toLowerCase()}_value`);
+            if (statValueElement) {
+                statValueElement.textContent = rolledValue;
+            }
+        });
+
+        rerollButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                if (!rerollUsed) {
+                    const statName = this.dataset.stat;
+                    const newValue = rollStat();
+                    const statValueElement = document.getElementById(`stat_${statName.toLowerCase()}_value`);
+                    if (statValueElement) {
+                        statValueElement.textContent = newValue;
+                    }
+                    currentStats[statName] = newValue;
+                    if(rerolledStatNameInput) rerolledStatNameInput.value = statName;
+                    if(rerolledStatValueInput) rerolledStatValueInput.value = newValue;
+                    rerollUsed = true;
+                    rerollButtons.forEach(btn => btn.disabled = true);
+                    this.disabled = true;
+                }
+            });
+        });
+
+        const characterCreationForm = document.getElementById('characterCreationForm');
+        characterCreationForm.addEventListener('submit', function() {
+            for (const stat in currentStats) {
+                let input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = `stat_${stat.toLowerCase()}`;
+                input.value = currentStats[stat];
+                this.appendChild(input);
+            }
+        });
+    }
+    </script>
+
+    {% else %}
+    {# Main Game Interface #}
     <h1>Shopkeeper Adventure</h1>
 
     <div class="container">
@@ -85,7 +393,7 @@
 
         <div class="action-box">
             <h2>Perform Action</h2>
-            <form id="actionForm" action="/action" method="post">
+            <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
                 <div>
                     <label for="action_name_select">Action:</label>
                     <select id="action_name_select" name="action_name">
@@ -106,10 +414,8 @@
                     </select>
                 </div>
 
-                <!-- Hidden input to store the JSON string for action_details -->
                 <input type="hidden" id="action_details" name="action_details" value="{}">
 
-                <!-- Dynamic details sections -->
                 <div id="div_craft_details" class="hidden-details details-section">
                     <label for="craft_item_name">Item Name to Craft:</label>
                     <input type="text" id="craft_item_name" name="craft_item_name" placeholder="e.g., Minor Healing Potion">
@@ -141,7 +447,9 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+    // Main game interface script (relevant only if this block is rendered)
+    if (document.getElementById('actionForm')) {
+        document.addEventListener('DOMContentLoaded', function() { // Ensure this runs after DOM is loaded
             const actionSelect = document.getElementById('action_name_select');
             const hiddenDetailsInput = document.getElementById('action_details');
 
@@ -167,7 +475,7 @@
             ];
 
             function hideAllDetailDivs() {
-                allDetailDivs.forEach(div => div.style.display = 'none');
+                allDetailDivs.forEach(div => { if(div) div.style.display = 'none'; });
             }
 
             function compileAndSetActionDetails() {
@@ -176,65 +484,64 @@
 
                 switch (selectedAction) {
                     case 'craft':
-                        if (craftItemNameInput.value) {
+                        if (craftItemNameInput && craftItemNameInput.value) {
                             details.item_name = craftItemNameInput.value;
                         }
                         break;
                     case 'buy_from_own_shop':
-                        if (buyItemNameInput.value) {
+                        if (buyItemNameInput && buyItemNameInput.value) {
                             details.item_name = buyItemNameInput.value;
                         }
-                        if (buyQuantityInput.value) {
+                        if (buyQuantityInput && buyQuantityInput.value) {
                             details.quantity = parseInt(buyQuantityInput.value, 10);
                         }
                         break;
                     case 'sell_to_own_shop':
-                        if (sellItemNameInput.value) {
+                        if (sellItemNameInput && sellItemNameInput.value) {
                             details.item_name = sellItemNameInput.value;
                         }
                         break;
                     case 'travel_to_town':
-                        if (travelTownNameInput.value) {
+                        if (travelTownNameInput && travelTownNameInput.value) {
                             details.town_name = travelTownNameInput.value;
                         }
                         break;
-                    // Actions that don't require details will result in empty {}
                 }
-                hiddenDetailsInput.value = JSON.stringify(details);
+                if(hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify(details);
             }
 
-            actionSelect.addEventListener('change', function() {
-                hideAllDetailDivs();
-                const selectedAction = this.value;
+            if(actionSelect) {
+                actionSelect.addEventListener('change', function() {
+                    hideAllDetailDivs();
+                    const selectedAction = this.value;
 
-                switch (selectedAction) {
-                    case 'craft':
-                        craftDetailsDiv.style.display = 'block';
-                        break;
-                    case 'buy_from_own_shop':
-                        buyDetailsDiv.style.display = 'block';
-                        break;
-                    case 'sell_to_own_shop':
-                        sellDetailsDiv.style.display = 'block';
-                        break;
-                    case 'travel_to_town':
-                        travelDetailsDiv.style.display = 'block';
-                        break;
-                }
-                compileAndSetActionDetails(); // Update details when action changes
-            });
+                    switch (selectedAction) {
+                        case 'craft':
+                            if(craftDetailsDiv) craftDetailsDiv.style.display = 'block';
+                            break;
+                        case 'buy_from_own_shop':
+                            if(buyDetailsDiv) buyDetailsDiv.style.display = 'block';
+                            break;
+                        case 'sell_to_own_shop':
+                            if(sellDetailsDiv) sellDetailsDiv.style.display = 'block';
+                            break;
+                        case 'travel_to_town':
+                            if(travelDetailsDiv) travelDetailsDiv.style.display = 'block';
+                            break;
+                    }
+                    compileAndSetActionDetails();
+                });
 
-            // Add event listeners to detail inputs to update JSON in real-time
-            allDetailInputs.forEach(input => {
-                if(input) { //Check if input element exists
-                    input.addEventListener('input', compileAndSetActionDetails);
-                }
-            });
-
-            // Initial setup on page load
-            actionSelect.dispatchEvent(new Event('change'));
+                allDetailInputs.forEach(input => {
+                    if (input) {
+                        input.addEventListener('input', compileAndSetActionDetails);
+                    }
+                });
+                actionSelect.dispatchEvent(new Event('change')); // Initial setup
+            }
         });
+    }
     </script>
-
+    {% endif %}
 </body>
 </html>
