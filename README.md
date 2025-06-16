@@ -2,6 +2,15 @@
 
 This project is a Python-based implementation of a whimsical, high-fantasy, turn-based, multiplayer shopkeeper RPG.
 
+## Key Features
+
+*   **User Accounts:** Register and log in with a unique username and password.
+*   **Character Creation:** Create characters with rolled stats and one re-roll opportunity.
+*   **Multiple Character Slots:** Manage up to two distinct characters per account.
+*   **Persistent Data:** User accounts and character progress are saved in JSON files.
+*   **Perma-death:** Characters can die permanently (e.g., through exhaustion), occupying one of their slots.
+*   **Web-Based UI:** Interact with the game through a Flask-powered web interface.
+
 ## Running the Game
 
 ### Command-Line Interface (CLI)
@@ -16,3 +25,4 @@ To run the web interface:
 2. Install dependencies: `pip install -r requirements.txt`
 3. Run the game: `python app.py` or `flask run`
 4. Access the web interface at `http://localhost:5001`.
+5. On your first visit, you will need to register a user account and then create a character through the web UI to start playing.
