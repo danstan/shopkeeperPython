@@ -71,6 +71,7 @@ else:
         # picture = google_user_info.get("picture") # Optional, not used currently
 
         # 1. Check if user exists by google_id
+        print(f"DEBUG_GOOGLE_LOGIN: Before calling find_user_by_google_id. Full users dict: {users}")
         username = find_user_by_google_id(google_id)
 
         if username: # Existing Google-linked user
@@ -144,7 +145,11 @@ graveyard = {}
 
 # --- Helper Functions for User Lookup ---
 def find_user_by_google_id(google_id_to_find):
+    print(f"DEBUG_FIND_USER: Entered function. Full users dict: {users}")
     for username, user_data in users.items():
+        print(f"DEBUG_FIND_USER: Iterating. username='{username}', type(user_data)='{type(user_data)}'")
+        if not isinstance(user_data, dict):
+            print(f"DEBUG_FIND_USER: CRITICAL! user_data for '{username}' is {user_data}")
         if user_data.get('google_id') == google_id_to_find:
             return username
     return None
