@@ -194,6 +194,34 @@
         .character-creation-container #stats_container span {
             flex-grow: 1;
         }
+
+        /* Action Result Popup Styles */
+        #action-result-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none; /* Hidden by default */
+        }
+        #action-result-popup #close-popup-button {
+            display: block;
+            margin-top: 15px;
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right; /* Or use flexbox on a parent for better alignment */
+        }
+        #action-result-popup #close-popup-button:hover {
+            background-color: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -975,8 +1003,35 @@
                 }
             });
         }
+
+        // Action Result Popup Handling
+        const popupActionResult = {{ popup_action_result | tojson | safe }};
+        const actionResultPopup = document.getElementById('action-result-popup');
+        const actionResultMessage = document.getElementById('action-result-message');
+        const closePopupButton = document.getElementById('close-popup-button');
+
+        if (popupActionResult && popupActionResult.trim() !== "") {
+            if (actionResultMessage) {
+                // Replace newline characters with <br> tags for HTML display
+                actionResultMessage.innerHTML = popupActionResult.replace(/\n/g, '<br>');
+            }
+            if (actionResultPopup) {
+                actionResultPopup.style.display = 'block';
+            }
+        }
+
+        if (closePopupButton && actionResultPopup) {
+            closePopupButton.addEventListener('click', function() {
+                actionResultPopup.style.display = 'none';
+            });
+        }
     });
     </script>
     {% endif %}
+
+    <div id="action-result-popup" style="display: none;">
+        <div id="action-result-message"></div>
+        <button id="close-popup-button">Close</button>
+    </div>
 </body>
 </html>
