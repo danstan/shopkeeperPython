@@ -63,13 +63,33 @@ The game can be run by executing the command `python main.py` from the root dire
 
 To run the web interface:
 
-1. Navigate to the `shopkeeperPython` directory.
-2. Install dependencies: `pip install -r requirements.txt`
+1.  **Navigate to the Project Root Directory:**
+    Open your terminal and navigate to the root directory of this project (the one containing *this* README.md file).
 
-   **Note on Updates:** If you pull new changes from the repository, remember to reinstall dependencies as new ones might have been added:
-   ```bash
-   pip install -r shopkeeperPython/requirements.txt
-   ```
-3. Run the game: `python app.py` or `flask run`
-4. Access the web interface at `http://localhost:5001`.
-5. On your first visit, you will need to register a user account and then create a character through the web UI to start playing.
+2.  **Install Dependencies (from project root):**
+    If you haven't already, install the required Python packages. It's recommended to use a virtual environment.
+    ```bash
+    pip install -r shopkeeperPython/requirements.txt
+    ```
+    **Note on Updates:** If you pull new changes, remember to reinstall dependencies as new ones might have been added.
+
+3.  **Run the Game (Recommended Method):**
+    From the project root directory, run the application as a module:
+    ```bash
+    python -m shopkeeperPython.app
+    ```
+
+4.  **Alternative Method (Directly running app.py):**
+    Alternatively, you can navigate into the application's directory and run `app.py` directly (this works due to relative imports within `app.py`):
+    ```bash
+    cd shopkeeperPython
+    python app.py
+    cd ..
+    ```
+    (Then return to the root if you were there)
+
+5.  **Access the Web Interface:**
+    Open your web browser and navigate to `http://localhost:5001` (or the address shown in your terminal).
+
+6.  **First Use:**
+    On your first visit, you will need to register a user account and then create a character through the web UI to start playing.
