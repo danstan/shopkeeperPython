@@ -4,7 +4,7 @@ body {
     color: #333;
     line-height: 1.6;
     margin: 0;
-    padding: 20px;
+    padding: 0; /* Changed from 20px for full viewport */
 }
 
 h1, h2, h3, h4 { /* Added h3, h4 for new detail sections */
@@ -55,31 +55,38 @@ h1 {
     gap: 20px;
 }
 
-.log-box {
+.log-box { /* This is the original .log-box, might be different from #actions-content > .log-box */
      width: 100%;
+    /* margin-bottom: 10px; */
 }
 
-.action-box {
+.action-box { /* This is the original .action-box, might be different from #action-controls-wrapper */
     width: 100%;
     display: flex;
     flex-wrap: wrap;
     gap: 20px;
 }
 
-#game-output {
+/* Styling for game-output when it's inside #actions-content .log-box */
+#actions-content > .log-box #game-output {
     white-space: pre-wrap;
     border: 1px solid #ccc;
-    padding: 10px;
-    min-height: 250px;
-    max-height: 400px;
+    padding: 5px;
     overflow-y: auto;
     background-color: #f9f9f9;
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.9em;
     color: #2c3e50;
+    flex-grow: 1;
+    height: auto; /* Let flex-grow manage height */
+    min-height: 50px;
+    /* Precise height adjustment based on H2's actual rendered height: */
+    /* Assuming H2 and its margins take up ~25px: */
+    height: calc(100% - 25px);
 }
 
-/* General form styling - applies to new detail inputs too */
+
+/* General form styling */
 form div {
     margin-bottom: 10px;
 }
@@ -90,17 +97,16 @@ label {
     font-weight: bold;
 }
 
-input[type="text"], input[type="number"] { /* Combined for general text/number inputs */
-    width: calc(100% - 22px); /* Full width minus padding/border */
+input[type="text"], input[type="number"] {
+    width: calc(100% - 22px);
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
     box-sizing: border-box;
-    margin-bottom: 10px; /* Space below inputs */
+    margin-bottom: 10px;
 }
 
-
-input[type="submit"] { /* Old main submit, might not be used */
+input[type="submit"] {
     background-color: #5cb85c;
     color: white;
     padding: 10px 15px;
@@ -130,13 +136,13 @@ hr {
     margin: 30px 0;
 }
 
-/* Styles for New UI Elements */
+/* Styles for original .action-box-section elements (before moving into action-controls-wrapper) */
 .action-box-section {
     flex: 1;
     min-width: 250px;
 }
 
-#world-map-container h2, #current-location-container h2, #action-details-container h3 { /* Added #action-details-container h3 */
+#world-map-container h2, #current-location-container h2, #action-details-container h3 {
     margin-top: 0;
     border-bottom: 1px solid #eee;
     padding-bottom: 10px;
@@ -209,23 +215,22 @@ input[type="hidden"] {
     display: none;
 }
 
-/* Styles for Action Detail Sections */
 #action-details-container {
-    border-top: 2px dashed #ccc; /* Separator for the details container */
+    border-top: 2px dashed #ccc;
     padding-top: 15px;
     margin-top: 20px;
 }
 
 .hidden-details {
-    display: none; /* Ensures these are hidden by default */
+    display: none;
 }
 
 .details-section {
-    background-color: #fdfdfd; /* Slightly different background for detail sections */
+    background-color: #fdfdfd;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
     padding: 15px;
-    margin-top: 10px; /* Space between different detail forms if multiple were somehow shown */
+    margin-top: 10px;
 }
 
 .details-section h4 {
@@ -236,29 +241,400 @@ input[type="hidden"] {
 }
 
 .details-section label {
-    margin-bottom: 3px; /* Slightly less margin for labels in detail sections */
+    margin-bottom: 3px;
     font-size: 0.9em;
 }
 
-/* Inputs within .details-section are already covered by general input[type="text"], input[type="number"] styles */
-/* We can add more specific styling if needed */
 .details-section input[type="text"],
 .details-section input[type="number"] {
-    margin-bottom: 15px; /* Ensure space before the submit button */
+    margin-bottom: 15px;
 }
 
 .submit-details-button {
-    background-color: #17a2b8; /* Info blue/teal */
+    background-color: #17a2b8;
     color: white;
     padding: 10px 15px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 1em;
-    display: block; /* Make it a block to take its own line or control width */
-    margin-top: 10px; /* Space above the button */
+    display: block;
+    margin-top: 10px;
 }
 
 .submit-details-button:hover {
-    background-color: #138496; /* Darker shade of info blue/teal */
+    background-color: #138496;
+}
+
+/* New UI Structure Styles */
+.game-container {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100vw;
+    height: 100vh;
+    border: none;
+    position: relative;
+    box-sizing: border-box;
+}
+
+#map-container {
+    flex-grow: 1;
+    order: 2;
+    border: 1px solid #666;
+    min-height: 60%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    box-sizing: border-box;
+}
+
+#map-container svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+#left-tabs-container {
+    order: 1;
+    width: 15%;
+    height: calc(100vh - 20vh); /* Adjusted to use vh for parent height */
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+#stats-tab, #info-tab, #inventory-tab, #actions-tab { /* Combined common tab styles */
+    background-color: #e0e0e0;
+    border: 1px solid #999;
+    padding: 0; /* Padding handled by title-bar and content */
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#stats-tab, #info-tab { /* Specific to left tabs */
+    width: 100%;
+    flex: 1;
+}
+
+#info-tab {
+    border-top: 1px solid #888;
+}
+
+#inventory-tab { /* Specific to right tab */
+    width: 15%;
+    order: 3;
+    height: calc(100vh - 20vh); /* Adjusted to use vh for parent height */
+}
+
+#actions-tab { /* Specific to bottom tab */
+    width: 100%;
+    height: 20vh; /* Adjusted to vh */
+    order: 4;
+    background-color: #c0c0c0;
+}
+
+.actions-tab-active .tab-title-bar {
+    background-color: #a8d5e2;
+    font-weight: bold;
+}
+
+#top-right-menu-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 80px;
+    height: 30px;
+    background-color: #f0f0f0;
+    border: 1px solid #aaa;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+#settings-popup {
+    display: none;
+    position: absolute;
+    top: 45px;
+    right: 10px;
+    width: 200px;
+    background-color: #fff;
+    border: 1px solid #aaa;
+    padding: 0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 100;
+}
+
+#settings-popup ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+#settings-popup li {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+#settings-popup li:last-child {
+    border-bottom: none;
+}
+
+#settings-popup li:hover {
+    background-color: #f5f5f5;
+}
+
+#settings-popup a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+#map-container svg text {
+    font-weight: bold;
+}
+
+/* Tab Titles and Content Area Styling */
+.tab-title-bar {
+    padding: 6px 8px;
+    background-color: #d0d0d0;
+    border-bottom: 1px solid #999;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.8em;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    cursor: default;
+}
+
+#actions-tab .tab-title-bar { /* Actions tab title is clickable */
+    cursor: pointer;
+}
+
+.tab-content {
+    display: none;
+    padding: 5px; /* Reduced padding */
+    border: 1px dashed #777;
+    margin-top: 0;
+    background-color: #f9f9f9;
+    height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
+    flex-grow: 1;
+}
+
+/* Specifics for #actions-content (which also has .tab-content class) */
+#actions-content {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    padding: 5px;
+    /* height: 100%; /* This is now handled by flex-grow on .tab-content */
+}
+
+#actions-content > .log-box {
+    flex: 1 1 40%;
+    margin-bottom: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+#action-controls-wrapper {
+    flex: 1 1 58%;
+    overflow-y: auto;
+    height: 100%;
+    padding: 5px;
+    border: 1px solid #b0b0b0;
+    background-color: #fdfdfd;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: #999 #e0e0e0;
+}
+
+#action-controls-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+
+#action-controls-wrapper::-webkit-scrollbar-track {
+    background: #e0e0e0;
+    border-radius: 4px;
+}
+
+#action-controls-wrapper::-webkit-scrollbar-thumb {
+    background-color: #999;
+    border-radius: 4px;
+    border: 2px solid #e0e0e0;
+}
+
+#action-controls-wrapper::-webkit-scrollbar-thumb:hover {
+    background-color: #777;
+}
+
+/* General 'shrinking' styles for content within action-controls-wrapper */
+#action-controls-wrapper .action-box-section {
+    padding: 6px;
+    margin-bottom: 6px;
+    border-radius: 3px;
+    background-color: #f9f9f9;
+}
+
+#action-controls-wrapper h2 {
+    font-size: 1em;
+    margin-top: 0;
+    margin-bottom: 5px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+#action-controls-wrapper h3 {
+    font-size: 0.9em;
+    margin-top: 5px;
+    margin-bottom: 4px;
+}
+
+#action-controls-wrapper h4 {
+    font-size: 0.85em;
+    margin-top: 0;
+    margin-bottom: 4px;
+    padding-bottom: 2px;
+}
+
+#action-controls-wrapper p,
+#action-controls-wrapper label,
+#action-controls-wrapper li {
+    font-size: 0.75em;
+    margin-bottom: 3px;
+}
+#action-controls-wrapper ul {
+    margin-top: 2px;
+    margin-bottom: 5px;
+}
+#action-controls-wrapper ul li {
+    padding: 1px 0;
+}
+
+#action-controls-wrapper button,
+#action-controls-wrapper input[type="text"],
+#action-controls-wrapper input[type="number"],
+#action-controls-wrapper input[type="submit"],
+#action-controls-wrapper .submit-details-button,
+#action-controls-wrapper .map-destination-button,
+#action-controls-wrapper .sub-location-button,
+#action-controls-wrapper .action-button,
+#action-controls-wrapper .general-action-button {
+    padding: 3px 6px;
+    font-size: 0.75em;
+    margin-bottom: 3px;
+    margin-top: 2px;
+}
+
+#action-controls-wrapper input[type="text"],
+#action-controls-wrapper input[type="number"] {
+    width: calc(100% - 14px);
+}
+
+#action-controls-wrapper .details-section {
+    padding: 6px;
+    margin-top: 4px;
+    border-radius: 3px;
+}
+
+#action-controls-wrapper .details-section label {
+    margin-bottom: 1px;
+}
+
+#action-controls-wrapper .details-section input[type="text"],
+#action-controls-wrapper .details-section input[type="number"] {
+    margin-bottom: 5px;
+}
+
+/* Headings within tab contents */
+#stats-content h2, #info-content h2, #inventory-content h2:first-child,
+#actions-content .log-box h2 { /* Added Game Log H2 here */
+    font-size: 1em; /* Reduced from 1.1em */
+    margin-top: 0;
+    margin-bottom: 6px; /* Consistent reduced margin */
+    color: #333;
+    text-align: left;
+    padding: 2px 0; /* Minimal padding for h2 */
+}
+/* Specific for inventory h2s that are not the first child */
+#inventory-content h2 {
+    font-size: 1em;
+    margin-top: 8px; /* A bit more space for subsequent inventory headings */
+    margin-bottom: 6px;
+    color: #333;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 3px;
+}
+
+
+#stats-content p, #info-content p {
+    font-size: 0.9em;
+    margin: 4px 0;
+    color: #444;
+    text-align: left;
+    word-wrap: break-word;
+}
+
+#stats-content ul {
+    padding-left: 5px;
+    margin-bottom: 0;
+}
+
+#stats-content li {
+    font-size: 0.85em;
+    padding: 2px 0;
+    color: #555;
+    text-align: left;
+    word-wrap: break-word;
+}
+
+#inventory-content ul {
+    padding-left: 5px;
+    margin-bottom: 10px;
+}
+
+#inventory-content li {
+    font-size: 0.85em;
+    padding: 2px 0;
+    color: #555;
+    text-align: left;
+    word-wrap: break-word;
+}
+
+#inventory-content p {
+    font-size: 0.85em;
+    font-style: italic;
+    color: #777;
+    text-align: left;
+    margin-bottom: 10px;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+body {
+    background-color: #f4f4f4;
+    padding: 0;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+.container, .log-action-container {
+    /* These are part of the old layout, commented out in index.html */
 }

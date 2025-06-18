@@ -401,32 +401,42 @@
 
     {% else %}
     {# Main Game Interface #}
-    <h1>Shopkeeper Adventure</h1>
-
-    <div class="container">
-        <div class="status-container">
-            <div class="status-box">
-                <h2>Player Status</h2>
-                <p><strong>Name:</strong> {{ player_name }}</p>
-                <p><strong>HP:</strong> {{ player_hp }} / {{ player_max_hp }}</p>
-                <p><strong>Gold:</strong> {{ player_gold }} G</p>
-                <p><strong>Stats:</strong></p>
-                <ul>
-                    {% for stat, value in player_stats.items() %}
-                    <li><strong>{{ stat }}:</strong> {{ value }}</li>
-                    {% endfor %}
-                </ul>
+    <div class="game-container">
+        <div id="top-right-menu-button">Menu</div>
+        <div id="left-tabs-container">
+            <div id="stats-tab">
+                <div class="tab-title-bar">Stats</div>
+                <div id="stats-content" class="tab-content">
+                    <h2>Player Status</h2>
+                    <p><strong>Name:</strong> {{ player_name }}</p>
+                    <p><strong>HP:</strong> {{ player_hp }} / {{ player_max_hp }}</p>
+                    <p><strong>Gold:</strong> {{ player_gold }} G</p>
+                    <p><strong>Stats:</strong></p>
+                    <ul>
+                        {% for stat, value in player_stats.items() %}
+                        <li><strong>{{ stat }}:</strong> {{ value }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
-
-            <div class="status-box">
-                <h2>Game Info</h2>
-                <p><strong>Current Time:</strong> {{ current_time }}</p>
-                <p><strong>Current Town:</strong> {{ current_town_name }}</p>
+            <div id="info-tab">
+                <div class="tab-title-bar">Info</div>
+                <div id="info-content" class="tab-content">
+                    <h2>Game Info</h2>
+                    <p><strong>Current Time:</strong> {{ current_time }}</p>
+                    <p><strong>Current Town:</strong> {{ current_town_name }}</p>
+                </div>
             </div>
         </div>
-
-        <div class="inventory-container">
-            <div class="inventory-box">
+        <div id="map-container">
+            <svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+              <rect width="100%" height="100%" fill="#cccccc" />
+              <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="24px" fill="#333333">Overworld Map</text>
+            </svg>
+        </div>
+        <div id="inventory-tab">
+            <div class="tab-title-bar">Inventory</div>
+            <div id="inventory-content" class="tab-content">
                 <h2>Shop Inventory</h2>
                 {% if shop_inventory and shop_inventory[0] != "Empty" %}
                 <ul>
@@ -437,9 +447,7 @@
                 {% else %}
                 <p>Empty</p>
                 {% endif %}
-            </div>
 
-            <div class="inventory-box">
                 <h2>Player Inventory</h2>
                 {% if player_inventory and player_inventory[0] != "Empty" %}
                 <ul>
@@ -452,130 +460,157 @@
                 {% endif %}
             </div>
         </div>
-
-        <!-- Available Crafting Recipes Section -->
-        <div class="crafting-recipes-container action-box-section"> <!-- Reusing action-box-section for some styling -->
-            <h2>Available Crafting Recipes</h2>
-            {% if available_recipes and available_recipes | length > 0 %}
-                <ul id="crafting-recipes-list">
-                    {% for recipe_name, details in available_recipes.items() %}
-                    <li>
-                        <strong>{{ recipe_name }}</strong>
-                        <p><em>Produces: {{ details.quantity_produced }}</em></p>
-                        <p>Ingredients:
-                            {% for item, quantity in details.ingredients.items() %}
-                                {{ item }} ({{ quantity }}){% if not loop.last %}, {% endif %}
-                            {% endfor %}
-                        </p>
-                        <button class="craft-recipe-button" data-item-name="{{ recipe_name }}">Craft</button>
-                    </li>
-                    {% endfor %}
-                </ul>
-            {% else %}
-                <p>No crafting recipes available or known.</p>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="log-action-container">
-        <div class="log-box">
-            <h2>Game Log</h2>
-            <div id="game-output" style="white-space: pre-wrap; height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
-                {{ game_output | safe }}
-            </div>
-        </div>
-
-        <div class="action-box"> <!-- This class might be reused or restyled -->
-            <h2>Game Actions</h2> <!-- Changed title -->
-
-            <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
-                <input type="hidden" id="action_name_hidden" name="action_name" value="">
-                <input type="hidden" id="action_details" name="action_details" value="{}">
-                <!-- Submit button might be dynamically added or made visible by JS,
-                     or we can have a generic "Do Selected Action" button if an action is chosen.
-                     For now, let action buttons themselves trigger form submission. -->
-            </form>
-
-            <div id="world-map-container" class="action-box-section"> <!-- New class for styling -->
-                <h2>World Map</h2>
-                <div id="map-destinations">
-                    {% if available_towns %}
-                        <p>Choose a destination to travel to:</p>
-                        <ul>
-                            {% for town_name_key in available_towns %}
-                            <li><button class="map-destination-button" data-town-name="{{ town_name_key }}">{{ town_name_key }}</button></li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p>No destinations available.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div id="current-location-container" class="action-box-section">
-                <h2>Current Location: <span id="current-town-display">{{ current_town_name }}</span></h2>
-                <div id="sub-locations-list">
-                    <!-- Sub-locations of the current town will be populated here by JavaScript -->
-                </div>
-                <div id="current-actions-list">
-                    <!-- Actions for the selected sub-location will be populated here by JavaScript -->
-                </div>
-            </div>
-
-            <!-- Container for Action Detail Forms -->
-            <div id="action-details-container" class="action-box-section" style="flex-basis: 100%; display: none;"> <!-- Initially hidden, spans full width if flex items wrap -->
-                <h3>Action Details</h3>
-
-                <div id="div_craft_details" class="hidden-details details-section">
-                    <h4>Craft Item</h4>
-                    <label for="craft_item_name">Item Name to Craft:</label>
-                    <input type="text" id="craft_item_name" name="craft_item_name_detail_input" placeholder="e.g., Minor Healing Potion">
-                    <button type="button" class="submit-details-button" data-action="craft">Craft It!</button>
-                </div>
-
-                <div id="div_buy_details" class="hidden-details details-section">
-                    <h4>Buy from Your Shop</h4>
-                    <label for="buy_item_name">Item Name to Buy:</label>
-                    <input type="text" id="buy_item_name" name="buy_item_name_detail_input" placeholder="e.g., Simple Dagger">
-                    <label for="buy_quantity">Quantity:</label>
-                    <input type="number" id="buy_quantity" name="buy_quantity_detail_input" value="1" min="1">
-                    <button type="button" class="submit-details-button" data-action="buy_from_own_shop">Buy Item(s)</button>
-                </div>
-
-                <div id="div_sell_details" class="hidden-details details-section">
-                    <h4>Sell to Your Shop</h4>
-                    <label for="sell_item_name">Item Name to Sell:</label>
-                    <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale">
-                    <button type="button" class="submit-details-button" data-action="sell_to_own_shop">Sell Item</button>
-                </div>
-            </div>
-
-            <!-- Buy Herbs from Hemlock Form -->
-            <div class="action-box-section">
-                <h3>Buy Herbs from Hemlock</h3>
-                <form action="{{ url_for('perform_action') }}" method="post">
-                    <input type="hidden" name="action_name" value="buy_from_npc">
-                    <input type="hidden" name="npc_name" value="Old Man Hemlock">
-                    <div class="details-section">
-                        <label for="hemlock_item_name">Name of Herb:</label>
-                        <input type="text" id="hemlock_item_name" name="item_name" placeholder="e.g., Moonpetal" required>
+        <div id="actions-tab">
+            <div class="tab-title-bar">Actions & Log</div>
+            <div id="actions-content" class="tab-content">
+                <div class="log-box">
+                    <h2>Game Log</h2>
+                    <div id="game-output" style="white-space: pre-wrap; height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
+                        {{ game_output | safe }}
                     </div>
-                    <div class="details-section">
-                        <label for="hemlock_quantity">Quantity:</label>
-                        <input type="number" id="hemlock_quantity" name="quantity" value="1" min="1" required>
+                </div>
+                <div id="action-controls-wrapper">
+                    <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
+                        <input type="hidden" id="action_name_hidden" name="action_name" value="">
+                        <input type="hidden" id="action_details" name="action_details" value="{}">
+                        <!-- Submit button might be dynamically added or made visible by JS,
+                             or we can have a generic "Do Selected Action" button if an action is chosen.
+                             For now, let action buttons themselves trigger form submission. -->
+                    </form>
+
+                    <div id="world-map-container" class="action-box-section"> <!-- New class for styling -->
+                        <h2>World Map</h2>
+                        <div id="map-destinations">
+                            {% if available_towns %}
+                                <p>Choose a destination to travel to:</p>
+                                <ul>
+                                    {% for town_name_key in available_towns %}
+                                    <li><button class="map-destination-button" data-town-name="{{ town_name_key }}">{{ town_name_key }}</button></li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p>No destinations available.</p>
+                            {% endif %}
+                        </div>
                     </div>
-                    <button type="submit">Buy Herbs</button>
-                </form>
-            </div>
 
-            <!-- Gather Resources Button -->
-            <div class="action-box-section">
-                <h3>General Actions</h3>
-                <button type="button" id="gatherResourcesButton" class="general-action-button">Gather Resources</button>
-                <!-- Add other general town/area actions here if needed -->
-            </div>
+                    <div id="current-location-container" class="action-box-section">
+                        <h2>Current Location: <span id="current-town-display">{{ current_town_name }}</span></h2>
+                        <div id="sub-locations-list">
+                            <!-- Sub-locations of the current town will be populated here by JavaScript -->
+                        </div>
+                        <div id="current-actions-list">
+                            <!-- Actions for the selected sub-location will be populated here by JavaScript -->
+                        </div>
+                    </div>
 
+                    <!-- Container for Action Detail Forms -->
+                    <div id="action-details-container" class="action-box-section" style="flex-basis: 100%; display: none;"> <!-- Initially hidden, spans full width if flex items wrap -->
+                        <h3>Action Details</h3>
+
+                        <div id="div_craft_details" class="hidden-details details-section">
+                            <h4>Craft Item</h4>
+                            <label for="craft_item_name">Item Name to Craft:</label>
+                            <input type="text" id="craft_item_name" name="craft_item_name_detail_input" placeholder="e.g., Minor Healing Potion">
+                            <button type="button" class="submit-details-button" data-action="craft">Craft It!</button>
+                        </div>
+
+                        <div id="div_buy_details" class="hidden-details details-section">
+                            <h4>Buy from Your Shop</h4>
+                            <label for="buy_item_name">Item Name to Buy:</label>
+                            <input type="text" id="buy_item_name" name="buy_item_name_detail_input" placeholder="e.g., Simple Dagger">
+                            <label for="buy_quantity">Quantity:</label>
+                            <input type="number" id="buy_quantity" name="buy_quantity_detail_input" value="1" min="1">
+                            <button type="button" class="submit-details-button" data-action="buy_from_own_shop">Buy Item(s)</button>
+                        </div>
+
+                        <div id="div_sell_details" class="hidden-details details-section">
+                            <h4>Sell to Your Shop</h4>
+                            <label for="sell_item_name">Item Name to Sell:</label>
+                            <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale">
+                            <button type="button" class="submit-details-button" data-action="sell_to_own_shop">Sell Item</button>
+                        </div>
+                    </div>
+
+                    <!-- Buy Herbs from Hemlock Form -->
+                    <div class="action-box-section">
+                        <h3>Buy Herbs from Hemlock</h3>
+                        <form action="{{ url_for('perform_action') }}" method="post">
+                            <input type="hidden" name="action_name" value="buy_from_npc">
+                            <input type="hidden" name="npc_name" value="Old Man Hemlock">
+                            <div class="details-section">
+                                <label for="hemlock_item_name">Name of Herb:</label>
+                                <input type="text" id="hemlock_item_name" name="item_name" placeholder="e.g., Moonpetal" required>
+                            </div>
+                            <div class="details-section">
+                                <label for="hemlock_quantity">Quantity:</label>
+                                <input type="number" id="hemlock_quantity" name="quantity" value="1" min="1" required>
+                            </div>
+                            <button type="submit">Buy Herbs</button>
+                        </form>
+                    </div>
+
+                    <!-- Gather Resources Button -->
+                    <div class="action-box-section">
+                        <h3>General Actions</h3>
+                        <button type="button" id="gatherResourcesButton" class="general-action-button">Gather Resources</button>
+                        <!-- Add other general town/area actions here if needed -->
+                    </div>
+                </div>
+            </div>
         </div>
+        <div id="settings-popup" style="display: none;">
+            <ul>
+                <li id="settings-option">Settings</li>
+                <li><a href="{{ url_for('logout_route') }}" id="logout-option">Logout</a></li>
+                <li id="save-game-option">Save Game</li>
+            </ul>
+        </div>
+
+        <!--
+        <h1>Shopkeeper Adventure</h1>
+
+        <div class="container">
+            <div class="status-container">
+                <!-- Player Status was here -->
+
+                <!-- Game Info was here -->
+            </div>
+
+            <div class="inventory-container">
+                <!-- Shop Inventory was here -->
+                <!-- Player Inventory was here -->
+            </div>
+
+            <! -- Available Crafting Recipes Section -- >
+            <div class="crafting-recipes-container action-box-section"> <!-- Reusing action-box-section for some styling -- >
+                <h2>Available Crafting Recipes</h2>
+                {% if available_recipes and available_recipes | length > 0 %}
+                    <ul id="crafting-recipes-list">
+                        {% for recipe_name, details in available_recipes.items() %}
+                        <li>
+                            <strong>{{ recipe_name }}</strong>
+                            <p><em>Produces: {{ details.quantity_produced }}</em></p>
+                            <p>Ingredients:
+                                {% for item, quantity in details.ingredients.items() %}
+                                    {{ item }} ({{ quantity }}){% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </p>
+                            <button class="craft-recipe-button" data-item-name="{{ recipe_name }}">Craft</button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>No crafting recipes available or known.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="log-action-container">
+            <!-- log-box was here -->
+            <!-- action-box contents were moved into #action-controls-wrapper -->
+        </div>
+        -->
     </div>
 
     <script>
@@ -586,6 +621,7 @@
     var allTownsData = {{ all_towns_data_json | default('{}') | safe }};
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Existing script for actionForm, map, sub-locations etc.
         if (document.getElementById('actionForm')) {
             const actionForm = document.getElementById('actionForm');
             const hiddenActionNameInput = document.getElementById('action_name_hidden');
@@ -815,6 +851,93 @@
                  // Fallback if current_town_name isn't set or no data for it
                  displaySubLocations([]); // Call with empty array
             }
+        }
+
+        // New UI interaction script
+        const gameContainer = document.querySelector('.game-container');
+        if (gameContainer) {
+            const statsTab = document.getElementById('stats-tab');
+            const statsContent = document.getElementById('stats-content');
+            const inventoryTab = document.getElementById('inventory-tab');
+            const inventoryContent = document.getElementById('inventory-content');
+            const actionsTab = document.getElementById('actions-tab');
+            const actionsContent = document.getElementById('actions-content');
+            const infoTab = document.getElementById('info-tab');
+            const infoContent = document.getElementById('info-content');
+            const topRightMenuButton = document.getElementById('top-right-menu-button');
+            const settingsPopup = document.getElementById('settings-popup');
+            const settingsOption = document.getElementById('settings-option');
+            const saveGameOption = document.getElementById('save-game-option');
+
+            if (statsTab && statsContent) {
+                statsTab.addEventListener('mouseenter', () => {
+                    statsContent.style.display = 'block';
+                });
+                statsTab.addEventListener('mouseleave', () => {
+                    statsContent.style.display = 'none';
+                });
+            }
+
+            if (inventoryTab && inventoryContent) {
+                inventoryTab.addEventListener('mouseenter', () => {
+                    inventoryContent.style.display = 'block';
+                });
+                inventoryTab.addEventListener('mouseleave', () => {
+                    inventoryContent.style.display = 'none';
+                });
+            }
+
+            if (infoTab && infoContent) {
+                infoTab.addEventListener('mouseenter', () => {
+                    infoContent.style.display = 'block';
+                });
+                infoTab.addEventListener('mouseleave', () => {
+                    infoContent.style.display = 'none';
+                });
+            }
+
+            if (actionsTab && actionsContent) {
+                actionsTab.addEventListener('click', () => {
+                    const isHidden = actionsContent.style.display === 'none' || actionsContent.style.display === '';
+                    actionsContent.style.display = isHidden ? 'block' : 'none';
+                    if (isHidden) {
+                        actionsTab.classList.add('actions-tab-active');
+                    } else {
+                        actionsTab.classList.remove('actions-tab-active');
+                    }
+                });
+            }
+
+            if (topRightMenuButton && settingsPopup) {
+                topRightMenuButton.addEventListener('click', () => {
+                    settingsPopup.style.display = settingsPopup.style.display === 'none' || settingsPopup.style.display === '' ? 'block' : 'none';
+                });
+            }
+
+            if (settingsOption) {
+                settingsOption.addEventListener('click', () => {
+                    console.log("Settings clicked");
+                    settingsPopup.style.display = 'none'; // Hide popup after click
+                });
+            }
+
+            if (saveGameOption) {
+                saveGameOption.addEventListener('click', () => {
+                    console.log("Save Game clicked");
+                    settingsPopup.style.display = 'none'; // Hide popup after click
+                });
+            }
+
+            // Optional: Close popup if clicked outside
+            document.addEventListener('click', function(event) {
+                if (settingsPopup && topRightMenuButton) {
+                    const isClickInsideMenuButton = topRightMenuButton.contains(event.target);
+                    const isClickInsidePopup = settingsPopup.contains(event.target);
+                    if (!isClickInsideMenuButton && !isClickInsidePopup && settingsPopup.style.display === 'block') {
+                        settingsPopup.style.display = 'none';
+                    }
+                }
+            });
         }
     });
     </script>
