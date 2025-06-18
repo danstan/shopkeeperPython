@@ -262,3 +262,169 @@ input[type="hidden"] {
 .submit-details-button:hover {
     background-color: #138496; /* Darker shade of info blue/teal */
 }
+
+/* New UI Structure Styles */
+.game-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping for smaller screens if needed, or use grid for more precise control */
+    width: 800px;   /* Fixed width for now */
+    height: 600px;  /* Fixed height for now */
+    border: 2px solid #333; /* Dark border for game-container */
+    margin: 20px auto; /* Center it on the page */
+    position: relative; /* For absolute positioning of children like settings-popup */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+#map-container {
+    flex-grow: 1; /* Takes up available space in the flex container */
+    order: 2; /* Central element */
+    /* background-color: #a0a0a0; /* Removed placeholder background */
+    border: 1px solid #666;
+    min-height: 300px; /* Minimum height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px; /* Optional padding around the SVG */
+    box-sizing: border-box;
+}
+
+#map-container svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Scales SVG down to fit, maintaining aspect ratio */
+}
+
+#stats-tab {
+    width: 150px;
+    order: 1; /* Left side */
+    background-color: #e0e0e0; /* Light grey background */
+    border: 1px solid #999;
+    padding: 10px;
+    box-sizing: border-box;
+    position: relative; /* For positioning tab content */
+}
+
+#inventory-tab {
+    width: 150px;
+    order: 3; /* Right side */
+    background-color: #e0e0e0; /* Light grey background */
+    border: 1px solid #999;
+    padding: 10px;
+    box-sizing: border-box;
+    position: relative; /* For positioning tab content */
+}
+
+#actions-tab {
+    width: 100%; /* Spans full width of game-container */
+    height: 100px;
+    order: 4; /* Bottom */
+    background-color: #c0c0c0; /* Medium grey background */
+    border: 1px solid #888;
+    padding: 10px;
+    box-sizing: border-box;
+    position: relative; /* For positioning tab content */
+}
+
+#top-right-menu-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 80px;
+    height: 30px;
+    background-color: #f0f0f0; /* Light background for button */
+    border: 1px solid #aaa;
+    z-index: 10; /* Ensure it's above other elements if they overlap */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+#settings-popup {
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: 45px; /* Below the menu button */
+    right: 10px;
+    width: 200px;
+    background-color: #fff;
+    border: 1px solid #aaa;
+    padding: 0; /* Remove padding if ul will have it */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 100; /* Above other elements */
+}
+
+#settings-popup ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+#settings-popup li {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+#settings-popup li:last-child {
+    border-bottom: none;
+}
+
+#settings-popup li:hover {
+    background-color: #f5f5f5;
+}
+
+#settings-popup a {
+    text-decoration: none;
+    color: inherit;
+    display: block; /* Make the link fill the li for easier clicking */
+}
+
+
+/* Basic styling for the placeholder text within new divs */
+#map-container svg text { /* More specific styling for text within map SVG if needed */
+    font-weight: bold;
+}
+
+/* Placeholder text styling for other tabs, not map-container anymore */
+#stats-tab, #inventory-tab, #actions-tab, #top-right-menu-button {
+    text-align: center;
+    font-size: 0.9em;
+    color: #333;
+}
+
+.tab-content {
+    display: none; /* Hidden by default */
+    padding: 10px;
+    border: 1px dashed #666;
+    margin-top: 5px;
+    background-color: #f9f9f9;
+    /* Position absolutely within tabs if needed, or just let it flow */
+}
+
+
+/* Ensuring body takes full viewport height if game-container is smaller than viewport and centered */
+html, body {
+    height: 100%;
+    margin: 0; /* Reset default margin on body */
+}
+
+body {
+    display: flex; /* Use flex to center game-container if it's not 100vw/vh */
+    align-items: center; /* Vertically center */
+    justify-content: center; /* Horizontally center */
+    background-color: #f4f4f4; /* Existing background color */
+    padding: 0; /* Reset padding if body is used for centering */
+}
+/* If game-container is set to 100vw/100vh, then body flex centering is not needed.
+   The current fixed size 800x600px will be centered by the body flex properties.
+*/
+
+/* Adjusting some existing styles to not conflict with full page layout if body is flex container */
+/* The main .container and .log-action-container are part of the old layout,
+   which is now commented out in index.html. If they were to be used within the new tabs,
+   their styling might need to be adjusted (e.g., width: 100% might not be appropriate).
+*/
+.container, .log-action-container {
+    /* If these were to be used inside a tab, their width might need to be auto or fit-content */
+    /* For now, this is fine as they are commented out. */
+}
