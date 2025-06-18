@@ -293,8 +293,7 @@ class GameManager:
         current_time_str = self.time.get_time_string()
         town_name_display = self.current_town.name if self.current_town else "Unknown Location"
         # Using f-string for newline for clarity
-        self._print(f"
-[{current_time_str}] {self.character.name} (in {town_name_display}) performs action: {action_name}")
+        self._print(f"[{current_time_str}] {self.character.name} (in {town_name_display}) performs action: {action_name}")
 
         action_xp_reward = 0
         time_advanced_by_action_hours = 0 # Default to 0, action will set if it consumes specific time
