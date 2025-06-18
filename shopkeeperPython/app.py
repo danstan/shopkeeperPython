@@ -2,10 +2,11 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import io
 import json
 import os # Added for environment variables
-from game.game_manager import GameManager
-from game.character import Character
+from shopkeeperPython.game.game_manager import GameManager
+from shopkeeperPython.game.character import Character
 # Assuming Item class is available for from_dict as it's used in Character.from_dict
-from game.item import Item
+from shopkeeperPython.game.item import Item
+from shopkeeperPython.game.game_manager import HEMLOCK_HERBS # Added import
 from flask_dance.contrib.google import make_google_blueprint, google
 from flask_dance.consumer import oauth_authorized, oauth_error # Added for signals
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -639,7 +640,8 @@ def display_game_output():
                            current_town_sub_locations_json=json.dumps(current_town_sub_locations),
                            all_towns_data_json=json.dumps(all_towns_data),
                            available_recipes=available_recipes,
-                           popup_action_result=popup_action_result # Pass to template
+                           popup_action_result=popup_action_result, # Pass to template
+                           hemlock_herbs_json=json.dumps(HEMLOCK_HERBS) # Added Hemlock's herbs
                            )
 
 def parse_action_details(details_str: str) -> dict:
