@@ -32,17 +32,21 @@ This project includes a simple web-based user interface to allow for interactive
 
 ### Running the Web UI
 
-Follow these steps to run the web UI:
+The recommended way to run the web UI is from the project's root directory (the directory *above* this one).
 
-1.  **Navigate to this Directory (`shopkeeperPython`):**
-    Open your terminal or command prompt. Ensure you are in the `shopkeeperPython` directory (the one containing *this* README.md and `app.py`).
-    If you are in the project root, type:
+
+1.  **Navigate to the Project Root Directory:**
+    Open your terminal or command prompt. If you are currently in the `shopkeeperPython` directory (where this README is), navigate up one level:
     ```bash
-    cd shopkeeperPython
-    ```
+    cd ..
 
-2.  **Create and Activate a Virtual Environment (Recommended)**:
-    It's a best practice to use a virtual environment. If you created one in the project root, ensure it's active. If creating one here:
+    ```
+    You should now be in the project root directory (the one that contains the main `README.md` and the `shopkeeperPython` folder).
+
+
+2.  **Create and Activate a Virtual Environment (Recommended, from project root)**:
+    It's a best practice to use a virtual environment from the project root.
+
     ```bash
     # Create a virtual environment (e.g., named .venv)
     python -m venv .venv
@@ -53,26 +57,23 @@ Follow these steps to run the web UI:
     # source .venv/bin/activate
     ```
 
-3.  **Install Dependencies**:
-    With your virtual environment active, install the required Python packages from this directory:
+
+3.  **Install Dependencies (from project root)**:
+    With your virtual environment active, install the required Python packages. The `requirements.txt` file is located within the `shopkeeperPython` directory.
+
     ```bash
-    pip install -r requirements.txt
+    pip install -r shopkeeperPython/requirements.txt
     ```
 
-4.  **Run the Flask Application (Method 1: Directly):**
-    Since `app.py` now uses relative imports, you can run it directly from this directory:
-    ```bash
-    python app.py
-    ```
 
-5.  **Run the Flask Application (Method 2: As a module from parent directory):**
-    The standard Python way for packaged applications is to run them as a module from the parent (project root) directory. To do this:
+4.  **Run the Flask Application (as a module from project root)**:
+    Execute the application as a module:
+
     ```bash
-    cd ..
     python -m shopkeeperPython.app
     ```
-    (Then, if you want to return to this directory: `cd shopkeeperPython`)
 
 
-6.  **Open in Browser**:
+5.  **Open in Browser**:
+
     Open your web browser and navigate to the address shown in your terminal (e.g., `http://127.0.0.1:5001/`).
