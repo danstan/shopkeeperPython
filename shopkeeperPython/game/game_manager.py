@@ -51,14 +51,24 @@ class GameManager:
             properties=["Quiet farming village", "River nearby"],
             nearby_resources=["Fish", "Wheat", "Basic Herbs"],
             unique_npc_crafters=[{"name": "Old Man Hemlock", "specialty": "Herbalism", "services": ["Identifies Herbs"], "quests_available": []}],
-            market_demand_modifiers={"Minor Healing Potion": 1.1, "Bread": 0.9, "Fish": 1.05}
+            market_demand_modifiers={"Minor Healing Potion": 1.1, "Bread": 0.9, "Fish": 1.05},
+            sub_locations=[
+                {"name": "Village Shop", "description": "Your humble shop.", "actions": ["buy_from_own_shop", "sell_to_own_shop", "check_shop_inventory", "craft"]},
+                {"name": "Village Square", "description": "The central gathering point of the village.", "actions": ["explore_town", "talk_to_villager", "research_market"]},
+                {"name": "Old Man Hemlock's Hut", "description": "A small, smoky hut belonging to the local herbalist.", "actions": ["talk_to_hemlock", "buy_herbs_hemlock"]}
+            ]
         )
         town_steel_flow = Town(
             name="Steel Flow City",
             properties=["Major mining hub", "Strong warrior tradition"],
             nearby_resources=["Iron Ore", "Coal", "Stone"],
             unique_npc_crafters=[{"name": "Borin Stonebeard", "specialty": "Blacksmithing", "services": ["Repairs Gear", "Sells Metal Ingots"], "quests_available": ["Clear Mine Pests"]}],
-            market_demand_modifiers={"Simple Dagger": 1.25, "Iron Sword": 1.3, "Minor Healing Potion": 1.15, "Stale Ale": 0.8}
+            market_demand_modifiers={"Simple Dagger": 1.25, "Iron Sword": 1.3, "Minor Healing Potion": 1.15, "Stale Ale": 0.8},
+            sub_locations=[
+                {"name": "City Market", "description": "A bustling marketplace.", "actions": ["explore_town", "research_market", "visit_general_store_sfc"]},
+                {"name": "The Rusty Pickaxe Tavern", "description": "A rowdy place favored by miners.", "actions": ["buy_drink_tavern", "gather_rumors_tavern"]},
+                {"name": "Borin Stonebeard's Smithy", "description": "The workshop of the renowned blacksmith.", "actions": ["talk_to_borin", "repair_gear_borin"]}
+            ]
         )
         self.towns = [town_starting, town_steel_flow]
         self.towns_map = {town.name: town for town in self.towns}
@@ -438,6 +448,33 @@ class GameManager:
             elif action_name == "wait":
                 self._print(f"  {self.character.name} waits for an hour, observing the surroundings.")
                 action_xp_reward = 1 # Minimal XP for passing time consciously
+
+            # --- New Placeholder Actions from Sub-locations ---
+            elif action_name == "talk_to_villager":
+                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You chat with a villager.")
+                action_xp_reward = 2
+            elif action_name == "talk_to_hemlock":
+                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You speak with Old Man Hemlock.")
+                action_xp_reward = 2
+            elif action_name == "buy_herbs_hemlock":
+                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You browse Hemlock's herbs.")
+                action_xp_reward = 1
+            elif action_name == "visit_general_store_sfc":
+                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You enter the general store in Steel Flow City.")
+                action_xp_reward = 1
+            elif action_name == "buy_drink_tavern":
+                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You order a drink at The Rusty Pickaxe.")
+                action_xp_reward = 1
+            elif action_name == "gather_rumors_tavern":
+                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You listen for rumors in the tavern.")
+                action_xp_reward = 3
+            elif action_name == "talk_to_borin":
+                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You talk to Borin Stonebeard.")
+                action_xp_reward = 2
+            elif action_name == "repair_gear_borin":
+                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You ask Borin about repairs.")
+                action_xp_reward = 1
+            # --- End New Placeholder Actions ---
 
             else: # Unrecognized action
                 self._print(f"  Action '{action_name}' is not recognized or implemented yet.")
