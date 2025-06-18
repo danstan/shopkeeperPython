@@ -191,7 +191,7 @@ class GameManager:
             town_name_for_dialogue = self.current_town.name if self.current_town else "this town"
             formatted_snippet = snippet.format(town_name=town_name_for_dialogue)
             self.daily_customer_dialogue_snippets.append(formatted_snippet)
-            self._print(f"  Overheard: "{formatted_snippet}"")
+            self._print(f"  Overheard: {formatted_snippet}")
 
     def action_talk_to_customer(self, details: dict):
         if not self.shop:
@@ -225,7 +225,7 @@ class GameManager:
 
         town_name_for_dialogue = self.current_town.name if self.current_town else "this place"
         formatted_snippet = snippet.format(town_name=town_name_for_dialogue)
-        self._print(f"  You approach a customer. They say: "{formatted_snippet}"")
+        self._print(f"  You approach a customer. They say: {formatted_snippet}")
         self.daily_customer_dialogue_snippets.append(f"(Directly engaged) {formatted_snippet}")
 
     def send_chat_message(self, recipient, message):
@@ -263,7 +263,7 @@ class GameManager:
         if self.daily_customer_dialogue_snippets:
             self._print("  Overheard Customer Snippets (EOD):")
             for snippet in self.daily_customer_dialogue_snippets:
-                self._print(f"    - "{snippet}"")
+                self._print(f"    - {snippet}")
 
         # Commit XP only if character is alive and exists
         if self.character and hasattr(self.character, 'is_dead') and not self.character.is_dead :
