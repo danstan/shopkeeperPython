@@ -46,17 +46,42 @@
             border-radius: 4px;
             width: calc(100% - 170px); /* Adjust based on label width and padding */
         }
-        .character-creation-container button, .login-container button { /* Apply to login button too */
+        .character-creation-container button, .login-container button, .google-login-button {
             padding: 10px 15px;
-            background-color: #007bff;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             margin-left: 5px;
+            text-decoration: none;
+            display: inline-block;
+            line-height: normal;
         }
-        .character-creation-container button:hover, .login-container button:hover { /* Apply to login button too */
+        .login-container button {
+            background-color: #007bff;
+        }
+        .character-creation-container button {
+             background-color: #007bff;
+        }
+        /* Individual hover effects */
+        .login-container button:hover {
             background-color: #0056b3;
+        }
+        .character-creation-container button:hover {
+            background-color: #0056b3;
+        }
+        .google-login-button {
+            background-color: #4285F4;
+            margin-left: 0;
+        }
+        .google-login-button:hover {
+            background-color: #357ae8;
+        }
+        .google-login-button img {
+            width: 18px;
+            height: 18px;
+            vertical-align: middle;
+            margin-right: 10px;
         }
         .character-creation-container button:disabled {
             background-color: #ccc;
@@ -193,6 +218,16 @@
                 {% endfor %}
             {% endif %}
         {% endwith %}
+
+        {% if google_auth_is_configured %}
+        <div style="margin-top: 20px; text-align: center;">
+            <p>OR</p>
+            <a href="{{ url_for('google_initiate_login_route') }}" class="google-login-button">
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
+                Login with Google
+            </a>
+        </div>
+        {% endif %}
     </div>
 
     {% elif show_character_selection %}
