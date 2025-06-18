@@ -76,6 +76,11 @@ class TestGameManager(unittest.TestCase):
         self.assertEqual(self.gm.daily_customer_dialogue_snippets, [], "Initial daily_customer_dialogue_snippets should be an empty list.")
         self.assertEqual(self.gm.tracking_day, self.gm.time.current_day, "Initial tracking_day should match current_day.")
 
+    # Helper to reset output stream for focused tests
+    def _clear_output(self):
+        self.output_stream.truncate(0)
+        self.output_stream.seek(0)
+
     def test_daily_tracker_reset(self):
         """Test that _reset_daily_trackers correctly resets all trackers."""
         # Modify some trackers directly
@@ -613,6 +618,197 @@ class TestGameManager(unittest.TestCase):
         # Check the content of the added snippet
         last_snippet = self.gm.daily_customer_dialogue_snippets[-1]
         self.assertTrue(last_snippet.startswith("(Directly engaged)"), "Snippet should be marked as directly engaged.")
+
+    # --- Tests for features from the latest subtasks ---
+
+    def test_action_craft_item_via_game_manager_success(self):
+        self._clear_output()
+        # Setup: Character needs ingredients for "Traveler's Bread"
+        # Recipe: {"Grain": 2, "Clean Water": 1}
+        self.char.add_item_to_inventory(Item(name="Grain", base_value=1, item_type="component", quantity=2))
+        self.char.add_item_to_inventory(Item(name="Clean Water", base_value=1, item_type="component", quantity=1))
+        initial_xp = self.char.pending_xp
+
+        self.gm.perform_hourly_action("craft", {"item_name": "Traveler's Bread"})
+
+        # Verify bread is in shop inventory
+        found_bread = next((item for item in self.gm.shop.inventory if item.name == "Traveler's Bread"), None)
+        self.assertIsNotNone(found_bread)
+        if found_bread:
+            self.assertEqual(found_bread.quantity, 1)
+
+        # Verify ingredients removed from character
+        self.assertFalse(self.char.has_items({"Grain": 1})[0], "Grain should be consumed.")
+        self.assertFalse(self.char.has_items({"Clean Water": 1})[0], "Clean Water should be consumed.")
+
+        self.assertEqual(self.char.pending_xp, initial_xp + 10, "Crafting XP not awarded.") # Default craft XP is 10
+        self.assertIn("Successfully crafted 1x Common Traveler's Bread.", self.output_stream.getvalue()) # Assuming common quality
+
+    def test_action_craft_item_via_game_manager_fail_no_ingredients(self):
+        self._clear_output()
+        # Character does NOT have ingredients for "Simple Dagger"
+        # Recipe: {"Leather Scraps": 1, "Scrap Metal": 2}
+        self.char.inventory = [] # Ensure empty
+        initial_xp = self.char.pending_xp
+
+        self.gm.perform_hourly_action("craft", {"item_name": "Simple Dagger"})
+
+        self.assertIsNone(next((item for item in self.gm.shop.inventory if item.name == "Simple Dagger"), None))
+        self.assertEqual(self.char.pending_xp, initial_xp, "XP should not be awarded for failed craft.")
+        self.assertIn("Cannot craft Simple Dagger. Missing ingredients", self.output_stream.getvalue())
+
+    @unittest.mock.patch('random.choice')
+    @unittest.mock.patch('random.randint')
+    def test_action_gather_resources(self, mock_randint, mock_choice):
+        self._clear_output()
+        # Mock random.choice to return "Wild Herb"
+        # Town's nearby_resources: ["Dirty Water", "Moldy Fruit", "Wild Herb", "Small Twig", "Sturdy Branch", "Grain"]
+        mock_choice.return_value = "Wild Herb"
+        # Mock random.randint to return 2
+        mock_randint.return_value = 2
+
+        initial_xp = self.char.pending_xp
+        self.gm.perform_hourly_action("gather_resources")
+
+        # Verify character inventory
+        wild_herb_item = next((item for item in self.char.inventory if item.name == "Wild Herb"), None)
+        self.assertIsNotNone(wild_herb_item)
+        if wild_herb_item:
+            self.assertEqual(wild_herb_item.quantity, 2)
+            self.assertEqual(wild_herb_item.item_type, "component") # As per RESOURCE_ITEM_DEFINITIONS
+
+        self.assertEqual(self.char.pending_xp, initial_xp + 3, "Gathering XP not awarded.")
+        self.assertIn(f"{self.char.name} gathered 2x Wild Herb.", self.output_stream.getvalue())
+        mock_choice.assert_called_with(self.gm.current_town.nearby_resources)
+        mock_randint.assert_called_with(1,3)
+
+
+    def test_action_buy_herbs_hemlock_success(self):
+        self._clear_output()
+        self.char.gold = 100
+        initial_xp = self.char.pending_xp
+        item_to_buy = "Sunpetal" # Price 8g
+        quantity = 3
+        expected_cost = 8 * quantity # 24g
+
+        self.gm.perform_hourly_action("buy_herbs_hemlock", {"item_name": item_to_buy, "quantity": quantity})
+
+        self.assertEqual(self.char.gold, 100 - expected_cost)
+        sunpetal_item = next((item for item in self.char.inventory if item.name == item_to_buy), None)
+        self.assertIsNotNone(sunpetal_item)
+        if sunpetal_item:
+            self.assertEqual(sunpetal_item.quantity, quantity)
+        self.assertEqual(self.char.pending_xp, initial_xp + 1, "Buying herbs XP not awarded.") # XP is 1
+        self.assertIn(f"{self.char.name} bought {quantity}x {item_to_buy} from Old Man Hemlock for {expected_cost}g.", self.output_stream.getvalue())
+        self.assertEqual(self.gm.daily_gold_spent_on_purchases_by_player, expected_cost)
+
+    def test_action_buy_herbs_hemlock_unknown_item(self):
+        self._clear_output()
+        self.char.gold = 100
+        initial_gold = self.char.gold
+        initial_xp = self.char.pending_xp
+
+        self.gm.perform_hourly_action("buy_herbs_hemlock", {"item_name": "Bogus Herb", "quantity": 1})
+
+        self.assertEqual(self.char.gold, initial_gold)
+        self.assertEqual(self.char.pending_xp, initial_xp) # No XP for failed purchase
+        self.assertIn("Old Man Hemlock doesn't sell 'Bogus Herb'.", self.output_stream.getvalue())
+
+    def test_action_buy_herbs_hemlock_insufficient_gold(self):
+        self._clear_output()
+        self.char.gold = 10 # Sunpetal costs 8g, needs 24g for 3.
+        initial_gold = self.char.gold
+        initial_xp = self.char.pending_xp
+
+        self.gm.perform_hourly_action("buy_herbs_hemlock", {"item_name": "Sunpetal", "quantity": 3})
+
+        self.assertEqual(self.char.gold, initial_gold)
+        self.assertEqual(self.char.pending_xp, initial_xp)
+        self.assertIn(f"{self.char.name} doesn't have enough gold. (Needs 24g, Has {initial_gold}g).", self.output_stream.getvalue())
+
+    @unittest.mock.patch('random.choice')
+    def test_action_talk_to_hemlock(self, mock_choice):
+        self._clear_output()
+        # Old Man Hemlock's dialogue options:
+        # ["The forest speaks to those who listen.", "These old bones have seen many seasons.", "Looking for herbs, are we?"]
+        expected_dialogue = "These old bones have seen many seasons."
+        mock_choice.return_value = expected_dialogue
+        initial_xp = self.char.pending_xp
+
+        self.gm.perform_hourly_action("talk_to_hemlock")
+
+        self.assertIn(f"Old Man Hemlock says: \"{expected_dialogue}\"", self.output_stream.getvalue())
+        self.assertEqual(self.char.pending_xp, initial_xp + 1, "Talking to Hemlock XP not awarded.")
+        # Ensure mock_choice was called with Hemlock's specific dialogues
+        hemlock_npc_data = next(npc for npc in self.gm.current_town.unique_npc_crafters if npc['name'] == "Old Man Hemlock")
+        mock_choice.assert_called_with(hemlock_npc_data['dialogue'])
+
+
+    @unittest.mock.patch('random.choice')
+    def test_action_talk_to_villager(self, mock_choice):
+        self._clear_output()
+        expected_dialogue = "Nice weather we're having, eh?" # A generic one
+        mock_choice.return_value = expected_dialogue
+        initial_xp = self.char.pending_xp
+
+        self.gm.perform_hourly_action("talk_to_villager")
+
+        self.assertIn(f"You chat with a villager. They say: \"{expected_dialogue}\"", self.output_stream.getvalue())
+        self.assertEqual(self.char.pending_xp, initial_xp + 1, "Talking to villager XP not awarded.")
+        # The argument to mock_choice for generic villagers is a list defined inside the method, harder to assert directly
+        # but the output check is a good indicator.
+
+    @unittest.mock.patch('random.choice')
+    @unittest.mock.patch('random.random')
+    def test_action_explore_town_find_gold(self, mock_random_value, mock_choice_find):
+        self._clear_output()
+        mock_random_value.return_value = 0.10 # Ensure find happens (chance < 0.20)
+        gold_find_details = {"type": "gold", "amount": 10}
+        mock_choice_find.return_value = gold_find_details
+
+        self.char.gold = 50
+        initial_xp = self.char.pending_xp
+
+        self.gm.perform_hourly_action("explore_town")
+
+        self.assertEqual(self.char.gold, 60)
+        self.assertIn(f"While exploring, {self.char.name} found 10g!", self.output_stream.getvalue())
+        self.assertEqual(self.char.pending_xp, initial_xp + 5, "Explore town XP not awarded.") # explore_town base XP
+
+    @unittest.mock.patch('random.choice')
+    @unittest.mock.patch('random.random')
+    def test_action_explore_town_find_item(self, mock_random_value, mock_choice_find):
+        self._clear_output()
+        mock_random_value.return_value = 0.10 # Ensure find happens
+        item_find_details = {"type": "item", "name": "Shiny Pebble", "description": "A smooth, oddly shiny pebble.", "base_value": 1, "item_type": "trinket", "quality": "Common", "quantity": 1}
+        mock_choice_find.return_value = item_find_details
+
+        initial_xp = self.char.pending_xp
+
+        self.gm.perform_hourly_action("explore_town")
+
+        found_item = next((item for item in self.char.inventory if item.name == "Shiny Pebble"), None)
+        self.assertIsNotNone(found_item)
+        if found_item:
+            self.assertEqual(found_item.quantity, 1)
+        self.assertIn(f"While exploring, {self.char.name} found a Shiny Pebble!", self.output_stream.getvalue())
+        self.assertEqual(self.char.pending_xp, initial_xp + 5)
+
+    @unittest.mock.patch('random.random')
+    def test_action_explore_town_no_find(self, mock_random_value):
+        self._clear_output()
+        mock_random_value.return_value = 0.50 # Ensure NO find happens (chance >= 0.20)
+
+        initial_gold = self.char.gold
+        initial_inv_count = len(self.char.inventory)
+        initial_xp = self.char.pending_xp
+
+        self.gm.perform_hourly_action("explore_town")
+
+        self.assertEqual(self.char.gold, initial_gold)
+        self.assertEqual(len(self.char.inventory), initial_inv_count)
+        self.assertNotIn("found", self.output_stream.getvalue().lower()) # Check that "found" isn't in output
+        self.assertEqual(self.char.pending_xp, initial_xp + 5)
 
 
 if __name__ == '__main__':

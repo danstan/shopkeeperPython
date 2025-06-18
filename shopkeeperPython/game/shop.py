@@ -13,9 +13,16 @@ class Shop:
     Represents a shop in the Shopkeeper Python game.
     """
     BASIC_RECIPES = {
-        "Stale Ale": {"base_value": 1, "type": "food", "description": "Barely drinkable ale.", "crafting_difficulty": 1, "effects": {"stamina_recovery": 1}},
-        "Simple Dagger": {"base_value": 5, "type": "weapon", "description": "A crude but functional dagger.", "crafting_difficulty": 5, "effects": {"damage": "1d4"}},
-        "Minor Healing Potion": {"base_value": 10, "type": "potion", "description": "Restores a small amount of health.", "effects": {"healing": 5}, "crafting_difficulty": 3}
+        "Stale Ale": {"base_value": 1, "type": "food", "description": "Barely drinkable ale.", "crafting_difficulty": 1, "effects": {"stamina_recovery": 1}, "is_consumable": True, "ingredients": {"Dirty Water": 1, "Moldy Fruit": 2}},
+        "Simple Dagger": {"base_value": 5, "type": "weapon", "description": "A crude but functional dagger.", "crafting_difficulty": 5, "effects": {"damage": "1d4"}, "ingredients": {"Leather Scraps": 1, "Scrap Metal": 2}},
+        "Minor Healing Potion": {"base_value": 10, "type": "potion", "description": "Restores a small amount of health.", "effects": {"healing": 5}, "crafting_difficulty": 3, "is_consumable": True, "ingredients": {"Herb Bundle": 1, "Clean Water": 1}},
+        "Wooden Club": {"base_value": 3, "type": "weapon", "description": "A sturdy piece of wood, good for bonking.", "crafting_difficulty": 2, "effects": {"damage": "1d4"}, "ingredients": {"Sturdy Branch": 1}},
+        "Traveler's Bread": {"base_value": 2, "type": "food", "description": "A dense, long-lasting loaf of bread.", "crafting_difficulty": 2, "effects": {"stamina_recovery": 2, "healing": 1}, "is_consumable": True, "ingredients": {"Grain": 2, "Clean Water": 1}},
+        "Leather Scraps": {"type": "component", "base_value": 4, "description": "Pieces of cured leather, useful for crafting.", "crafting_difficulty": 3, "effects": {}, "ingredients": {"Rawhide": 1}},
+        "Simple Bandages": {"type": "healing_item", "base_value": 6, "description": "Clean strips of cloth for dressing minor wounds.", "crafting_difficulty": 4, "effects": {"healing": 3}, "is_consumable": True, "ingredients": {"Linen Scrap": 2}},
+        "Crude Lockpick": {"type": "tool", "base_value": 8, "description": "A roughly made lockpick. Might break easily.", "crafting_difficulty": 7, "effects": {"skill_bonus": {"DEX_tools": 1}}, "is_consumable": False, "ingredients": {"Scrap Metal": 1, "Small Twig": 1}},
+        "Herb Bundle": {"type": "component", "base_value": 5, "description": "A bundle of common medicinal herbs.", "crafting_difficulty": 1, "effects": {}, "ingredients": {"Wild Herb": 3}},
+        "Basic Arrow": {"type": "ammunition", "base_value": 1, "description": "A simple wooden arrow with a stone head. Recipe makes 5.", "crafting_difficulty": 4, "effects": {"damage": "1d6"}, "quantity_produced": 5, "ingredients": {"Small Twig": 5, "Stone Fragment": 5, "Bird Feather": 5}}
     }
 
     QUALITY_THRESHOLDS = [
@@ -75,13 +82,35 @@ class Shop:
                 break
         return determined_quality
 
-    def craft_item(self, item_name: str) -> Item | None:
+    def craft_item(self, item_name: str, character: 'Character') -> Item | None:
         if not self.can_craft(item_name):
-            # print(f"Cannot craft {item_name}. Recipe unknown or prerequisites not met.") # GameManager usually prints this
+            # GameManager usually prints this
+            # print(f"Cannot craft {item_name}. Recipe unknown or prerequisites not met.")
             return None
+
         recipe = self.BASIC_RECIPES[item_name]
+        ingredients = recipe.get("ingredients", {})
+
+        if ingredients:
+            can_craft_item, missing_items = character.has_items(ingredients)
+            if not can_craft_item:
+                missing_items_str = ", ".join([f"{qty} {name}" for name, qty in missing_items.items()])
+                print(f"SHOP: Cannot craft {item_name}. Missing ingredients for {character.name}: {missing_items_str}.")
+                return None
+
+        # Proceed with crafting if ingredients are present or not required
         self.crafting_experience[item_name] = self.crafting_experience.get(item_name, 0) + 1
         quality = self._determine_quality(item_name)
+
+        # Consume ingredients before adding item to inventory
+        if ingredients:
+            if not character.consume_items(ingredients):
+                # This should ideally not happen if has_items check was accurate
+                print(f"SHOP: Error consuming ingredients for {item_name} from {character.name}'s inventory. Crafting aborted.")
+                # Potentially roll back crafting_experience increment if that's desired
+                # self.crafting_experience[item_name] = self.crafting_experience.get(item_name, 1) -1 # example rollback
+                return None
+
         crafted_item = Item(
             name=item_name,
             description=recipe.get("description", "A crafted item."),
@@ -91,10 +120,15 @@ class Shop:
             effects=recipe.get("effects", {}),
             is_magical=recipe.get("is_magical", recipe["type"] in ["potion", "scroll", "weapon", "armor", "ring", "amulet"]),
             is_attunement=recipe.get("is_attunement", False),
-            is_consumable=recipe.get("is_consumable", recipe["type"] in ["potion", "food", "scroll"])
+            is_consumable=recipe.get("is_consumable", recipe["type"] in ["potion", "food", "scroll"]),
+            quantity=recipe.get("quantity_produced", 1) # Handle quantity_produced
         )
+
+        # If quantity_produced is > 1, the Item object itself handles this via its quantity field.
+        # The shop inventory will store one Item stack.
         self.add_item_to_inventory(crafted_item)
-        # print(f"Crafted {crafted_item.quality} {item_name}. Experience for {item_name}: {self.crafting_experience[item_name]}.") # GameManager can print success
+        # GameManager can print success
+        # print(f"Crafted {crafted_item.quantity}x {crafted_item.quality} {item_name}. Experience for {item_name}: {self.crafting_experience[item_name]}.")
         return crafted_item
 
     def stock_item(self, item: Item):
@@ -255,16 +289,96 @@ if __name__ == "__main__":
         def __init__(self, name="Default Test Town", market_demand_modifiers=None):
             super().__init__(name, [], [], [], market_demand_modifiers if market_demand_modifiers else {})
 
+    # Dummy Character for testing
+    class MockCharacter:
+        def __init__(self, name="Test Character", gold=100):
+            self.name = name
+            self.inventory = []
+            self.gold = gold
+
+        def add_item_to_inventory(self, item: Item):
+            self.inventory.append(item)
+            print(f"DEBUG: Added {item.name} to {self.name}'s inventory. Current: {[i.name for i in self.inventory]}")
+
+
+        def has_items(self, items_to_check: dict) -> tuple[bool, dict]:
+            missing_items = {}
+            for item_name, required_qty in items_to_check.items():
+                current_qty = sum(1 for item in self.inventory if item.name == item_name)
+                if current_qty < required_qty:
+                    missing_items[item_name] = required_qty - current_qty
+            if missing_items:
+                return False, missing_items
+            return True, {}
+
+        def consume_items(self, items_to_consume: dict) -> bool:
+            print(f"DEBUG: {self.name} attempting to consume: {items_to_consume}")
+            # This is a simplified consumption logic for testing.
+            # A more robust one would handle stacks or specific item instances.
+            for item_name, qty_to_consume in items_to_consume.items():
+                consumed_count = 0
+                new_inventory = []
+                for item in reversed(self.inventory): # Reversed to remove from end, less index issues
+                    if item.name == item_name and consumed_count < qty_to_consume:
+                        consumed_count += 1
+                        print(f"DEBUG: Consuming {item.name} from {self.name}")
+                    else:
+                        new_inventory.append(item)
+                self.inventory = list(reversed(new_inventory)) # Preserve original order if any
+                if consumed_count < qty_to_consume:
+                    print(f"DEBUG: Failed to consume all {item_name} for {self.name}. Needed {qty_to_consume}, found {consumed_count}")
+                    return False # Should not happen if has_items is called first
+            print(f"DEBUG: {self.name}'s inventory after consumption: {[i.name for i in self.inventory]}")
+            return True
+
     default_town = MockTown()
-    shop_in_default = Shop(name="The Prancing Pony", owner_name="Barliman Butterbur", town=default_town)
+    # shop_in_default = Shop(name="The Prancing Pony", owner_name="Barliman Butterbur", town=default_town) # owner_name is str
 
     # Test with a town that has modifiers
     town_with_mods = MockTown("Whiterun", market_demand_modifiers={"Minor Healing Potion": 1.5, "Simple Dagger": 0.8})
-    shop_in_whiterun = Shop(name="Warmaiden's", owner_name="Adrianne", town=town_with_mods)
+    # The shop owner is just a name, the actual character object is passed during crafting
+    shop_in_whiterun = Shop(name="Warmaiden's", owner_name="Adrianne Avenicci", town=town_with_mods)
 
-    print("\n--- Crafting Initial Items for Serialization Test ---")
-    crafted_potion = shop_in_whiterun.craft_item("Minor Healing Potion")
+    # Create a mock character (the shop owner or a player)
+    test_crafter = MockCharacter(name="Test Crafter", gold=100)
+    # Add some ingredients to the crafter's inventory for testing
+    test_crafter.add_item_to_inventory(Item(name="Herb Bundle", base_value=5, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Clean Water", base_value=1, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Clean Water", base_value=1, item_type="component")) # more water
+    test_crafter.add_item_to_inventory(Item(name="Scrap Metal", base_value=2, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Scrap Metal", base_value=2, item_type="component"))
+
+
+    print("\n--- Crafting Test (Minor Healing Potion) ---")
+    # Attempt to craft a Minor Healing Potion - should succeed
+    print(f"{test_crafter.name} inventory before potion: {[i.name for i in test_crafter.inventory]}")
+    crafted_potion = shop_in_whiterun.craft_item("Minor Healing Potion", test_crafter)
+    if crafted_potion:
+        print(f"Successfully crafted: {crafted_potion.name} (Quality: {crafted_potion.quality})")
+    else:
+        print(f"Failed to craft Minor Healing Potion.")
     shop_in_whiterun.display_inventory()
+    print(f"{test_crafter.name} inventory after potion: {[i.name for i in test_crafter.inventory]}")
+
+    print("\n--- Crafting Test (Simple Dagger) - Missing Leather Scraps ---")
+    # Attempt to craft a Simple Dagger - should fail due to missing Leather Scraps (which itself needs Rawhide)
+    print(f"{test_crafter.name} inventory before dagger: {[i.name for i in test_crafter.inventory]}")
+    crafted_dagger = shop_in_whiterun.craft_item("Simple Dagger", test_crafter)
+    if crafted_dagger:
+        print(f"Successfully crafted: {crafted_dagger.name}")
+    else:
+        print(f"Failed to craft Simple Dagger.")
+    shop_in_whiterun.display_inventory()
+    print(f"{test_crafter.name} inventory after dagger: {[i.name for i in test_crafter.inventory]}")
+
+    print("\n--- Crafting Test (Leather Scraps) - No Rawhide ---")
+    # Attempt to craft Leather Scraps - should fail as Test Crafter has no Rawhide
+    crafted_scraps = shop_in_whiterun.craft_item("Leather Scraps", test_crafter)
+    if crafted_scraps:
+        print(f"Successfully crafted: {crafted_scraps.name}")
+        test_crafter.add_item_to_inventory(crafted_scraps) # Manually add to crafter for next step if it was shop stock
+    else:
+        print(f"Failed to craft Leather Scraps.")
 
     print("\n--- Serialization Test for Shop ---")
     shop_dict = shop_in_whiterun.to_dict()
