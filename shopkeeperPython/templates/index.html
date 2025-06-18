@@ -403,6 +403,7 @@
     {# Main Game Interface #}
     <div class="game-container">
         <div id="top-right-menu-button">Menu</div>
+
         <div id="left-tabs-container">
             <div id="stats-tab">
                 <div class="tab-title-bar">Stats</div>
@@ -556,6 +557,7 @@
                         <button type="button" id="gatherResourcesButton" class="general-action-button">Gather Resources</button>
                         <!-- Add other general town/area actions here if needed -->
                     </div>
+
                 </div>
             </div>
         </div>
@@ -566,6 +568,8 @@
                 <li id="save-game-option">Save Game</li>
             </ul>
         </div>
+
+
 
         <!--
         <h1>Shopkeeper Adventure</h1>
@@ -609,6 +613,7 @@
         <div class="log-action-container">
             <!-- log-box was here -->
             <!-- action-box contents were moved into #action-controls-wrapper -->
+
         </div>
         -->
     </div>
@@ -862,8 +867,10 @@
             const inventoryContent = document.getElementById('inventory-content');
             const actionsTab = document.getElementById('actions-tab');
             const actionsContent = document.getElementById('actions-content');
+
             const infoTab = document.getElementById('info-tab');
             const infoContent = document.getElementById('info-content');
+
             const topRightMenuButton = document.getElementById('top-right-menu-button');
             const settingsPopup = document.getElementById('settings-popup');
             const settingsOption = document.getElementById('settings-option');
@@ -887,6 +894,7 @@
                 });
             }
 
+
             if (infoTab && infoContent) {
                 infoTab.addEventListener('mouseenter', () => {
                     infoContent.style.display = 'block';
@@ -905,6 +913,7 @@
                     } else {
                         actionsTab.classList.remove('actions-tab-active');
                     }
+
                 });
             }
 
