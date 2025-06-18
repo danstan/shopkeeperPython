@@ -14,14 +14,16 @@ app.secret_key = 'dev_secret_key_!@#$%' # Replace with a strong, random key in p
 MAX_CHARS_PER_USER = 2
 USERS_FILE = 'users.json'
 CHARACTERS_FILE = 'user_characters.json'
+GRAVEYARD_FILE = 'graveyard.json' # New file path for graveyard
 
 # --- User and Character Data Stores (Global for simplicity) ---
 users = {} # username: password
 user_characters = {} # username: [list of character_dicts]
+graveyard = {} # username: [list of dead character_dicts] - New data structure
 
 # --- Data Persistence Functions ---
 def load_data():
-    global users, user_characters
+    global users, user_characters, graveyard # Add graveyard to globals
     try:
         with open(USERS_FILE, 'r') as f:
             users = json.load(f)
@@ -43,7 +45,24 @@ def load_data():
     except json.JSONDecodeError:
         print(f"Warning: Could not decode {CHARACTERS_FILE}. Starting with empty characters.")
         user_characters = {}
-        save_user_characters()
+        save_user_characters() # Ensure file is created if decode error occurred after file existence check
+
+    # Load graveyard data
+    try:
+        with open(GRAVEYARD_FILE, 'r') as f:
+            graveyard = json.load(f)
+    except FileNotFoundError:
+        graveyard = {}
+        # Create an empty graveyard file if it doesn't exist
+        with open(GRAVEYARD_FILE, 'w') as f:
+            json.dump(graveyard, f, indent=4)
+        print(f"'{GRAVEYARD_FILE}' not found, created a new one.")
+    except json.JSONDecodeError:
+        graveyard = {}
+        print(f"Error decoding '{GRAVEYARD_FILE}'. Initializing empty graveyard and overwriting.")
+        # Overwrite corrupted file with empty data
+        with open(GRAVEYARD_FILE, 'w') as f:
+            json.dump(graveyard, f, indent=4)
 
 
 def save_users():
@@ -53,6 +72,10 @@ def save_users():
 def save_user_characters():
     with open(CHARACTERS_FILE, 'w') as f:
         json.dump(user_characters, f, indent=4)
+
+def save_graveyard(): # New function to save graveyard data
+    with open(GRAVEYARD_FILE, 'w') as f:
+        json.dump(graveyard, f, indent=4)
 
 # Load data at application startup
 load_data()
@@ -162,15 +185,16 @@ def create_character_route():
     username = session['username']
     char_name = request.form.get('character_name')
 
-    if username not in user_characters: # Should have been created at registration
-        user_characters[username] = []
+    if username not in user_characters:
+        user_characters[username] = [] # Should have been created at registration, but good safeguard
 
-    if len(user_characters[username]) >= MAX_CHARS_PER_USER: # This checks total slots (alive or dead)
-        flash(f'You have reached the maximum of {MAX_CHARS_PER_USER} character slots.', 'error')
+    active_characters_list = user_characters.get(username, [])
+    # The prompt asks to change the limit check to active characters.
+    # The previous logic (len(user_characters[username])) checked total slots.
+    # Now, it should be len(active_characters_list) because dead chars are moved out.
+    if len(active_characters_list) >= MAX_CHARS_PER_USER:
+        flash(f'You have reached the maximum of {MAX_CHARS_PER_USER} active characters. A dead character frees up their slot.', 'error')
         return redirect(url_for('display_game_output'))
-
-    # The prompt simplified this: "The death of a character does *not* free up a slot for this iteration."
-    # So, the check above is sufficient. No need to count only 'active_chars' for slot limit here.
 
     stats = {}
     stat_keys_map = {
@@ -231,10 +255,21 @@ def display_game_output():
     current_town_display = "N/A"
     shop_inventory_display = ["Empty"]
     player_inventory_display = ["Empty"]
+    dead_characters_info = [] # Initialize for passing to template
 
     if user_logged_in:
         username = session['username']
         characters_list = user_characters.get(username, [])
+        user_graveyard_list = graveyard.get(username, []) # Load user's graveyard
+
+        # Prepare graveyard info for template
+        if user_graveyard_list:
+            for dead_char_data in user_graveyard_list:
+                dead_characters_info.append({
+                    'name': dead_char_data.get('name', 'Unknown'),
+                    'level': dead_char_data.get('level', 0),
+                    # Add other details if needed, e.g., from dead_char_data['stats']
+                })
 
         # Handle 'action=create_new_char' from URL to switch to creation mode
         if request.args.get('action') == 'create_new_char':
@@ -331,7 +366,8 @@ def display_game_output():
                            user_logged_in=user_logged_in,
                            show_character_selection=show_character_selection,
                            characters_for_selection=characters_for_selection,
-                           MAX_CHARS_PER_USER=MAX_CHARS_PER_USER, # Pass to template
+                           MAX_CHARS_PER_USER=MAX_CHARS_PER_USER,
+                           dead_characters_info=dead_characters_info, # Pass graveyard data
                            show_character_creation_form=show_character_creation_form,
                            game_output=current_game_output,
                            player_name=player_name_display,
@@ -394,20 +430,31 @@ def perform_action():
 
         # After action, check for death
         if player_char.is_dead:
-            if 'username' in session and 'selected_character_slot' in session:
-                username = session['username']
-                slot = session['selected_character_slot']
-                if username in user_characters and 0 <= slot < len(user_characters[username]):
-                    # Update the stored character data to reflect death
-                    user_characters[username][slot] = player_char.to_dict() # This now includes is_dead=True
-                    save_user_characters()
-                    flash(f"{player_char.name} has died! Their story ends here.", "error")
-                    session.pop('selected_character_slot', None) # Clear selection
-                    # No need to change global player_char here, display_game_output will handle it
+            username = session.get('username')
+            slot_index = session.get('selected_character_slot')
+
+            if username and slot_index is not None:
+                if username in user_characters and 0 <= slot_index < len(user_characters[username]):
+                    # Move character from active list to graveyard
+                    dead_char_data = user_characters[username].pop(slot_index)
+                    # Ensure 'is_dead' is explicitly true in the data moved to graveyard,
+                    # though player_char.to_dict() should already handle this.
+                    dead_char_data['is_dead'] = True
+
+                    graveyard.setdefault(username, []).append(dead_char_data)
+
+                    save_user_characters() # Save updated (shorter) list of active characters
+                    save_graveyard()       # Save updated graveyard
+
+                    flash(f"{dead_char_data.get('name', 'The character')} has died and been moved to the graveyard. Their slot is now free.", "error")
+                    session.pop('selected_character_slot', None)
                 else:
-                    flash("Error recording character death: session data mismatch.", "critical_error")
+                    flash("Error processing character death: Character slot data mismatch.", "critical_error")
+                    # Still clear the slot, as it's likely invalid or pointing to a now-gone character
+                    session.pop('selected_character_slot', None)
             else:
-                flash("Error recording character death: user or character slot not in session.", "critical_error")
+                flash("Error processing character death: User session data missing.", "critical_error")
+                session.pop('selected_character_slot', None) # Clear potentially problematic slot
 
             # Redirect to display_game_output, which will show character selection/creation
             return redirect(url_for('display_game_output'))

@@ -6,9 +6,9 @@ This project is a Python-based implementation of a whimsical, high-fantasy, turn
 
 *   **User Accounts:** Register and log in with a unique username and password.
 *   **Character Creation:** Create characters with rolled stats and one re-roll opportunity.
-*   **Multiple Character Slots:** Manage up to two distinct characters per account.
-*   **Persistent Data:** User accounts and character progress are saved in JSON files.
-*   **Perma-death:** Characters can die permanently (e.g., through exhaustion), occupying one of their slots.
+*   **Multiple Character Slots:** Manage up to two distinct active characters per account.
+*   **Persistent Data:** User accounts, active characters, and graveyard data are saved in JSON files.
+*   **Perma-death & Graveyard:** Deceased characters are moved to a viewable Graveyard. This frees up their original character slot, allowing for a new active character to be created (up to the account limit).
 *   **Web-Based UI:** Interact with the game through a Flask-powered web interface.
 
 ## Running the Game
