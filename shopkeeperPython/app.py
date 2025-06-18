@@ -29,6 +29,9 @@ app.secret_key = 'dev_secret_key_!@#$%' # Replace with a strong, random key in p
 GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
 GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
 
+print(f"DEBUG: GOOGLE_OAUTH_CLIENT_ID: {GOOGLE_OAUTH_CLIENT_ID}")
+print(f"DEBUG: GOOGLE_OAUTH_CLIENT_SECRET: {'SET' if GOOGLE_OAUTH_CLIENT_SECRET else 'NOT SET'}")
+
 if not GOOGLE_OAUTH_CLIENT_ID or not GOOGLE_OAUTH_CLIENT_SECRET:
     print("WARNING: Google OAuth Client ID or Secret is not set in environment variables.")
     print("Google Login will not work. Please set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET.")
@@ -88,7 +91,7 @@ else:
 
 
         # 3. Create new game user if no existing link found
-        internal_username_base = email.split('@')[0] if email else "googleuser"
+        internal_username_base = email.lower().split('@')[0] if email else "googleuser"
         internal_username = internal_username_base
         counter = 1
         while internal_username in users: # Ensure username is unique
@@ -418,6 +421,9 @@ def display_game_output():
     player_inventory_display = ["Empty"]
     dead_characters_info = [] # Initialize for passing to template
 
+    # Check if Google OAuth is configured
+    google_auth_is_configured = bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET)
+
     if user_logged_in:
         username = session['username']
         characters_list = user_characters.get(username, [])
@@ -539,7 +545,8 @@ def display_game_output():
                            current_time=current_time_display,
                            current_town_name=current_town_display,
                            shop_inventory=shop_inventory_display,
-                           player_inventory=player_inventory_display
+                           player_inventory=player_inventory_display,
+                           google_auth_is_configured=google_auth_is_configured
                            )
 
 def parse_action_details(details_str: str) -> dict:
