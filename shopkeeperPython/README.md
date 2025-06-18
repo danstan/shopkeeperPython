@@ -34,15 +34,19 @@ This project includes a simple web-based user interface to allow for interactive
 
 The recommended way to run the web UI is from the project's root directory (the directory *above* this one).
 
+
 1.  **Navigate to the Project Root Directory:**
     Open your terminal or command prompt. If you are currently in the `shopkeeperPython` directory (where this README is), navigate up one level:
     ```bash
     cd ..
+
     ```
     You should now be in the project root directory (the one that contains the main `README.md` and the `shopkeeperPython` folder).
 
+
 2.  **Create and Activate a Virtual Environment (Recommended, from project root)**:
     It's a best practice to use a virtual environment from the project root.
+
     ```bash
     # Create a virtual environment (e.g., named .venv)
     python -m venv .venv
@@ -53,17 +57,23 @@ The recommended way to run the web UI is from the project's root directory (the 
     # source .venv/bin/activate
     ```
 
+
 3.  **Install Dependencies (from project root)**:
     With your virtual environment active, install the required Python packages. The `requirements.txt` file is located within the `shopkeeperPython` directory.
+
     ```bash
     pip install -r shopkeeperPython/requirements.txt
     ```
 
+
 4.  **Run the Flask Application (as a module from project root)**:
     Execute the application as a module:
+
     ```bash
     python -m shopkeeperPython.app
     ```
 
+
 5.  **Open in Browser**:
+
     Open your web browser and navigate to the address shown in your terminal (e.g., `http://127.0.0.1:5001/`).

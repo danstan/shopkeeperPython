@@ -73,14 +73,18 @@ To run the web interface:
     ```
     **Note on Updates:** If you pull new changes, remember to reinstall dependencies as new ones might have been added.
 
+
 3.  **Run the Game:**
+
     From the project root directory, run the application as a module:
     ```bash
     python -m shopkeeperPython.app
     ```
 
+
 4.  **Access the Web Interface:**
     Open your web browser and navigate to `http://localhost:5001` (or the address shown in your terminal).
 
 5.  **First Use:**
+
     On your first visit, you will need to register a user account and then create a character through the web UI to start playing.
