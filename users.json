@@ -1,0 +1,8 @@
+{
+    "testuser": {
+        "password": "scrypt:32768:8:1$ZC9GqsoycB3bociE$29b5399af2cce2d676309b4e3af323a389f511525ad3be4a1ce03953679fafae56fdc1e8c738875cb88305c7ed08c260d385e4ad4d5fb598e99601f9dcf34df9",
+        "google_id": null,
+        "email_google": null,
+        "display_name_google": null
+    }
+}
