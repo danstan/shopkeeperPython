@@ -1,2 +1,5 @@
 Flask
-flask_dance
+
+Flask-Dance
+blinker
+
