@@ -163,9 +163,14 @@ def find_user_by_email(email_to_find):
 # --- Data Persistence Functions ---
 def load_data():
     global users, user_characters, graveyard # Add graveyard to globals
+    print("DEBUG_LOAD_DATA: Starting load_data()")
     try:
         with open(USERS_FILE, 'r') as f:
+            file_content = f.read()
+            print(f"DEBUG_LOAD_DATA: {USERS_FILE} found. Raw content before parsing: '{file_content}'")
+            f.seek(0) # IMPORTANT: Reset file cursor to the beginning before json.load()
             users = json.load(f)
+            print(f"DEBUG_LOAD_DATA: Users loaded from file. Parsed users dict: {users}")
     except FileNotFoundError:
         # Default user with a hashed password
         users = {"testuser": {
@@ -175,6 +180,7 @@ def load_data():
             "display_name_google": None
             }
         }
+        print(f"DEBUG_LOAD_DATA: {USERS_FILE} not found. Assigned default users structure. Default users dict: {users}")
         save_users()
     except json.JSONDecodeError:
         print(f"Warning: Could not decode {USERS_FILE}. Starting with default user.")
@@ -185,6 +191,7 @@ def load_data():
             "display_name_google": None
             }
         }
+        print(f"DEBUG_LOAD_DATA: JSONDecodeError in {USERS_FILE}. Assigned default users structure. Default users dict: {users}")
         save_users()
 
 
@@ -218,6 +225,7 @@ def load_data():
 
 
 def save_users():
+    print(f"DEBUG_SAVE_USERS: Attempting to save users. Current users dict to be saved: {users}")
     with open(USERS_FILE, 'w') as f:
         json.dump(users, f, indent=4)
 
