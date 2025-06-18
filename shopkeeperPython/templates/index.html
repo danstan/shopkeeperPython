@@ -557,24 +557,14 @@
                                     <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale">
                                     <button type="button" class="submit-details-button" data-action="sell_to_own_shop">Sell Item</button>
                                 </div>
-                            </div>
 
-                            <!-- Buy Herbs from Hemlock Form -->
-                            <div class="action-box-section">
-                                <h3>Buy Herbs from Hemlock</h3>
-                                <form action="{{ url_for('perform_action') }}" method="post"> <!-- This is a nested form. HTML allows this but it can be tricky. -->
-                                    <input type="hidden" name="action_name" value="buy_from_npc">
-                                    <input type="hidden" name="npc_name" value="Old Man Hemlock">
-                                    <div class="details-section">
-                                        <label for="hemlock_item_name">Name of Herb:</label>
-                                        <input type="text" id="hemlock_item_name" name="item_name" placeholder="e.g., Moonpetal" required>
-                                    </div>
-                                    <div class="details-section">
-                                        <label for="hemlock_quantity">Quantity:</label>
-                                        <input type="number" id="hemlock_quantity" name="quantity" value="1" min="1" required>
-                                    </div>
-                                    <button type="submit">Buy Herbs</button>
-                                </form>
+                                <div id="div_hemlock_herbs_details" class="hidden-details details-section">
+                                    <h4>Buy Herbs from Hemlock</h4>
+                                    <div id="hemlock-herbs-list"></div>
+                                    <label for="hemlock_quantity_dynamic">Quantity:</label>
+                                    <input type="number" id="hemlock_quantity_dynamic" value="1" min="1">
+                                    <button type="button" id="submit_buy_hemlock_herb_button">Buy Selected Herb</button>
+                                </div>
                             </div>
 
                             <!-- Gather Resources Button -->
@@ -662,6 +652,16 @@
     // For simplicity with Jinja, variables are passed here.
     var currentTownSubLocations = {{ current_town_sub_locations_json | default('[]') | safe }}; // May not be strictly needed if allTownsData is comprehensive
     var allTownsData = {{ all_towns_data_json | default('{}') | safe }};
+    var hemlockHerbsData = {};
+    try {
+        const hemlockJson = '{{ hemlock_herbs_json | safe }}';
+        if (hemlockJson) {
+            hemlockHerbsData = JSON.parse(hemlockJson);
+        }
+    } catch (e) {
+        console.error("Error parsing Hemlock's herbs JSON:", e);
+        // hemlockHerbsData remains {}
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         // Existing script for actionForm, map, sub-locations etc.
@@ -684,9 +684,13 @@
             const buyQuantityInput = document.getElementById('buy_quantity');
             const sellDetailsDiv = document.getElementById('div_sell_details');
             const sellItemNameInput = document.getElementById('sell_item_name');
+            const hemlockHerbsDetailsDiv = document.getElementById('div_hemlock_herbs_details');
+            const hemlockHerbsListDiv = document.getElementById('hemlock-herbs-list'); // New div for list
 
-            const allDetailDivs = [craftDetailsDiv, buyDetailsDiv, sellDetailsDiv];
-            let currentActionRequiringDetails = null; // Stores the action name when a detail form is shown
+            const allDetailDivs = [craftDetailsDiv, buyDetailsDiv, sellDetailsDiv, hemlockHerbsDetailsDiv];
+            let currentActionRequiringDetails = null;
+            let currentSubLocationName = null;
+            let selectedHemlockHerbName = null; // To store the selected Hemlock herb
 
             function hideAllDetailForms() {
                 if (actionDetailsContainer) actionDetailsContainer.style.display = 'none';
@@ -723,6 +727,7 @@
             function displayActions(subLocName) {
                 if (!currentActionsListDiv) return;
                 currentActionsListDiv.innerHTML = ''; // Clear previous
+                currentSubLocationName = subLocName; // Store the sub-location name
 
                 const currentTownName = currentTownDisplay ? currentTownDisplay.textContent : null;
                 if (!currentTownName || !allTownsData || !allTownsData[currentTownName] || !allTownsData[currentTownName].sub_locations) {
@@ -802,7 +807,34 @@
                             if (sellDetailsDiv) sellDetailsDiv.style.display = 'block';
                             currentActionRequiringDetails = actionName;
                             // Do NOT submit form yet
-                        } else if (!event.target.classList.contains('craft-recipe-button')) { // Ensure not to double-handle craft-recipe-buttons
+                        } else if (actionName === 'buy_from_npc' && currentSubLocationName === "Old Man Hemlock's Hut") {
+                            if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
+                            if (hemlockHerbsDetailsDiv) hemlockHerbsDetailsDiv.style.display = 'block';
+                            currentActionRequiringDetails = actionName;
+                            selectedHemlockHerbName = null; // Reset selection when showing the list
+                            if (hemlockHerbsListDiv) {
+                                hemlockHerbsListDiv.innerHTML = ''; // Clear previous list
+                                if (hemlockHerbsData && Object.keys(hemlockHerbsData).length > 0) {
+                                    const ul = document.createElement('ul');
+                                    ul.style.listStyleType = 'none'; // Optional: remove bullets
+                                    ul.style.paddingLeft = '0'; // Optional: remove default padding
+                                    for (const herbKey in hemlockHerbsData) {
+                                        const herb = hemlockHerbsData[herbKey];
+                                        const li = document.createElement('li');
+                                        li.style.marginBottom = '10px'; // Optional: spacing
+                                        li.innerHTML = `
+                                            <strong>${herb.name}</strong> - ${herb.price}G<br>
+                                            <em>${herb.description}</em><br>
+                                            <button type="button" class="select-hemlock-herb-button" data-herb-name="${herb.name}">Select</button>
+                                        `;
+                                        ul.appendChild(li);
+                                    }
+                                    hemlockHerbsListDiv.appendChild(ul);
+                                } else {
+                                    hemlockHerbsListDiv.innerHTML = '<p>No herbs available from Hemlock at this time.</p>';
+                                }
+                            }
+                        } else if (!event.target.classList.contains('craft-recipe-button')) {
                             // For actions not needing details from the dynamic list
                             if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({});
                             if (actionForm) actionForm.submit();
@@ -857,23 +889,71 @@
                             details.item_name = sellItemNameInput.value;
                         }
                         break;
+                    // Case for 'buy_from_npc' (Old Man Hemlock) will be handled by its own button listener,
+                    // as it needs to capture the selected herb, which isn't part of this generic function.
+                    // This function is for the generic ".submit-details-button"s.
                 }
                 if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify(details);
             }
 
-            // Event Listener for "Submit Details" buttons within each detail form
+            // Event Listener for "Submit Details" buttons within each detail form (generic ones)
             if (actionDetailsContainer) {
                 actionDetailsContainer.addEventListener('click', function(event) {
-                    if (event.target.classList.contains('submit-details-button')) {
+                    if (event.target.classList.contains('submit-details-button')) { // Generic submit buttons
                         if (!currentActionRequiringDetails) {
                             console.error("Submit details button clicked but no currentActionRequiringDetails is set.");
                             return;
                         }
-                        // The 'data-action' on the button should match currentActionRequiringDetails for sanity,
-                        // but currentActionRequiringDetails is the primary driver here.
-                        compileAndSetActionDetails(); // Compile details based on the visible form (tracked by currentActionRequiringDetails)
-                        // action_name_hidden should already be set by the initial action button click.
+                        compileAndSetActionDetails();
                         if (actionForm) actionForm.submit();
+                    }
+                });
+            }
+
+            // Event listener for selecting a Hemlock herb
+            if (hemlockHerbsListDiv) {
+                hemlockHerbsListDiv.addEventListener('click', function(event) {
+                    if (event.target.classList.contains('select-hemlock-herb-button')) {
+                        selectedHemlockHerbName = event.target.dataset.herbName;
+                        // Optional: Visual feedback for selection
+                        document.querySelectorAll('.select-hemlock-herb-button').forEach(btn => {
+                            btn.style.fontWeight = 'normal'; // Reset others
+                            btn.style.backgroundColor = '';
+                        });
+                        event.target.style.fontWeight = 'bold'; // Highlight selected
+                        event.target.style.backgroundColor = '#a0d2a0'; // Light green highlight
+                        console.log("Selected herb: " + selectedHemlockHerbName);
+                    }
+                });
+            }
+
+            // Specific listener for "Buy Selected Herb" button from Hemlock's details
+            const submitBuyHemlockHerbButton = document.getElementById('submit_buy_hemlock_herb_button');
+            const hemlockQuantityInput = document.getElementById('hemlock_quantity_dynamic');
+
+            if (submitBuyHemlockHerbButton && hemlockQuantityInput) {
+                submitBuyHemlockHerbButton.addEventListener('click', function() {
+                    if (!selectedHemlockHerbName) {
+                        alert("Please select an herb to buy.");
+                        return;
+                    }
+                    const quantity = parseInt(hemlockQuantityInput.value, 10);
+                    if (isNaN(quantity) || quantity < 1) {
+                        alert("Please enter a valid quantity (at least 1).");
+                        return;
+                    }
+
+                    if (hiddenActionNameInput) hiddenActionNameInput.value = 'buy_from_npc';
+                    if (hiddenDetailsInput) {
+                        hiddenDetailsInput.value = JSON.stringify({
+                            npc_name: "Old Man Hemlock",
+                            item_name: selectedHemlockHerbName,
+                            quantity: quantity
+                        });
+                    }
+                    if (actionForm) {
+                        console.log("Submitting buy_from_npc action for Hemlock:", hiddenDetailsInput.value);
+                        actionForm.submit();
                     }
                 });
             }
