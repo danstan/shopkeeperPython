@@ -106,20 +106,23 @@ body {
 }
 
 #actions-tab {
-    order: 4;
+    /* order: 4; */ /* Removed for absolute positioning */
     width: 100%;
-    height: 20vh; /* Use viewport height for this panel */
+    /* height: 20vh; */ /* Removed, height now determined by content */
     background-color: #c0c0c0;
     /* border: 1px solid #888; /* REMOVED individual border */
     border-top: 1px solid #555; /* Stronger separator from content above */
 
     padding: 0;
     box-sizing: border-box;
-    position: relative;
+    position: absolute; /* Changed from relative */
+    bottom: 0; /* Added */
+    left: 0; /* Added */
+    z-index: 20; /* Added */
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    border-left: 1px solid #999; /* Add separator */
+    /* border-left: 1px solid #999; */ /* Removed as it might be irrelevant */
 }
 
 /* New styles for Actions/Log Tabs */
@@ -263,7 +266,7 @@ body {
     /* flex-direction: row; /* Not needed if panels stack vertically */
     /* gap: 8px; /* Not needed if panels stack vertically */
     /* padding: 8px; /* Padding will be on panels if needed, or keep if desired for overall content area */
-    height: calc(100% - 35px); /* Adjust based on tab button height, assuming buttons are around 35px */
+    height: auto; /* Was calc(100% - 35px) */
     overflow: hidden; /* To contain the sliding panels */
     position: relative; /* For positioning panels if needed, though max-height should handle it */
 
@@ -281,7 +284,7 @@ body {
 
 #actions-panel-content.panel-visible,
 #log-panel-content.panel-visible {
-    max-height: calc(20vh - 35px); /* Allows panel to use full height of #actions-content (parent) */
+    max-height: 40vh; /* Changed from calc(20vh - 35px) */
     /* If content inside panels needs scrolling, add overflow-y: auto; here
        and ensure #action-controls-wrapper and .log-box don't have fixed height:100%
        if this parent has overflow-y: auto as well.
@@ -309,15 +312,22 @@ body {
     visibility: hidden;
     transition: opacity 0.35s ease-in-out, transform 0.35s ease-in-out, visibility 0s linear 0.35s;
     /* Inherits other styles like padding, background, height:100% from .tab-content */
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5; /* Lowered z-index for non-hovered state */
 }
 
 /* Initial off-screen positions */
 #stats-content, #info-content {
     transform: translateX(-100%);
+    left: 0; /* Added left: 0; */
 }
 
 #inventory-content {
     transform: translateX(100%);
+    left: 0; /* Added left: 0; per instructions (was right: 0 initially) */
 }
 
 /* Hover states to bring content into view */
@@ -328,6 +338,7 @@ body {
     opacity: 1;
     visibility: visible;
     transition-delay: 0s; /* Ensure visibility transition applies correctly on hover */
+    z-index: 25; /* Higher z-index on hover to go above actions tab */
 }
 
 

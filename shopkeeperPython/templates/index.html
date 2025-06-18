@@ -406,8 +406,8 @@
 
         <div id="left-tabs-container">
             <div id="stats-tab">
-                <div class="tab-title-bar">Stats</div>
                 <div id="stats-content" class="tab-content">
+                    <div class="tab-title-bar">Stats</div>
                     <h2>Player Status</h2>
                     <p><strong>Name:</strong> {{ player_name }}</p>
                     <p><strong>HP:</strong> {{ player_hp }} / {{ player_max_hp }}</p>
@@ -421,8 +421,8 @@
                 </div>
             </div>
             <div id="info-tab">
-                <div class="tab-title-bar">Info</div>
                 <div id="info-content" class="tab-content">
+                    <div class="tab-title-bar">Info</div>
                     <h2>Game Info</h2>
                     <p><strong>Current Time:</strong> {{ current_time }}</p>
                     <p><strong>Current Town:</strong> {{ current_town_name }}</p>
@@ -436,8 +436,8 @@
             </svg>
         </div>
         <div id="inventory-tab">
-            <div class="tab-title-bar">Inventory</div>
             <div id="inventory-content" class="tab-content">
+                <div class="tab-title-bar">Inventory</div>
                 <h2>Shop Inventory</h2>
                 {% if shop_inventory and shop_inventory[0] != "Empty" %}
                 <ul>
@@ -951,6 +951,27 @@
                     if (!isClickInsideMenuButton && !isClickInsidePopup && settingsPopup.style.display === 'block') {
                         settingsPopup.style.display = 'none';
                     }
+                }
+            });
+
+            // Click-outside-to-close for Actions/Log tabs
+            const actionsTabContainer = document.getElementById('actions-tab');
+            const actionsPanel = document.getElementById('actions-panel-content');
+            const logPanel = document.getElementById('log-panel-content');
+            const actionsButton = document.getElementById('actions-tab-button');
+            const logButton = document.getElementById('log-tab-button');
+
+            document.addEventListener('click', function(event) {
+                const isActionsPanelVisible = actionsPanel && actionsPanel.classList.contains('panel-visible');
+                const isLogPanelVisible = logPanel && logPanel.classList.contains('panel-visible');
+
+                // Check if either panel is visible AND the click is outside the actionsTabContainer
+                if ((isActionsPanelVisible || isLogPanelVisible) && actionsTabContainer && !actionsTabContainer.contains(event.target)) {
+                    // Close both panels and deactivate both buttons
+                    if (actionsPanel) actionsPanel.classList.remove('panel-visible');
+                    if (logPanel) logPanel.classList.remove('panel-visible');
+                    if (actionsButton) actionsButton.classList.remove('active-tab-button');
+                    if (logButton) logButton.classList.remove('active-tab-button');
                 }
             });
         }
