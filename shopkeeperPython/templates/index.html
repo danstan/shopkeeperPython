@@ -953,6 +953,27 @@
                     }
                 }
             });
+
+            // Click-outside-to-close for Actions/Log tabs
+            const actionsTabContainer = document.getElementById('actions-tab');
+            const actionsPanel = document.getElementById('actions-panel-content');
+            const logPanel = document.getElementById('log-panel-content');
+            const actionsButton = document.getElementById('actions-tab-button');
+            const logButton = document.getElementById('log-tab-button');
+
+            document.addEventListener('click', function(event) {
+                const isActionsPanelVisible = actionsPanel && actionsPanel.classList.contains('panel-visible');
+                const isLogPanelVisible = logPanel && logPanel.classList.contains('panel-visible');
+
+                // Check if either panel is visible AND the click is outside the actionsTabContainer
+                if ((isActionsPanelVisible || isLogPanelVisible) && actionsTabContainer && !actionsTabContainer.contains(event.target)) {
+                    // Close both panels and deactivate both buttons
+                    if (actionsPanel) actionsPanel.classList.remove('panel-visible');
+                    if (logPanel) logPanel.classList.remove('panel-visible');
+                    if (actionsButton) actionsButton.classList.remove('active-tab-button');
+                    if (logButton) logButton.classList.remove('active-tab-button');
+                }
+            });
         }
     });
     </script>
