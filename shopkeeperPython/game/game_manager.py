@@ -140,8 +140,7 @@ class GameManager:
 
     def _print(self, message: str):
         if self.output_stream:
-            self.output_stream.write(message + "
-")
+            self.output_stream.write(message + "\n")
             self.output_stream.flush()
         else:
             print(message)
