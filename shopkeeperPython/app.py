@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, get_flashed_messages
 import io
 import json
 import os # Added for environment variables
@@ -311,6 +311,7 @@ def login_route():
 def logout_route():
     session.pop('username', None)
     session.pop('selected_character_slot', None) # Clear selected character on logout
+    get_flashed_messages()
     flash('You have been logged out.', 'success')
     # Reset global player_char to avoid carrying over state
     global player_char, game_manager_instance
@@ -392,6 +393,10 @@ def create_character_route():
     username = session['username']
     char_name = request.form.get('character_name')
 
+    if not char_name or not char_name.strip():
+        flash('Character name cannot be empty or just whitespace.', 'error')
+        return redirect(url_for('display_game_output', action='create_new_char'))
+
     if username not in user_characters:
         user_characters[username] = [] # Should have been created at registration, but good safeguard
 
@@ -442,7 +447,7 @@ def create_character_route():
         game_manager_instance._print(f"Character {new_character.name} (user: {username}) created and game world prepared.")
     else:
         game_manager_instance._print(f"Attempted to create character {new_character.name}, but game world setup failed. Check logs.")
-        # flash a message to user here?
+        flash(f"Failed to initialize game for {new_character.name}. The character data might be incomplete or corrupted. Please try creating the character again or contact support if the issue persists.", "error")
 
     return redirect(url_for('display_game_output'))
 
