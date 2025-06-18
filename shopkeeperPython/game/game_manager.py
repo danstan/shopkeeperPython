@@ -202,22 +202,35 @@ class GameManager:
         else:
             self._print(f"Character {self.character.name} has no display_character_info method or it's not callable.")
 
+        # Determine starting town
+        loaded_town_name = None
+        town_source_message = "(defaulted)" # Assume default initially
 
-        starting_town_name = "Starting Village" # Default starting town
-        selected_starting_town = self.towns_map.get(starting_town_name)
+        if hasattr(self.character, 'current_town_name') and self.character.current_town_name:
+            loaded_town_name = self.character.current_town_name
+            selected_starting_town = self.towns_map.get(loaded_town_name)
+            if selected_starting_town:
+                town_source_message = "(loaded)"
+            else:
+                self._print(f"Warning: Saved town '{loaded_town_name}' not found or invalid. Falling back to default.")
+                loaded_town_name = None # Ensure we fall through to default logic
 
-        if not selected_starting_town:
-            self._print(f"CRITICAL: Default starting town '{starting_town_name}' not found in towns_map.")
-            if self.towns: # Fallback to the first town in the list
-                self._print(f"Warning: Falling back to the first town in the list: {self.towns[0].name}")
-                selected_starting_town = self.towns[0]
-            else: # This is a severe issue: no towns are defined at all.
-                self._print("CRITICAL: No towns available at all. Cannot set current_town for character.")
-                self.is_game_setup = False # Cannot complete setup
-                return
+        if not loaded_town_name: # If no town loaded from character or loaded town was invalid
+            default_town_name = "Starting Village"
+            selected_starting_town = self.towns_map.get(default_town_name)
+            if not selected_starting_town: # Critical fallback for default
+                self._print(f"CRITICAL: Default starting town '{default_town_name}' not found in towns_map.")
+                if self.towns:
+                    self._print(f"Warning: Falling back to the first town in the list: {self.towns[0].name}")
+                    selected_starting_town = self.towns[0]
+                else:
+                    self._print("CRITICAL: No towns available at all. Cannot set current_town for character.")
+                    self.is_game_setup = False
+                    return
+            # town_source_message remains "(defaulted)"
 
         self.current_town = selected_starting_town
-        self._print(f"Player character {self.character.name} starting in/moved to: {self.current_town.name}.")
+        self._print(f"Player character {self.character.name} starting in/continuing in: {self.current_town.name} {town_source_message}.")
 
         # Initialize Shop for the character
         self.shop = Shop(name=f"{self.character.name}'s Emporium", owner_name=self.character.name, town=self.current_town)

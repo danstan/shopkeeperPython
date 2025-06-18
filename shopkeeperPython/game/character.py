@@ -48,6 +48,7 @@ class Character:
         self.skill_points_to_allocate = 0
         self.speed = 30
         self.is_dead = False # Added for perma-death
+        self.current_town_name = "Starting Village" # Initialize current town name
 
     @property
     def max_hp(self):
@@ -393,7 +394,9 @@ class Character:
                 print("  Reroll failed."); return False
         return False
 
-    def to_dict(self) -> dict:
+    def to_dict(self, current_town_name: str = None) -> dict:
+        # If current_town_name is None, default to "Starting Village"
+        town_name_to_save = current_town_name if current_town_name is not None else "Starting Village"
         return {
             "name": self.name,
             "stats": self.stats.copy(),
@@ -414,6 +417,7 @@ class Character:
             "skill_points_to_allocate": self.skill_points_to_allocate,
             "speed": self.speed,
             "is_dead": self.is_dead, # Added for perma-death
+            "current_town_name": town_name_to_save,
         }
 
     @classmethod
@@ -437,6 +441,8 @@ class Character:
         char.skill_points_to_allocate = data.get("skill_points_to_allocate", 0)
         char.speed = data.get("speed", 30)
         char.is_dead = data.get("is_dead", False) # Added for perma-death
+        # Load current_town_name, defaulting if not found (e.g., older save files)
+        char.current_town_name = data.get("current_town_name", "Starting Village")
 
         # If character is dead, ensure HP is 0.
         if char.is_dead:

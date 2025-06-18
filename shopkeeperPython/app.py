@@ -714,7 +714,7 @@ def perform_action():
             if username and slot_index is not None:
                 # Ensure the slot_index is valid for the list of characters for that user
                 if username in user_characters and 0 <= slot_index < len(user_characters[username]):
-                    user_characters[username][slot_index] = player_char.to_dict()
+                    user_characters[username][slot_index] = player_char.to_dict(current_town_name=game_manager_instance.current_town.name)
                     save_user_characters()
                     # Optional: game_manager_instance._print("  Character data saved after action.")
                 else:
