@@ -467,6 +467,7 @@
                 <div id="log-tab-button">Log</div>
             </div>
             <div id="actions-content" class="tab-content">
+
                 <div id="actions-panel-content"> <!-- Panel for Actions -->
                     <div id="action-controls-wrapper">
                         <!-- All original form elements and action sections MUST be HERE -->
@@ -490,6 +491,7 @@
                                     {% endif %}
                                 </div>
                             </div>
+
 
                             <div id="current-location-container" class="action-box-section">
                                 <h2>Current Location: <span id="current-town-display">{{ current_town_name }}</span></h2>
@@ -564,9 +566,11 @@
                             {{ game_output | safe }}
                         </div>
                     </div>
+
                 </div> <!-- Close log-panel-content -->
             </div> <!-- Close actions-content -->
         </div> <!-- Close actions-tab -->
+
         <div id="settings-popup" style="display: none;">
             <ul>
                 <li id="settings-option">Settings</li>

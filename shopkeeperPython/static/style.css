@@ -266,6 +266,7 @@ body {
     height: calc(100% - 35px); /* Adjust based on tab button height, assuming buttons are around 35px */
     overflow: hidden; /* To contain the sliding panels */
     position: relative; /* For positioning panels if needed, though max-height should handle it */
+
 }
 
 #actions-panel-content, #log-panel-content {
@@ -294,6 +295,7 @@ body {
     height: 100%; /* Fill the visible height of the panel */
     overflow-y: auto; /* Allow scrolling within these if content exceeds panel height */
 }
+
 
 
 /* Add overflow:hidden to tab containers */
