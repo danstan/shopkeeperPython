@@ -460,9 +460,10 @@ def display_game_output():
     global game_manager_instance
 
     user_logged_in = 'username' in session
+    # Initialize these to False. Their final values will be determined by the logic below.
     show_character_selection = False
     show_character_creation_form = False
-    player_char_loaded_or_selected = False
+    player_char_loaded_or_selected = False # This will be true if a character is successfully loaded/selected
     characters_for_selection = []
     current_game_output = ""
 
@@ -471,170 +472,155 @@ def display_game_output():
     player_stats_display = {}
     player_hp_display = 0
     player_max_hp_display = 0
-    player_gold_display = 0
+    player_gold_display = 0 # Will be set to default if showing creation form
     current_time_display = "N/A"
     current_town_display = "N/A"
     shop_inventory_display = ["Empty"]
     player_inventory_display = ["Empty"]
-    dead_characters_info = [] # Initialize for passing to template
+    dead_characters_info = []
 
-    # --- Data for new UI elements ---
     available_towns = list(game_manager_instance.towns_map.keys())
     current_town_sub_locations = []
     all_towns_data = {}
-    available_recipes = {} # Initialize
-    # --- End Data for new UI elements ---
-
-    # Check if Google OAuth is configured
+    available_recipes = {}
     google_auth_is_configured = bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET)
 
     if user_logged_in:
         username = session['username']
         characters_list = user_characters.get(username, [])
-        user_graveyard_list = graveyard.get(username, []) # Load user's graveyard
+        user_graveyard_list = graveyard.get(username, [])
 
-        # Prepare graveyard info for template
         if user_graveyard_list:
             for dead_char_data in user_graveyard_list:
                 dead_characters_info.append({
                     'name': dead_char_data.get('name', 'Unknown'),
                     'level': dead_char_data.get('level', 0),
-                    # Add other details if needed, e.g., from dead_char_data['stats']
                 })
 
-        # Handle 'action=create_new_char' from URL to switch to creation mode
-        if request.args.get('action') == 'create_new_char':
+        is_creating_new_char_action = request.args.get('action') == 'create_new_char'
+
+        if is_creating_new_char_action:
             if len(characters_list) < MAX_CHARS_PER_USER:
-                session.pop('selected_character_slot', None) # Clear selection to force creation view
-                player_char_loaded_or_selected = False # Ensure we don't think a char is active
-                # This will lead to show_character_creation_form = True below
-            else:
+                session.pop('selected_character_slot', None)
+                player_char_loaded_or_selected = False # Explicitly not loading a character
+                show_character_creation_form = True  # GOAL: Show the creation form
+                show_character_selection = False     # Do not show selection
+
+                # Prepare for character creation screen (blank character, default gold)
+                output_stream.truncate(0)
+                output_stream.seek(0)
+                unnamed_char = Character(name=None)
+                player_char = unnamed_char # Update global
+                player_char.gold = 50 # Default gold for creation form display
+                game_manager_instance.setup_for_character(unnamed_char) # Reset GM
+
+                if not characters_list:
+                    current_game_output = "Welcome! Please create your first character."
+                else:
+                    current_game_output = "Create your new character."
+            else: # At character limit
                 flash(f"You cannot create more than {MAX_CHARS_PER_USER} characters.", "warning")
-                # Fall through to character selection or current char display
+                # Let flow continue to potentially show selected character or selection screen
+                # show_character_creation_form remains False
 
-        selected_slot = session.get('selected_character_slot')
+        # This block runs if NOT (is_creating_new_char_action AND slots available)
+        # It tries to load a character if one is selected,
+        # OR determines if selection/creation should be shown if no character is active.
+        if not show_character_creation_form: # Only proceed if not already decided to show creation form
+            selected_slot = session.get('selected_character_slot')
 
-        if selected_slot is not None:
-            try:
-                slot = int(selected_slot)
-                if 0 <= slot < len(characters_list):
-                    char_data = characters_list[slot]
-                    if char_data.get('is_dead', False):
-                        flash(f"{char_data.get('name', 'Character')} is dead and cannot be played.", "warning")
+            if selected_slot is not None:
+                try:
+                    slot = int(selected_slot)
+                    if 0 <= slot < len(characters_list):
+                        char_data = characters_list[slot]
+                        if char_data.get('is_dead', False):
+                            flash(f"{char_data.get('name', 'Character')} is dead and cannot be played.", "warning")
+                            session.pop('selected_character_slot', None)
+                            player_char_loaded_or_selected = False
+                        else:
+                            loaded_player_char = Character.from_dict(char_data)
+                            game_manager_instance.setup_for_character(loaded_player_char)
+                            if game_manager_instance.is_game_setup:
+                                player_char = loaded_player_char # Update global
+                                player_char_loaded_or_selected = True
+                            else:
+                                flash(f"Failed to set up game world for {loaded_player_char.name}. Please try re-creating or contact support.", "error")
+                                player_char_loaded_or_selected = False
+                                session.pop('selected_character_slot', None)
+                    else: # Invalid slot index
                         session.pop('selected_character_slot', None)
                         player_char_loaded_or_selected = False
-                        # Explicitly reset game_manager_instance if a dead character was selected then deselected.
-                        # This ensures that if no other character is subsequently loaded, GM doesn't retain old state.
-                        # The existing logic for "No character active, decide to show selection or creation"
-                        # already handles setting player_char to Character(name=None) and is_game_setup = False.
-                        # So, just ensuring player_char_loaded_or_selected = False is enough here.
-                    else:
-                        loaded_player_char = Character.from_dict(char_data)
-                        # Call setup_for_character with the loaded character
-                        game_manager_instance.setup_for_character(loaded_player_char)
+                except (ValueError, TypeError): # Invalid slot format
+                     session.pop('selected_character_slot', None)
+                     player_char_loaded_or_selected = False
 
-                        if game_manager_instance.is_game_setup:
-                            # Update the global player_char in app.py to reflect the loaded character
-                            player_char = loaded_player_char
-                            player_char_loaded_or_selected = True
-                            # flash(f"Character {player_char.name} loaded successfully.", "success") # Optional: can be noisy
-                        else:
-                            # Setup failed for some reason (e.g., bad character data, though from_dict should catch some)
-                            flash(f"Failed to set up game world for {loaded_player_char.name}. Please try re-creating or contact support.", "error")
-                            player_char_loaded_or_selected = False
-                            session.pop('selected_character_slot', None) # Deselect problematic character
-                else: # Invalid slot
-                    session.pop('selected_character_slot', None)
-                    player_char_loaded_or_selected = False # Ensure this is false
-            except (ValueError, TypeError):
-                 session.pop('selected_character_slot', None)
-                 player_char_loaded_or_selected = False # Ensure this is false on error too
+            # If a character is loaded and active:
+            if player_char_loaded_or_selected:
+                player_name_display = player_char.name
+                player_stats_display = player_char.stats
+                player_hp_display = player_char.hp
+                player_max_hp_display = player_char.get_effective_max_hp()
+                player_gold_display = player_char.gold
+                current_time_display = game_manager_instance.time.get_time_string()
+                current_town_display = game_manager_instance.current_town.name
+                if game_manager_instance.current_town:
+                    current_town_sub_locations = game_manager_instance.current_town.sub_locations
+                for town_obj in game_manager_instance.towns_map.values():
+                    all_towns_data[town_obj.name] = {"sub_locations": town_obj.sub_locations}
+                shop_items = {}
+                for item in game_manager_instance.shop.inventory:
+                    shop_items[item.name] = shop_items.get(item.name, 0) + 1
+                shop_inventory_display = [f"{name} (x{qty})" for name, qty in shop_items.items()] or ["Empty"]
+                player_inventory_display = [item.name for item in player_char.inventory] or ["Empty"]
+                current_game_output = output_stream.getvalue()
+                if game_manager_instance.shop:
+                    available_recipes = game_manager_instance.shop.BASIC_RECIPES
+            else: # No character is active/loaded (and not showing creation form from action=create_new_char)
+                output_stream.truncate(0)
+                output_stream.seek(0)
+                unnamed_char = Character(name=None)
+                player_char = unnamed_char # Update global
+                player_char.gold = 50 # Default gold
+                game_manager_instance.setup_for_character(unnamed_char) # Reset GM
 
-
-        if player_char_loaded_or_selected:
-            # This block executes only if a living character is successfully loaded and selected.
-            player_name_display = player_char.name
-            player_stats_display = player_char.stats
-            player_hp_display = player_char.hp
-            player_max_hp_display = player_char.get_effective_max_hp()
-            player_gold_display = player_char.gold
-            current_time_display = game_manager_instance.time.get_time_string()
-            current_town_display = game_manager_instance.current_town.name
-            # Populate sub-locations and all_towns_data if a character is loaded
-            if game_manager_instance.current_town:
-                current_town_sub_locations = game_manager_instance.current_town.sub_locations
-
-            for town_obj in game_manager_instance.towns_map.values():
-                all_towns_data[town_obj.name] = {
-                    "sub_locations": town_obj.sub_locations
-                }
-
-            shop_items = {}
-            for item in game_manager_instance.shop.inventory:
-                shop_items[item.name] = shop_items.get(item.name, 0) + 1
-            shop_inventory_display = [f"{name} (x{qty})" for name, qty in shop_items.items()] or ["Empty"]
-
-            player_inventory_display = [item.name for item in player_char.inventory] or ["Empty"]
-            current_game_output = output_stream.getvalue()
-
-            # Fetch recipes if shop is available
-            if game_manager_instance.shop:
-                available_recipes = game_manager_instance.shop.BASIC_RECIPES
-            else:
-                available_recipes = {} # Ensure it's an empty dict if no shop
-
-        else: # No character active (either not selected, selection invalid, or selection was a dead char)
-            output_stream.truncate(0)
-            output_stream.seek(0)
-
-            unnamed_char = Character(name=None) # Character with no name
-            player_char = unnamed_char # Update global player_char
-            player_char.gold = 50 # Default gold for display on creation form
-
-            # Call setup_for_character with the unnamed char.
-            # This will internally set game_manager_instance.is_game_setup to False
-            # and reset other GM properties based on an unnamed character.
-            game_manager_instance.setup_for_character(unnamed_char)
-
-            if characters_list: # User has characters, but none selected (or selection was invalid/dead)
-                show_character_selection = True
-                for i, char_data_item in enumerate(characters_list):
-                    characters_for_selection.append({
-                        'name': char_data_item.get('name', 'Unknown'),
-                        'level': char_data_item.get('level', 0),
-                        'slot_index': i,
-                        'is_dead': char_data_item.get('is_dead', False) # Add is_dead status
-                    })
-                current_game_output = "Please select a character or create a new one."
-                # player_char and game_manager_instance already handled by unnamed_char logic above
-
-            else: # No existing characters for this user
-                if len(characters_list) < MAX_CHARS_PER_USER: # Check against characters_list for creation possibility
-                    show_character_creation_form = True
-                    # player_char already set to unnamed_char with default gold
-                    current_game_output = "Welcome! Please create your character."
-                else: # No characters and no slots left
-                    current_game_output = "You have no characters and no character slots available. Please contact support."
-                # player_char and game_manager_instance already handled by unnamed_char logic above
+                if characters_list: # User has characters, but none are selected/active
+                    show_character_selection = True
+                    for i, char_data_item in enumerate(characters_list):
+                        characters_for_selection.append({
+                            'name': char_data_item.get('name', 'Unknown'),
+                            'level': char_data_item.get('level', 0),
+                            'slot_index': i,
+                            'is_dead': char_data_item.get('is_dead', False)
+                        })
+                    current_game_output = "Please select a character"
+                    if len(characters_list) < MAX_CHARS_PER_USER:
+                        current_game_output += " or create a new one."
+                    # player_gold_display is implicitly 50 from player_char.gold if no char loaded
+                else: # No characters exist for this user
+                    show_character_creation_form = True # Show creation form
+                    current_game_output = "Welcome! Please create your first character."
+                    # player_gold_display is implicitly 50 as above
 
     else: # User not logged in
-        unnamed_char_for_logout = Character(name=None)
-        player_char = unnamed_char_for_logout
-        player_char.gold = 50
-        # Ensure GameManager is also reset when user logs out
-        game_manager_instance.setup_for_character(unnamed_char_for_logout)
-        current_game_output = "Please log in to start your adventure."
-        output_stream.truncate(0) # Clear game log for login screen
+        output_stream.truncate(0)
         output_stream.seek(0)
-        output_stream.write(current_game_output)
+        unnamed_char = Character(name=None)
+        player_char = unnamed_char # Update global
+        player_char.gold = 50
+        game_manager_instance.setup_for_character(unnamed_char)
+        current_game_output = "Please log in to start your adventure."
 
+    # Ensure player_gold_display reflects the state for creation/no selection
+    if show_character_creation_form or (not player_char_loaded_or_selected and not user_logged_in) or (user_logged_in and not player_char_loaded_or_selected):
+        player_gold_display = player_char.gold # Should be 50 from unnamed_char
 
     return render_template('index.html',
                            user_logged_in=user_logged_in,
                            show_character_selection=show_character_selection,
                            characters_for_selection=characters_for_selection,
                            MAX_CHARS_PER_USER=MAX_CHARS_PER_USER,
-                           dead_characters_info=dead_characters_info, # Pass graveyard data
+                           dead_characters_info=dead_characters_info,
                            show_character_creation_form=show_character_creation_form,
                            game_output=current_game_output,
                            player_name=player_name_display,
