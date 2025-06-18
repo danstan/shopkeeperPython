@@ -462,18 +462,31 @@
             </div>
         </div>
         <div id="actions-tab">
-            <div class="tab-title-bar">Actions & Log</div>
+            <div class="actions-log-tab-buttons">
+                <div id="actions-tab-button">Actions</div>
+                <div id="log-tab-button">Log</div>
+            </div>
             <div id="actions-content" class="tab-content">
-                <div class="log-box">
-                    <h2>Game Log</h2>
-                    <div id="game-output" style="white-space: pre-wrap; height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
-                        {{ game_output | safe }}
+                <div id="actions-panel-content">
+                    <div id="action-controls-wrapper">
+                        <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
+                            <input type="hidden" id="action_name_hidden" name="action_name" value="">
+                            <input type="hidden" id="action_details" name="action_details" value="{}">
                     </div>
                 </div>
-                <div id="action-controls-wrapper">
-                    <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
-                        <input type="hidden" id="action_name_hidden" name="action_name" value="">
-                        <input type="hidden" id="action_details" name="action_details" value="{}">
+                <div id="log-panel-content">
+                    <div class="log-box">
+                        <h2>Game Log</h2>
+                        <div id="game-output" style="white-space: pre-wrap; height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
+                            {{ game_output | safe }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="settings-popup" style="display: none;">
+            <ul>
+                <li id="settings-option">Settings</li>
                         <!-- Submit button might be dynamically added or made visible by JS,
                              or we can have a generic "Do Selected Action" button if an action is chosen.
                              For now, let action buttons themselves trigger form submission. -->
@@ -557,7 +570,6 @@
                         <button type="button" id="gatherResourcesButton" class="general-action-button">Gather Resources</button>
                         <!-- Add other general town/area actions here if needed -->
                     </div>
-
                 </div>
             </div>
         </div>
@@ -865,8 +877,14 @@
             const statsContent = document.getElementById('stats-content');
             const inventoryTab = document.getElementById('inventory-tab');
             const inventoryContent = document.getElementById('inventory-content');
-            const actionsTab = document.getElementById('actions-tab');
-            const actionsContent = document.getElementById('actions-content');
+            // const actionsTab = document.getElementById('actions-tab'); // Old reference
+            // const actionsContent = document.getElementById('actions-content'); // Old reference for direct toggle
+
+            // New elements for Actions/Log tabs
+            const actionsTabButton = document.getElementById('actions-tab-button');
+            const logTabButton = document.getElementById('log-tab-button');
+            const actionsPanelContent = document.getElementById('actions-panel-content');
+            const logPanelContent = document.getElementById('log-panel-content');
 
             const infoTab = document.getElementById('info-tab');
             const infoContent = document.getElementById('info-content');
@@ -879,25 +897,33 @@
             // REMOVED JavaScript hover listeners for statsTab, inventoryTab, and infoTab
             // CSS :hover will now handle their visibility and animation.
 
-            if (actionsTab && actionsContent) {
-                actionsTab.addEventListener('click', () => {
-                    // For actionsContent, we toggle between 'none' and 'flex'
-                    // because #actions-content is a flex container itself.
-                    const isHidden = actionsContent.style.display === 'none' || actionsContent.style.display === '';
-                    actionsContent.style.display = isHidden ? 'flex' : 'none'; // Use 'flex'
-                    if (isHidden) {
-                        actionsTab.classList.add('actions-tab-active');
-                    } else {
-                        actionsTab.classList.remove('actions-tab-active');
-                    }
-                    // Note: The 'display: flex' for #actions-content when visible
-                    // was already specified in the CSS for #actions-content when it's active/shown.
-                    // The previous CSS had it as `display: flex` overriding `.tab-content display:none`.
-                    // Now, `.tab-content` no longer has `display:none`.
-                    // `#actions-content` specifically has `display:none` initially.
-                    // So JS must set it to `display:flex` to show it.
+            // Old listener for #actions-tab (the container) is removed.
+            // if (actionsTab && actionsContent) { ... }
+
+            // New listeners for Actions/Log tab buttons
+            if (actionsTabButton && actionsPanelContent && logTabButton && logPanelContent) {
+                actionsTabButton.addEventListener('click', () => {
+                    actionsPanelContent.classList.add('panel-visible');
+                    logPanelContent.classList.remove('panel-visible');
+                    actionsTabButton.classList.add('active-tab-button');
+                    logTabButton.classList.remove('active-tab-button');
                 });
+
+                logTabButton.addEventListener('click', () => {
+                    logPanelContent.classList.add('panel-visible');
+                    actionsPanelContent.classList.remove('panel-visible');
+                    logTabButton.classList.add('active-tab-button');
+                    actionsTabButton.classList.remove('active-tab-button');
+                });
+
+                // Initial state: Make Actions tab active by default
+                actionsTabButton.classList.add('active-tab-button');
+                actionsPanelContent.classList.add('panel-visible');
+                // Ensure log tab is not active/visible initially
+                logTabButton.classList.remove('active-tab-button');
+                logPanelContent.classList.remove('panel-visible');
             }
+
 
             if (topRightMenuButton && settingsPopup) {
                 topRightMenuButton.addEventListener('click', () => {
