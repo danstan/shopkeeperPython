@@ -65,6 +65,11 @@ To run the web interface:
 
 1. Navigate to the `shopkeeperPython` directory.
 2. Install dependencies: `pip install -r requirements.txt`
+
+   **Note on Updates:** If you pull new changes from the repository, remember to reinstall dependencies as new ones might have been added:
+   ```bash
+   pip install -r shopkeeperPython/requirements.txt
+   ```
 3. Run the game: `python app.py` or `flask run`
 4. Access the web interface at `http://localhost:5001`.
 5. On your first visit, you will need to register a user account and then create a character through the web UI to start playing.

@@ -163,36 +163,66 @@ def find_user_by_email(email_to_find):
 # --- Data Persistence Functions ---
 def load_data():
     global users, user_characters, graveyard # Add graveyard to globals
-    print("DEBUG_LOAD_DATA: Starting load_data()")
+
+    users_migrated = False # Flag to track if migration occurred
     try:
         with open(USERS_FILE, 'r') as f:
-            file_content = f.read()
-            print(f"DEBUG_LOAD_DATA: {USERS_FILE} found. Raw content before parsing: '{file_content}'")
-            f.seek(0) # IMPORTANT: Reset file cursor to the beginning before json.load()
-            users = json.load(f)
-            print(f"DEBUG_LOAD_DATA: Users loaded from file. Parsed users dict: {users}")
+            loaded_users_data = json.load(f)
+
+        # Data migration check
+        # Operate on a copy if direct modification during iteration is problematic,
+        # or build a new dictionary. Here, modifying loaded_users_data directly is fine.
+        for username, user_data in loaded_users_data.items():
+            if isinstance(user_data, str):
+                print(f"Migrating user data for user '{username}' to new format.")
+                loaded_users_data[username] = {
+                    "password": generate_password_hash(user_data), # Hash the original string password
+                    "google_id": None,
+                    "email_google": None,
+                    "display_name_google": None
+                }
+                users_migrated = True
+            # No need for the elif isinstance(user_data, dict) ... as it does nothing.
+
+        users.clear()
+        users.update(loaded_users_data)
+
+        if users_migrated:
+            save_users()
+
+
     except FileNotFoundError:
         # Default user with a hashed password
-        users = {"testuser": {
+        default_user_data = {"testuser": {
             "password": generate_password_hash("password123"),
             "google_id": None,
             "email_google": None,
             "display_name_google": None
             }
         }
-        print(f"DEBUG_LOAD_DATA: {USERS_FILE} not found. Assigned default users structure. Default users dict: {users}")
+
+        users.clear()
+        users.update(default_user_data)
+        # No need to call save_users() here if FileNotFoundError, as it will be created with default user
+        # and then immediately saved by the users_migrated block if it was the first run.
+        # However, to ensure it's saved if the file truly didn't exist and no migration happened (e.g. empty users dict from json.load on empty file that somehow passed FileNotFoundError)
+        # it's safer to keep the original save_users() or rely on the migration save.
+        # For this refactor, we'll ensure the default user is saved if created.
+
         save_users()
     except json.JSONDecodeError:
         print(f"Warning: Could not decode {USERS_FILE}. Starting with default user.")
-        users = {"testuser": {
+        default_user_data = {"testuser": {
             "password": generate_password_hash("password123"),
             "google_id": None,
             "email_google": None,
             "display_name_google": None
             }
         }
-        print(f"DEBUG_LOAD_DATA: JSONDecodeError in {USERS_FILE}. Assigned default users structure. Default users dict: {users}")
-        save_users()
+
+        users.clear()
+        users.update(default_user_data)
+        save_users() # Save the default user if JSON was corrupted
 
 
     try:
@@ -396,14 +426,23 @@ def create_character_route():
     # Automatically select the newly created character
     session['selected_character_slot'] = len(user_characters[username]) - 1
 
-    # Update global player_char and game_manager_instance
+    # Update global player_char (still useful for immediate context if needed before full setup)
     player_char = new_character
-    game_manager_instance.character = player_char
-    game_manager_instance.is_game_setup = True # Game is ready with the new character
-    output_stream.truncate(0) # Clear any previous messages (e.g. "create char" prompt)
+    # game_manager_instance.character = player_char # Redundant
+    # game_manager_instance.is_game_setup = True # Redundant
+
+    output_stream.truncate(0)
     output_stream.seek(0)
-    game_manager_instance._print(f"Character {player_char.name} created for user {username} and selected successfully!")
-    game_manager_instance.initialize_game_world_if_needed()
+
+    # Call the new setup method
+    game_manager_instance.setup_for_character(new_character)
+
+    # Confirmation message (optional, as setup_for_character is verbose)
+    if game_manager_instance.is_game_setup:
+        game_manager_instance._print(f"Character {new_character.name} (user: {username}) created and game world prepared.")
+    else:
+        game_manager_instance._print(f"Attempted to create character {new_character.name}, but game world setup failed. Check logs.")
+        # flash a message to user here?
 
     return redirect(url_for('display_game_output'))
 
@@ -471,16 +510,33 @@ def display_game_output():
                     if char_data.get('is_dead', False):
                         flash(f"{char_data.get('name', 'Character')} is dead and cannot be played.", "warning")
                         session.pop('selected_character_slot', None)
-                        player_char_loaded_or_selected = False # Force re-evaluation for selection/creation
+                        player_char_loaded_or_selected = False
+                        # Explicitly reset game_manager_instance if a dead character was selected then deselected.
+                        # This ensures that if no other character is subsequently loaded, GM doesn't retain old state.
+                        # The existing logic for "No character active, decide to show selection or creation"
+                        # already handles setting player_char to Character(name=None) and is_game_setup = False.
+                        # So, just ensuring player_char_loaded_or_selected = False is enough here.
                     else:
-                        player_char = Character.from_dict(char_data)
-                        game_manager_instance.character = player_char
-                        game_manager_instance.is_game_setup = True
-                        player_char_loaded_or_selected = True
-                else:
+                        loaded_player_char = Character.from_dict(char_data)
+                        # Call setup_for_character with the loaded character
+                        game_manager_instance.setup_for_character(loaded_player_char)
+
+                        if game_manager_instance.is_game_setup:
+                            # Update the global player_char in app.py to reflect the loaded character
+                            player_char = loaded_player_char
+                            player_char_loaded_or_selected = True
+                            # flash(f"Character {player_char.name} loaded successfully.", "success") # Optional: can be noisy
+                        else:
+                            # Setup failed for some reason (e.g., bad character data, though from_dict should catch some)
+                            flash(f"Failed to set up game world for {loaded_player_char.name}. Please try re-creating or contact support.", "error")
+                            player_char_loaded_or_selected = False
+                            session.pop('selected_character_slot', None) # Deselect problematic character
+                else: # Invalid slot
                     session.pop('selected_character_slot', None)
+                    player_char_loaded_or_selected = False # Ensure this is false
             except (ValueError, TypeError):
                  session.pop('selected_character_slot', None)
+                 player_char_loaded_or_selected = False # Ensure this is false on error too
 
 
         if player_char_loaded_or_selected:
@@ -500,10 +556,20 @@ def display_game_output():
 
             player_inventory_display = [item.name for item in player_char.inventory] or ["Empty"]
             current_game_output = output_stream.getvalue()
-        else: # No character active, decide to show selection or creation
-            output_stream.truncate(0) # Clear game log if no character is active
+        else: # No character active (either not selected, selection invalid, or selection was a dead char)
+            output_stream.truncate(0)
             output_stream.seek(0)
-            if characters_list: # User has characters, but none selected (or selection was invalid)
+
+            unnamed_char = Character(name=None) # Character with no name
+            player_char = unnamed_char # Update global player_char
+            player_char.gold = 50 # Default gold for display on creation form
+
+            # Call setup_for_character with the unnamed char.
+            # This will internally set game_manager_instance.is_game_setup to False
+            # and reset other GM properties based on an unnamed character.
+            game_manager_instance.setup_for_character(unnamed_char)
+
+            if characters_list: # User has characters, but none selected (or selection was invalid/dead)
                 show_character_selection = True
                 for i, char_data_item in enumerate(characters_list):
                     characters_for_selection.append({
@@ -513,29 +579,23 @@ def display_game_output():
                         'is_dead': char_data_item.get('is_dead', False) # Add is_dead status
                     })
                 current_game_output = "Please select a character or create a new one."
-                player_char = Character(name=None)
-                game_manager_instance.character = player_char
-                game_manager_instance.is_game_setup = False
+                # player_char and game_manager_instance already handled by unnamed_char logic above
 
             else: # No existing characters for this user
-                if len(characters_list) < MAX_CHARS_PER_USER:
+                if len(characters_list) < MAX_CHARS_PER_USER: # Check against characters_list for creation possibility
                     show_character_creation_form = True
-                    player_char = Character(name=None) # Prepare for creation
-                    player_char.gold = 50
-                    game_manager_instance.character = player_char
-                    game_manager_instance.is_game_setup = False
+                    # player_char already set to unnamed_char with default gold
                     current_game_output = "Welcome! Please create your character."
-                else: # No characters and no slots left (should ideally not happen if MAX_CHARS handled at creation)
+                else: # No characters and no slots left
                     current_game_output = "You have no characters and no character slots available. Please contact support."
-                    player_char = Character(name=None)
-                    game_manager_instance.character = player_char
-                    game_manager_instance.is_game_setup = False
+                # player_char and game_manager_instance already handled by unnamed_char logic above
 
     else: # User not logged in
-        player_char = Character(name=None)
+        unnamed_char_for_logout = Character(name=None)
+        player_char = unnamed_char_for_logout
         player_char.gold = 50
-        game_manager_instance.character = player_char
-        game_manager_instance.is_game_setup = False
+        # Ensure GameManager is also reset when user logs out
+        game_manager_instance.setup_for_character(unnamed_char_for_logout)
         current_game_output = "Please log in to start your adventure."
         output_stream.truncate(0) # Clear game log for login screen
         output_stream.seek(0)
