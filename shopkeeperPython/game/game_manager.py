@@ -32,6 +32,37 @@ CUSTOMER_DIALOGUE_TEMPLATES = {
     ]
 }
 
+RESOURCE_ITEM_DEFINITIONS = {
+    "Dirty Water": {"description": "Murky water, might need cleaning.", "base_value": 0, "item_type": "component"},
+    "Moldy Fruit": {"description": "Fruit that's seen better days.", "base_value": 0, "item_type": "component"},
+    "Scrap Metal": {"description": "A piece of discarded metal.", "base_value": 1, "item_type": "component"},
+    "Clean Water": {"description": "Potable water.", "base_value": 1, "item_type": "component"},
+    "Sturdy Branch": {"description": "A solid tree branch.", "base_value": 1, "item_type": "component"},
+    "Grain": {"description": "Handful of wild grain.", "base_value": 1, "item_type": "component"},
+    "Rawhide": {"description": "Untreated animal hide.", "base_value": 2, "item_type": "component"},
+    "Linen Scrap": {"description": "A small piece of linen cloth.", "base_value": 1, "item_type": "component"},
+    "Small Twig": {"description": "A thin twig.", "base_value": 0, "item_type": "component"},
+    "Wild Herb": {"description": "A common medicinal herb.", "base_value": 2, "item_type": "component"},
+    "Stone Fragment": {"description": "A sharp piece of stone.", "base_value": 0, "item_type": "component"},
+    "Bird Feather": {"description": "A bird feather.", "base_value": 1, "item_type": "component"}
+}
+
+HEMLOCK_HERBS = {
+   "Sunpetal": {"description": "A bright, sun-shaped flower that aids recovery.", "base_value": 5, "item_type": "herb", "quality": "Common", "price": 8},
+   "Moonleaf": {"description": "A silvery leaf that glows faintly, used in calming draughts.", "base_value": 7, "item_type": "herb", "quality": "Common", "price": 12},
+   "Bitterroot": {"description": "A pungent root known for its purifying qualities.", "base_value": 4, "item_type": "herb", "quality": "Common", "price": 6}
+}
+
+EXPLORATION_FINDS = [
+    {"type": "gold", "amount": 5},
+    {"type": "gold", "amount": 10},
+    {"type": "item", "name": "Old Coin", "description": "A worn, unidentifiable coin.", "base_value": 1, "item_type": "trinket", "quality": "Common", "quantity": 1},
+    {"type": "item", "name": "Linen Scrap", "description": "A small piece of linen cloth.", "base_value": 1, "item_type": "component", "quality": "Common", "quantity": 1},
+    {"type": "item", "name": "Small Twig", "description": "A thin twig.", "base_value": 0, "item_type": "component", "quality": "Common", "quantity": 1},
+    {"type": "item", "name": "Shiny Pebble", "description": "A smooth, oddly shiny pebble.", "base_value": 1, "item_type": "trinket", "quality": "Common", "quantity": 1},
+    {"type": "item", "name": "Apple", "description": "A slightly bruised apple.", "base_value": 1, "item_type": "food", "quality": "Common", "quantity": 1, "is_consumable": True, "effects": {"healing": 1}}
+]
+
 class GameManager:
     def __init__(self, player_character: Character = None, output_stream=None):
         self.output_stream = output_stream
@@ -49,8 +80,14 @@ class GameManager:
         town_starting = Town(
             name="Starting Village",
             properties=["Quiet farming village", "River nearby"],
-            nearby_resources=["Fish", "Wheat", "Basic Herbs"],
-            unique_npc_crafters=[{"name": "Old Man Hemlock", "specialty": "Herbalism", "services": ["Identifies Herbs"], "quests_available": []}],
+            nearby_resources=["Dirty Water", "Moldy Fruit", "Wild Herb", "Small Twig", "Sturdy Branch", "Grain"],
+            unique_npc_crafters=[{
+                "name": "Old Man Hemlock",
+                "specialty": "Herbalism",
+                "services": ["Identifies Herbs"],
+                "quests_available": [],
+                "dialogue": ["The forest speaks to those who listen.", "These old bones have seen many seasons.", "Looking for herbs, are we?"]
+            }],
             market_demand_modifiers={"Minor Healing Potion": 1.1, "Bread": 0.9, "Fish": 1.05},
             sub_locations=[
                 {"name": "Village Shop", "description": "Your humble shop.", "actions": ["buy_from_own_shop", "sell_to_own_shop", "check_shop_inventory", "craft"]},
@@ -61,8 +98,14 @@ class GameManager:
         town_steel_flow = Town(
             name="Steel Flow City",
             properties=["Major mining hub", "Strong warrior tradition"],
-            nearby_resources=["Iron Ore", "Coal", "Stone"],
-            unique_npc_crafters=[{"name": "Borin Stonebeard", "specialty": "Blacksmithing", "services": ["Repairs Gear", "Sells Metal Ingots"], "quests_available": ["Clear Mine Pests"]}],
+            nearby_resources=["Scrap Metal", "Stone Fragment", "Dirty Water", "Sturdy Branch"],
+            unique_npc_crafters=[{
+                "name": "Borin Stonebeard",
+                "specialty": "Blacksmithing",
+                "services": ["Repairs Gear", "Sells Metal Ingots"],
+                "quests_available": ["Clear Mine Pests"],
+                "dialogue": ["The clang of the hammer is music to my ears.", "Need something sturdy, eh?", "Steel and sweat, that's the way!"]
+            }],
             market_demand_modifiers={"Simple Dagger": 1.25, "Iron Sword": 1.3, "Minor Healing Potion": 1.15, "Stale Ale": 0.8},
             sub_locations=[
                 {"name": "City Market", "description": "A bustling marketplace.", "actions": ["explore_town", "research_market", "visit_general_store_sfc"]},
@@ -147,6 +190,25 @@ class GameManager:
 
         self.is_game_setup = True # Mark the game as successfully set up for this character
         self._print(f"--- Game world setup complete for {self.character.name}. is_game_setup: {self.is_game_setup} ---")
+
+    def _handle_npc_dialogue(self, npc_name_to_find: str) -> int:
+        if not self.current_town or not hasattr(self.current_town, 'unique_npc_crafters'):
+            self._print(f"  No town information or NPC crafters defined for {self.current_town.name if self.current_town else 'current location'}.")
+            return 0
+
+        for npc in self.current_town.unique_npc_crafters:
+            if npc.get('name') == npc_name_to_find:
+                dialogue_options = npc.get('dialogue')
+                if dialogue_options and isinstance(dialogue_options, list) and len(dialogue_options) > 0:
+                    dialogue_line = random.choice(dialogue_options)
+                    self._print(f"  {npc_name_to_find} says: \"{dialogue_line}\"")
+                    return 1  # XP for successful dialogue
+                else:
+                    self._print(f"  {npc_name_to_find} has nothing to say right now.")
+                    return 0
+
+        self._print(f"  Could not find '{npc_name_to_find}' in {self.current_town.name}.")
+        return 0
 
     def _print(self, message: str):
         if self.output_stream:
@@ -317,10 +379,13 @@ class GameManager:
             if action_name == "craft":
                 item_name = action_details.get("item_name")
                 if item_name:
-                    crafted_item = self.shop.craft_item(item_name)
+                    # Pass self.character to the craft_item method
+                    crafted_item = self.shop.craft_item(item_name, self.character)
                     if crafted_item:
-                        self._print(f"  Successfully crafted {crafted_item.quality} {item_name}.")
-                        self.daily_items_crafted.append(item_name)
+                        # Assuming crafted_item.quantity will be correctly set by Item constructor
+                        # based on recipe's quantity_produced.
+                        self._print(f"  Successfully crafted {crafted_item.quantity}x {crafted_item.quality} {item_name}.")
+                        self.daily_items_crafted.append(f"{crafted_item.quantity}x {item_name}")
                         action_xp_reward = 10
                     else:
                         self._print(f"  Failed to craft {item_name}.")
@@ -395,6 +460,29 @@ class GameManager:
                     self._print(f"    Nearby Resources: {', '.join(self.current_town.nearby_resources)}")
                     crafters = [f"{c['name']} ({c['specialty']})" for c in self.current_town.unique_npc_crafters]
                     self._print(f"    Unique NPCs: {', '.join(crafters) if crafters else 'None'}")
+
+                if random.random() < 0.20: # 20% chance to find something
+                    found_what = random.choice(EXPLORATION_FINDS)
+                    if found_what["type"] == "gold":
+                        amount = found_what["amount"]
+                        self.character.gold += amount
+                        self._print(f"  While exploring, {self.character.name} found {amount}g!")
+                    elif found_what["type"] == "item":
+                        item_effects = found_what.get("effects", {})
+                        item_is_consumable = found_what.get("is_consumable", False)
+
+                        found_item_obj = Item(
+                            name=found_what["name"],
+                            description=found_what["description"],
+                            base_value=found_what["base_value"],
+                            item_type=found_what["item_type"],
+                            quality=found_what["quality"],
+                            quantity=found_what["quantity"],
+                            effects=item_effects,
+                            is_consumable=item_is_consumable
+                        )
+                        self.character.add_item_to_inventory(found_item_obj)
+                        self._print(f"  While exploring, {self.character.name} found a {found_item_obj.name}!")
                 action_xp_reward = 5
 
             elif action_name == "talk_to_customer":
@@ -449,16 +537,103 @@ class GameManager:
                 self._print(f"  {self.character.name} waits for an hour, observing the surroundings.")
                 action_xp_reward = 1 # Minimal XP for passing time consciously
 
+            elif action_name == "gather_resources":
+                if not self.current_town or not self.current_town.nearby_resources:
+                    self._print("  No known resources to gather in this area.")
+                else:
+                    resource_name = random.choice(self.current_town.nearby_resources)
+                    gathered_quantity = random.randint(1, 3)
+
+                    details = RESOURCE_ITEM_DEFINITIONS.get(resource_name)
+                    if details:
+                        new_item = Item(
+                            name=resource_name,
+                            description=details["description"],
+                            base_value=details["base_value"],
+                            item_type=details["item_type"],
+                            quality="Common", # Gathered resources are typically common
+                            quantity=gathered_quantity
+                        )
+                        # Assuming add_item_to_inventory handles stacking or creates new stack
+                        self.character.add_item_to_inventory(new_item)
+                        self._print(f"  {self.character.name} gathered {new_item.quantity}x {new_item.name}.")
+                        action_xp_reward = 3
+                    else:
+                        self._print(f"  Could not find definition for resource: {resource_name}")
+
             # --- New Placeholder Actions from Sub-locations ---
             elif action_name == "talk_to_villager":
-                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You chat with a villager.")
-                action_xp_reward = 2
-            elif action_name == "talk_to_hemlock":
-                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You speak with Old Man Hemlock.")
-                action_xp_reward = 2
-            elif action_name == "buy_herbs_hemlock":
-                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You browse Hemlock's herbs.")
+                # For now, generic villager dialogue
+                generic_villager_dialogues = [
+                    "Nice weather we're having, eh?",
+                    "Watch out for the goblins if you're heading east.",
+                    "Welcome to our village!",
+                    "Hmm? Oh, just admiring the clouds.",
+                    "Need something?"
+                ]
+                if self.current_town and self.current_town.name == "Steel Flow City":
+                     generic_villager_dialogues.extend([
+                         "This city never sleeps, always the sound of the forges!",
+                         "Heard Borin's working on a special commission."
+                     ])
+                elif self.current_town and self.current_town.name == "Starting Village":
+                     generic_villager_dialogues.extend([
+                         "Old Man Hemlock knows all the secrets of the woods.",
+                         "The crops are doing well this season, thankfully."
+                     ])
+
+                self._print(f"  You chat with a villager. They say: \"{random.choice(generic_villager_dialogues)}\"")
                 action_xp_reward = 1
+            elif action_name == "talk_to_hemlock":
+                action_xp_reward = self._handle_npc_dialogue("Old Man Hemlock")
+            elif action_name == "buy_herbs_hemlock":
+                item_to_buy_name = action_details.get("item_name")
+                quantity_to_buy = 0
+                try:
+                    quantity_to_buy = int(action_details.get("quantity", 0))
+                except ValueError:
+                    self._print("  Invalid quantity. Please provide a number.")
+                    # Action fails, time passes, no XP
+                    action_xp_reward = 0
+                    # Need to jump to post-action processing or ensure time advances
+                    # For simplicity, let the default time advancement handle it.
+                    # This 'else' block for character alive continues, so time will pass.
+
+                if not item_to_buy_name or quantity_to_buy <= 0:
+                    if not item_to_buy_name: # Only print if item name was the issue and quantity might have been okay
+                         self._print("  Please specify a valid herb to buy from Hemlock.")
+                    elif quantity_to_buy <=0 and item_to_buy_name : # Only print if quantity was the issue
+                         self._print(f"  Please specify a valid quantity (more than 0) for {item_to_buy_name}.")
+                    else: # Both might be missing or other general failure
+                         self._print("  Please specify a valid herb and quantity to buy from Hemlock.")
+                    action_xp_reward = 0 # No XP for failed attempt
+                elif item_to_buy_name not in HEMLOCK_HERBS:
+                    self._print(f"  Old Man Hemlock doesn't sell '{item_to_buy_name}'. He has: {', '.join(HEMLOCK_HERBS.keys())}.")
+                    action_xp_reward = 0
+                else:
+                    herb_info = HEMLOCK_HERBS[item_to_buy_name]
+                    total_cost = herb_info["price"] * quantity_to_buy
+
+                    if self.character.gold < total_cost:
+                        self._print(f"  {self.character.name} doesn't have enough gold. (Needs {total_cost}g, Has {self.character.gold}g).")
+                        action_xp_reward = 0
+                    else:
+                        self.character.gold -= total_cost
+
+                        new_herb_item = Item(
+                            name=item_to_buy_name,
+                            description=herb_info["description"],
+                            base_value=herb_info["base_value"],
+                            item_type=herb_info["item_type"],
+                            quality=herb_info["quality"],
+                            quantity=quantity_to_buy
+                        )
+                        self.character.add_item_to_inventory(new_herb_item)
+                        self._print(f"  {self.character.name} bought {quantity_to_buy}x {item_to_buy_name} from Old Man Hemlock for {total_cost}g.")
+                        self.daily_gold_spent_on_purchases_by_player += total_cost
+                        # Note: This is a purchase from an NPC, not 'own shop', but using existing tracker for simplicity.
+                        # A more specific tracker like self.daily_gold_spent_on_npc_purchases could be added.
+                        action_xp_reward = 1
             elif action_name == "visit_general_store_sfc":
                 self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You enter the general store in Steel Flow City.")
                 action_xp_reward = 1
@@ -469,8 +644,7 @@ class GameManager:
                 self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You listen for rumors in the tavern.")
                 action_xp_reward = 3
             elif action_name == "talk_to_borin":
-                self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You talk to Borin Stonebeard.")
-                action_xp_reward = 2
+                action_xp_reward = self._handle_npc_dialogue("Borin Stonebeard")
             elif action_name == "repair_gear_borin":
                 self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You ask Borin about repairs.")
                 action_xp_reward = 1

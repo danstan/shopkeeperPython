@@ -299,6 +299,78 @@ class Character:
             if self.remove_specific_item_from_inventory(item_to_sell): print(f"  {item_to_sell.name} sold. Gold: {self.gold}"); return price_paid
             else: print(f"  CRITICAL: Sold {item_to_sell.name}, but failed to remove from inventory!"); return price_paid
         return 0
+
+    def has_items(self, items_to_check: dict) -> tuple[bool, dict]:
+        """
+        Checks if the character has enough of specified items in their inventory.
+
+        Args:
+            items_to_check: A dictionary like {"item_name": quantity, ...}.
+
+        Returns:
+            A tuple: (True, {}) if all items are present in sufficient quantities.
+                     (False, missing_items) if any item is insufficient.
+                     missing_items dictionary details what's lacking (e.g., {"Scrap Metal": 1}).
+        """
+        missing_items = {}
+        for item_name, required_quantity in items_to_check.items():
+            # Count items by name. This assumes items with the same name are stackable for crafting.
+            # If specific Item instances matter (e.g. with different qualities), this logic would need adjustment.
+            current_quantity = sum(item.quantity for item in self.inventory if item.name == item_name)
+            if current_quantity < required_quantity:
+                missing_items[item_name] = required_quantity - current_quantity
+
+        if missing_items:
+            return False, missing_items
+        return True, {}
+
+    def consume_items(self, items_to_consume: dict) -> bool:
+        """
+        Consumes specified items from the character's inventory.
+        This method assumes has_items was called and returned True.
+
+        Args:
+            items_to_consume: A dictionary like {"item_name": quantity, ...}.
+
+        Returns:
+            True if consumption was successful, False otherwise.
+        """
+        # First, verify again (optional, but safer)
+        can_consume, _ = self.has_items(items_to_consume)
+        if not can_consume:
+            # This case should ideally be prevented by a prior call to has_items
+            print(f"CHARACTER: {self.name} cannot consume items due to insufficient quantities (checked before consumption).")
+            return False
+
+        for item_name, quantity_to_consume in items_to_consume.items():
+            consumed_so_far = 0
+            # Iterate backwards to safely remove items from the list
+            for i in range(len(self.inventory) - 1, -1, -1):
+                item_in_inventory = self.inventory[i]
+                if item_in_inventory.name == item_name:
+                    if item_in_inventory.quantity > (quantity_to_consume - consumed_so_far):
+                        # Item stack has more than needed, reduce quantity
+                        item_in_inventory.quantity -= (quantity_to_consume - consumed_so_far)
+                        consumed_so_far = quantity_to_consume
+                        break
+                    else:
+                        # Consume the whole stack (or what's left of it)
+                        consumed_so_far += item_in_inventory.quantity
+                        self.inventory.pop(i) # Remove the item stack
+                if consumed_so_far >= quantity_to_consume:
+                    break
+
+            if consumed_so_far < quantity_to_consume:
+                # This indicates an issue, as has_items should have caught this.
+                # It might happen if items are not stackable and counts are off.
+                print(f"CHARACTER: Error consuming {item_name} for {self.name}. Needed {quantity_to_consume}, consumed {consumed_so_far}. Inventory might be inconsistent.")
+                # It might be necessary to roll back changes if a partial consumption is not acceptable.
+                # For now, we'll return False and log the error.
+                return False
+
+        print(f"CHARACTER: {self.name} successfully consumed items: {items_to_consume}")
+        return True
+
     def perform_skill_check(self, skill_name:str, dc:int, can_use_reroll_item:bool=True) -> bool:
         if skill_name not in self.stats: print(f"Warning: Invalid skill '{skill_name}'."); return False
         roll1=random.randint(1,20); d20=roll1; dis_str=""
