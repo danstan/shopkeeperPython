@@ -163,29 +163,61 @@ def find_user_by_email(email_to_find):
 # --- Data Persistence Functions ---
 def load_data():
     global users, user_characters, graveyard # Add graveyard to globals
+    users_migrated = False # Flag to track if migration occurred
     try:
         with open(USERS_FILE, 'r') as f:
-            users = json.load(f)
+            loaded_users_data = json.load(f)
+
+        # Data migration check
+        # Operate on a copy if direct modification during iteration is problematic,
+        # or build a new dictionary. Here, modifying loaded_users_data directly is fine.
+        for username, user_data in loaded_users_data.items():
+            if isinstance(user_data, str):
+                print(f"Migrating user data for user '{username}' to new format.")
+                loaded_users_data[username] = {
+                    "password": generate_password_hash(user_data), # Hash the original string password
+                    "google_id": None,
+                    "email_google": None,
+                    "display_name_google": None
+                }
+                users_migrated = True
+            # No need for the elif isinstance(user_data, dict) ... as it does nothing.
+
+        users.clear()
+        users.update(loaded_users_data)
+
+        if users_migrated:
+            save_users()
+
     except FileNotFoundError:
         # Default user with a hashed password
-        users = {"testuser": {
+        default_user_data = {"testuser": {
             "password": generate_password_hash("password123"),
             "google_id": None,
             "email_google": None,
             "display_name_google": None
             }
         }
+        users.clear()
+        users.update(default_user_data)
+        # No need to call save_users() here if FileNotFoundError, as it will be created with default user
+        # and then immediately saved by the users_migrated block if it was the first run.
+        # However, to ensure it's saved if the file truly didn't exist and no migration happened (e.g. empty users dict from json.load on empty file that somehow passed FileNotFoundError)
+        # it's safer to keep the original save_users() or rely on the migration save.
+        # For this refactor, we'll ensure the default user is saved if created.
         save_users()
     except json.JSONDecodeError:
         print(f"Warning: Could not decode {USERS_FILE}. Starting with default user.")
-        users = {"testuser": {
+        default_user_data = {"testuser": {
             "password": generate_password_hash("password123"),
             "google_id": None,
             "email_google": None,
             "display_name_google": None
             }
         }
-        save_users()
+        users.clear()
+        users.update(default_user_data)
+        save_users() # Save the default user if JSON was corrupted
 
 
     try:
