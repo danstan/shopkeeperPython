@@ -92,7 +92,7 @@ class GameManager:
             sub_locations=[
                 {"name": "Village Shop", "description": "Your humble shop.", "actions": ["buy_from_own_shop", "sell_to_own_shop", "check_shop_inventory", "craft"]},
                 {"name": "Village Square", "description": "The central gathering point of the village.", "actions": ["explore_town", "talk_to_villager", "research_market"]},
-                {"name": "Old Man Hemlock's Hut", "description": "A small, smoky hut belonging to the local herbalist.", "actions": ["talk_to_hemlock", "buy_herbs_hemlock"]}
+                {"name": "Old Man Hemlock's Hut", "description": "A small, smoky hut belonging to the local herbalist.", "actions": ["talk_to_hemlock", "buy_from_npc"]}
             ]
         )
         town_steel_flow = Town(
@@ -130,6 +130,59 @@ class GameManager:
 
         self.is_game_setup = False
         self._print("GameManager basic initialization complete. Call setup_for_character for full game world setup for a character.")
+
+    def _handle_player_craft_item(self, action_details: dict) -> int:
+        """Handles player-initiated crafting."""
+        item_name_to_craft = action_details.get("item_name")
+        if not item_name_to_craft:
+            self._print("  No item_name provided for crafting.")
+            return 0 # No XP
+
+        if not self.shop or not hasattr(self.shop, 'BASIC_RECIPES'): # Ensure shop and recipes are available
+            self._print("  Crafting recipes are not available at the moment.")
+            return 0
+
+        recipe = self.shop.BASIC_RECIPES.get(item_name_to_craft)
+        if not recipe:
+            self._print(f"  Recipe for '{item_name_to_craft}' not found.")
+            return 0
+
+        required_ingredients = recipe.get("ingredients", {})
+        can_craft, missing_items = self.character.has_items(required_ingredients)
+
+        if not can_craft:
+            missing_str = ", ".join([f"{qty}x {name}" for name, qty in missing_items.items()])
+            self._print(f"  Cannot craft {item_name_to_craft}. Missing ingredients: {missing_str}.")
+            return 0
+
+        # Consume Ingredients
+        if not self.character.consume_items(required_ingredients):
+            self._print(f"  Error consuming ingredients for {item_name_to_craft}. Crafting failed.")
+            # Potentially log more details or handle inconsistent state if consume_items can partially fail
+            return 0
+
+        self._print(f"  Successfully consumed ingredients for {item_name_to_craft}.")
+
+        # Create Item
+        # Ensure all necessary attributes are pulled from the recipe or defaulted
+        crafted_item = Item(
+            name=item_name_to_craft,
+            description=recipe.get("description", "A crafted item."),
+            base_value=recipe.get("base_value", 0),
+            item_type=recipe.get("item_type", "misc"),
+            quality="Common", # Player crafting defaults to Common for now
+            quantity=recipe.get("quantity_produced", 1),
+            effects=recipe.get("effects", {}),
+            is_consumable=recipe.get("is_consumable", False),
+            is_magical=recipe.get("is_magical", False),
+            is_attunement=recipe.get("is_attunement", False)
+            # Add other relevant fields from Item class if they are in recipe
+        )
+
+        self.character.add_item_to_inventory(crafted_item)
+        self._print(f"  {self.character.name} successfully crafted {crafted_item.quantity}x {crafted_item.name}.")
+        self.daily_items_crafted.append(f"{crafted_item.quantity}x {crafted_item.name}")
+        return 5 # XP for successful crafting
 
     def setup_for_character(self, new_character: Character):
         self._print(f"--- Setting up game world for character: {new_character.name if new_character and new_character.name else 'Unnamed/Invalid Character'} ---")
@@ -235,6 +288,70 @@ class GameManager:
         else:
              self.tracking_day = 1 # Default if time system isn't up yet (e.g. during early __init__)
 
+    def _handle_buy_from_npc(self, details: dict) -> int:
+        """Handles the logic for player buying items from an NPC."""
+        npc_name = details.get("npc_name")
+        item_name_to_buy = details.get("item_name")
+
+        try:
+            quantity_to_buy = int(details.get("quantity", 0))
+        except ValueError:
+            self._print("  Invalid quantity. Please provide a number.")
+            return 0 # No XP
+
+        if not npc_name:
+            self._print("  NPC name not specified for purchase.")
+            return 0
+        if not item_name_to_buy:
+            self._print("  Item name not specified for purchase.")
+            return 0
+        if quantity_to_buy <= 0:
+            self._print(f"  Please specify a valid quantity (more than 0) to buy {item_name_to_buy}.")
+            return 0
+
+        # Find the NPC in the current town
+        target_npc_data = None
+        if self.current_town and hasattr(self.current_town, 'unique_npc_crafters'):
+            for npc_data in self.current_town.unique_npc_crafters:
+                if npc_data.get('name') == npc_name:
+                    target_npc_data = npc_data
+                    break
+
+        if not target_npc_data:
+            self._print(f"  NPC '{npc_name}' not found in {self.current_town.name if self.current_town else 'this area'}.")
+            return 0
+
+        # --- NPC Specific Logic ---
+        if npc_name == "Old Man Hemlock":
+            if item_name_to_buy not in HEMLOCK_HERBS:
+                self._print(f"  Old Man Hemlock doesn't sell '{item_name_to_buy}'. He has: {', '.join(HEMLOCK_HERBS.keys())}.")
+                return 0
+
+            herb_info = HEMLOCK_HERBS[item_name_to_buy]
+            total_cost = herb_info["price"] * quantity_to_buy
+
+            if self.character.gold < total_cost:
+                self._print(f"  {self.character.name} doesn't have enough gold. (Needs {total_cost}g, Has {self.character.gold}g).")
+                return 0
+
+            self.character.gold -= total_cost
+            # Ensure Item constructor can handle 'quantity'
+            new_herb_item = Item(
+                name=item_name_to_buy,
+                description=herb_info["description"],
+                base_value=herb_info["base_value"],
+                item_type=herb_info["item_type"],
+                quality=herb_info["quality"],
+                quantity=quantity_to_buy # Pass quantity here
+            )
+            self.character.add_item_to_inventory(new_herb_item)
+            self._print(f"  {self.character.name} bought {quantity_to_buy}x {item_name_to_buy} from Old Man Hemlock for {total_cost}g.")
+            self.daily_gold_spent_on_purchases_by_player += total_cost
+            return 1 # XP for successful purchase
+        else:
+            self._print(f"  Buying items from '{npc_name}' is not implemented yet.")
+            return 0
+
     def _handle_customer_interaction(self, is_sale_or_purchase_by_player_shop:bool = False):
         # Ensure shop is initialized before proceeding
         if not self.shop:
@@ -323,7 +440,7 @@ class GameManager:
     def _run_end_of_day_summary(self, day_ended):
         self._print(f"--- End of Day {day_ended} Summary ---")
         self._print(f"  Gold earned from sales: {self.daily_gold_earned_from_sales}")
-        self._print(f"  Gold spent by player at shop: {self.daily_gold_spent_on_purchases_by_player}")
+        self._print(f"  Gold spent by player (shop/NPCs): {self.daily_gold_spent_on_purchases_by_player}") # Updated label
         self._print(f"  Gold earned by player selling to shop: {self.daily_gold_player_earned_selling_to_shop}")
         self._print(f"  Visitors: {self.daily_visitors}")
         self._print(f"  Items crafted: {', '.join(self.daily_items_crafted) if self.daily_items_crafted else 'None'}")
@@ -377,20 +494,8 @@ class GameManager:
         else:
             # --- Action Implementations (character is alive) ---
             if action_name == "craft":
-                item_name = action_details.get("item_name")
-                if item_name:
-                    # Pass self.character to the craft_item method
-                    crafted_item = self.shop.craft_item(item_name, self.character)
-                    if crafted_item:
-                        # Assuming crafted_item.quantity will be correctly set by Item constructor
-                        # based on recipe's quantity_produced.
-                        self._print(f"  Successfully crafted {crafted_item.quantity}x {crafted_item.quality} {item_name}.")
-                        self.daily_items_crafted.append(f"{crafted_item.quantity}x {item_name}")
-                        action_xp_reward = 10
-                    else:
-                        self._print(f"  Failed to craft {item_name}.")
-                else:
-                    self._print("  No item_name provided for crafting.")
+                action_xp_reward = self._handle_player_craft_item(action_details)
+                # self.daily_items_crafted is now handled within _handle_player_craft_item
 
             elif action_name == "buy_from_own_shop":
                 item_name = action_details.get("item_name")
@@ -586,54 +691,8 @@ class GameManager:
                 action_xp_reward = 1
             elif action_name == "talk_to_hemlock":
                 action_xp_reward = self._handle_npc_dialogue("Old Man Hemlock")
-            elif action_name == "buy_herbs_hemlock":
-                item_to_buy_name = action_details.get("item_name")
-                quantity_to_buy = 0
-                try:
-                    quantity_to_buy = int(action_details.get("quantity", 0))
-                except ValueError:
-                    self._print("  Invalid quantity. Please provide a number.")
-                    # Action fails, time passes, no XP
-                    action_xp_reward = 0
-                    # Need to jump to post-action processing or ensure time advances
-                    # For simplicity, let the default time advancement handle it.
-                    # This 'else' block for character alive continues, so time will pass.
-
-                if not item_to_buy_name or quantity_to_buy <= 0:
-                    if not item_to_buy_name: # Only print if item name was the issue and quantity might have been okay
-                         self._print("  Please specify a valid herb to buy from Hemlock.")
-                    elif quantity_to_buy <=0 and item_to_buy_name : # Only print if quantity was the issue
-                         self._print(f"  Please specify a valid quantity (more than 0) for {item_to_buy_name}.")
-                    else: # Both might be missing or other general failure
-                         self._print("  Please specify a valid herb and quantity to buy from Hemlock.")
-                    action_xp_reward = 0 # No XP for failed attempt
-                elif item_to_buy_name not in HEMLOCK_HERBS:
-                    self._print(f"  Old Man Hemlock doesn't sell '{item_to_buy_name}'. He has: {', '.join(HEMLOCK_HERBS.keys())}.")
-                    action_xp_reward = 0
-                else:
-                    herb_info = HEMLOCK_HERBS[item_to_buy_name]
-                    total_cost = herb_info["price"] * quantity_to_buy
-
-                    if self.character.gold < total_cost:
-                        self._print(f"  {self.character.name} doesn't have enough gold. (Needs {total_cost}g, Has {self.character.gold}g).")
-                        action_xp_reward = 0
-                    else:
-                        self.character.gold -= total_cost
-
-                        new_herb_item = Item(
-                            name=item_to_buy_name,
-                            description=herb_info["description"],
-                            base_value=herb_info["base_value"],
-                            item_type=herb_info["item_type"],
-                            quality=herb_info["quality"],
-                            quantity=quantity_to_buy
-                        )
-                        self.character.add_item_to_inventory(new_herb_item)
-                        self._print(f"  {self.character.name} bought {quantity_to_buy}x {item_to_buy_name} from Old Man Hemlock for {total_cost}g.")
-                        self.daily_gold_spent_on_purchases_by_player += total_cost
-                        # Note: This is a purchase from an NPC, not 'own shop', but using existing tracker for simplicity.
-                        # A more specific tracker like self.daily_gold_spent_on_npc_purchases could be added.
-                        action_xp_reward = 1
+            elif action_name == "buy_from_npc": # Changed from buy_herbs_hemlock
+                action_xp_reward = self._handle_buy_from_npc(action_details)
             elif action_name == "visit_general_store_sfc":
                 self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You enter the general store in Steel Flow City.")
                 action_xp_reward = 1
@@ -693,7 +752,7 @@ class GameManager:
 
             # NPC Shop Sales Simulation
             # Check if shop exists, has inventory, and action wasn't a direct shop interaction by player
-            if self.shop and self.shop.inventory and action_name not in ["buy_from_own_shop", "sell_to_own_shop"]:
+            if self.shop and self.shop.inventory and action_name not in ["buy_from_own_shop", "sell_to_own_shop", "buy_from_npc"]:
                 if random.random() < 0.1: # 10% chance for an NPC to buy something
                     item_to_sell_to_npc = random.choice(self.shop.inventory) if self.shop.inventory else None # Defensive choice
                     if item_to_sell_to_npc: # Ensure an item was actually chosen
@@ -705,5 +764,5 @@ class GameManager:
                             self.daily_gold_earned_from_sales += sale_price
                             self._handle_customer_interaction(is_sale_or_purchase_by_player_shop=True) # A sale is an interaction
             else: # Generic customer interaction if no NPC sale and shop exists
-                if self.shop : # Check if shop is initialized
+                if self.shop and action_name not in ["buy_from_own_shop", "sell_to_own_shop", "buy_from_npc"]: # Check if shop is initialized and not a shop action
                     self._handle_customer_interaction()

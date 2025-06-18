@@ -477,6 +477,7 @@ def display_game_output():
     available_towns = list(game_manager_instance.towns_map.keys())
     current_town_sub_locations = []
     all_towns_data = {}
+    available_recipes = {} # Initialize
     # --- End Data for new UI elements ---
 
     # Check if Google OAuth is configured
@@ -570,6 +571,13 @@ def display_game_output():
 
             player_inventory_display = [item.name for item in player_char.inventory] or ["Empty"]
             current_game_output = output_stream.getvalue()
+
+            # Fetch recipes if shop is available
+            if game_manager_instance.shop:
+                available_recipes = game_manager_instance.shop.BASIC_RECIPES
+            else:
+                available_recipes = {} # Ensure it's an empty dict if no shop
+
         else: # No character active (either not selected, selection invalid, or selection was a dead char)
             output_stream.truncate(0)
             output_stream.seek(0)
@@ -636,7 +644,8 @@ def display_game_output():
                            google_auth_is_configured=google_auth_is_configured,
                            available_towns=available_towns,
                            current_town_sub_locations_json=json.dumps(current_town_sub_locations),
-                           all_towns_data_json=json.dumps(all_towns_data)
+                           all_towns_data_json=json.dumps(all_towns_data),
+                           available_recipes=available_recipes
                            )
 
 def parse_action_details(details_str: str) -> dict:
@@ -684,10 +693,49 @@ def perform_action():
             flash("No active character or character is dead. Cannot perform action.", "error")
             return redirect(url_for('display_game_output'))
 
-        game_manager_instance.perform_hourly_action(action_name, details_dict)
+        if action_name == "buy_from_npc":
+            npc_name = request.form.get('npc_name')
+            item_name = request.form.get('item_name')
+            quantity = request.form.get('quantity', 1) # Default to 1 if not provided
+            try:
+                quantity = int(quantity)
+            except ValueError:
+                game_manager_instance._print(f"Invalid quantity: {quantity}. Defaulting to 1.")
+                quantity = 1
+
+            if npc_name and item_name and quantity > 0:
+                game_manager_instance._print(f"Attempting to buy {quantity} of {item_name} from {npc_name}.")
+                # Actual buying logic will be added later.
+                # For now, just log the attempt.
+                # Example: game_manager_instance.buy_item_from_npc(npc_name, item_name, quantity)
+            else:
+                game_manager_instance._print("Missing details for buying from NPC.")
+        else:
+            # Existing actions are handled by perform_hourly_action
+            game_manager_instance.perform_hourly_action(action_name, details_dict)
+
+        # ---- START NEW SAVE LOGIC ----
+        # Save character state if alive and loaded
+        # Use global player_char which should be the same as game_manager_instance.character
+        if player_char and player_char.name and not player_char.is_dead:
+            username = session.get('username')
+            slot_index = session.get('selected_character_slot')
+            if username and slot_index is not None:
+                # Ensure the slot_index is valid for the list of characters for that user
+                if username in user_characters and 0 <= slot_index < len(user_characters[username]):
+                    user_characters[username][slot_index] = player_char.to_dict()
+                    save_user_characters()
+                    # Optional: game_manager_instance._print("  Character data saved after action.")
+                else:
+                    # This case should ideally not be reached if session management is correct
+                    game_manager_instance._print(f"  Warning: Character slot data mismatch for user {username}, slot {slot_index}. Could not save character state after action.")
+            else:
+                # This case implies an issue with session state or a scenario where character exists without full session setup
+                 game_manager_instance._print("  Warning: User session data (username or slot_index) missing. Could not save character state after action.")
+        # ---- END NEW SAVE LOGIC ----
 
         # After action, check for death
-        if player_char.is_dead:
+        if player_char.is_dead: # This check should be safe even if player_char was reset due to death
             username = session.get('username')
             slot_index = session.get('selected_character_slot')
 
