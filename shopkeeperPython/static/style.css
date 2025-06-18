@@ -1,50 +1,56 @@
 /* Global settings */
 html, body {
-    height: 100%;
+
+    width: 100%; /* Full viewport width */
+    height: 100%; /* Full viewport height */
     margin: 0;
     padding: 0;
-    overflow: hidden; /* Prevents scrollbars on body if game-container is viewport-sized */
+    overflow: hidden;
+
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: #333;
     line-height: 1.6;
 }
 
 body {
-    background-color: #f4f4f4;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+
+    background-color: #f4f4f4; /* Existing background */
+    /* display: flex; align-items: center; justify-content: center; /* REMOVED for full screen */
 }
 
-/* Game Container - Fixed size and centered */
+/* Game Container - Full screen */
 .game-container {
-    width: 800px;
-    height: 600px;
-    border: 2px solid #333;
-    margin: auto; /* Works with body flex centering */
+    width: 100vw; /* Full viewport width */
+    height: 100vh; /* Full viewport height */
+    border: none; /* REMOVED border: 2px solid #333; */
+    /* margin: auto; /* REMOVED */
     position: relative;
     box-sizing: border-box;
     display: flex;
     flex-wrap: wrap;
-    background-color: #fff; /* Added a background to distinguish from body */
+    background-color: #f0f0f0; /* Light gray background for the whole game area */
 }
 
 /* Child elements of .game-container */
 #left-tabs-container {
     order: 1;
-    width: 15%; /* 15% of 800px = 120px */
-    height: calc(100% - 100px); /* Parent is 600px, actions-tab is 100px */
+    width: 15%;
+    height: 80vh; /* Adjusted for actions-tab taking 20vh */
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    border-right: 1px solid #999; /* Add separator */
+    background-color: #e0e0e0; /* Background for the container itself */
+    border-right: 1px solid #777; /* Separator line */
+
 }
 
 #stats-tab, #info-tab {
     width: 100%;
     flex: 1; /* Distribute space equally within left-tabs-container */
-    background-color: #e0e0e0;
-    border: 1px solid #999; /* Kept for now, might simplify later */
+
+    /* background-color: #e0e0e0; /* Moved to parent #left-tabs-container */
+    /* border: 1px solid #999; /* REMOVED individual borders */
+
     padding: 0;
     box-sizing: border-box;
     position: relative;
@@ -54,20 +60,27 @@ body {
 }
 
 #info-tab {
-    border-top: 1px solid #888; /* Separator within left tabs */
+
+    border-top: 1px solid #777; /* Separator within left tabs, slightly softer */
+
 }
 
 #map-container {
     order: 2;
-    flex-grow: 1; /* Takes remaining width (70%) */
-    height: calc(100% - 100px); /* Same height as side tabs */
-    border: 1px solid #666;
+
+    flex-grow: 1; /* Takes remaining width (approx 70%) */
+    height: 80vh; /* Adjusted height */
+    /* border: 1px solid #666; /* REMOVED in favor of container borders */
+
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 5px;
+    padding: 5px; /* Keep padding for SVG */
     box-sizing: border-box;
-    background-color: #f0f0f0; /* Light background for map area */
+
+    background-color: #ffffff; /* White background for map area */
+    border-right: 1px solid #777; /* Separator line */
+
 }
 
 #map-container svg {
@@ -78,10 +91,28 @@ body {
 
 #inventory-tab {
     order: 3;
-    width: 15%; /* 15% of 800px = 120px */
-    height: calc(100% - 100px); /* Same height as left tabs */
-    background-color: #e0e0e0;
-    border: 1px solid #999;
+
+    width: 15%;
+    height: 80vh; /* Adjusted height */
+    background-color: #e0e0e0; /* Background for the container itself */
+    /* border: 1px solid #999; /* REMOVED individual borders */
+    padding: 0;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    /* border-left: 1px solid #999; /* REMOVED as map-container has border-right */
+}
+
+#actions-tab {
+    order: 4;
+    width: 100%;
+    height: 20vh; /* Use viewport height for this panel */
+    background-color: #c0c0c0;
+    /* border: 1px solid #888; /* REMOVED individual border */
+    border-top: 1px solid #555; /* Stronger separator from content above */
+
     padding: 0;
     box-sizing: border-box;
     position: relative;
@@ -91,20 +122,6 @@ body {
     border-left: 1px solid #999; /* Add separator */
 }
 
-#actions-tab {
-    order: 4;
-    width: 100%; /* Spans full width of game-container */
-    height: 100px; /* Fixed height */
-    background-color: #c0c0c0;
-    border: 1px solid #888; /* Kept for now */
-    border-top: 2px solid #333; /* Stronger separator for bottom tab */
-    padding: 0;
-    box-sizing: border-box;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
 
 /* Common styles for all tab types (stats, info, inventory, actions) */
 #stats-tab, #info-tab, #inventory-tab, #actions-tab {
@@ -379,7 +396,6 @@ body {
 #action-controls-wrapper .action-button { background-color: #ffc107; color: #333; }
 #action-controls-wrapper .submit-details-button { background-color: #17a2b8; }
 #action-controls-wrapper .general-action-button { background-color: #6c757d; }
-
 
 #action-controls-wrapper ul {
     list-style-type: none;
