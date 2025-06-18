@@ -459,6 +459,8 @@ def display_game_output():
     global player_char
     global game_manager_instance
 
+    popup_action_result = session.pop('action_result', None) # Get and clear action result from session
+
     user_logged_in = 'username' in session
     # Initialize these to False. Their final values will be determined by the logic below.
     show_character_selection = False
@@ -636,7 +638,8 @@ def display_game_output():
                            available_towns=available_towns,
                            current_town_sub_locations_json=json.dumps(current_town_sub_locations),
                            all_towns_data_json=json.dumps(all_towns_data),
-                           available_recipes=available_recipes
+                           available_recipes=available_recipes,
+                           popup_action_result=popup_action_result # Pass to template
                            )
 
 def parse_action_details(details_str: str) -> dict:
@@ -761,6 +764,17 @@ def perform_action():
         import traceback
         game_manager_instance._print(f"Traceback: {traceback.format_exc()}")
 
+    # Capture action result for popup before redirecting
+    session['action_result'] = output_stream.getvalue()
+    # Clear the main output_stream AFTER capturing its value for the session,
+    # so it doesn't get displayed in the main log area on the next page load.
+    # However, the game_output for the next page load in display_game_output
+    # will re-fetch from output_stream.getvalue().
+    # This means the action result WILL appear in the main log as well.
+    # If the goal is to ONLY show it in the popup and NOT in the main log,
+    # then output_stream must be cleared here.
+    # output_stream.truncate(0) # Removed as per new requirement
+    # output_stream.seek(0) # Removed as per new requirement
 
     return redirect(url_for('display_game_output'))
 
