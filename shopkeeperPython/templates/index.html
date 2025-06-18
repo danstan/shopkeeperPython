@@ -876,44 +876,26 @@
             const settingsOption = document.getElementById('settings-option');
             const saveGameOption = document.getElementById('save-game-option');
 
-            if (statsTab && statsContent) {
-                statsTab.addEventListener('mouseenter', () => {
-                    statsContent.style.display = 'block';
-                });
-                statsTab.addEventListener('mouseleave', () => {
-                    statsContent.style.display = 'none';
-                });
-            }
-
-            if (inventoryTab && inventoryContent) {
-                inventoryTab.addEventListener('mouseenter', () => {
-                    inventoryContent.style.display = 'block';
-                });
-                inventoryTab.addEventListener('mouseleave', () => {
-                    inventoryContent.style.display = 'none';
-                });
-            }
-
-
-            if (infoTab && infoContent) {
-                infoTab.addEventListener('mouseenter', () => {
-                    infoContent.style.display = 'block';
-                });
-                infoTab.addEventListener('mouseleave', () => {
-                    infoContent.style.display = 'none';
-                });
-            }
+            // REMOVED JavaScript hover listeners for statsTab, inventoryTab, and infoTab
+            // CSS :hover will now handle their visibility and animation.
 
             if (actionsTab && actionsContent) {
                 actionsTab.addEventListener('click', () => {
+                    // For actionsContent, we toggle between 'none' and 'flex'
+                    // because #actions-content is a flex container itself.
                     const isHidden = actionsContent.style.display === 'none' || actionsContent.style.display === '';
-                    actionsContent.style.display = isHidden ? 'block' : 'none';
+                    actionsContent.style.display = isHidden ? 'flex' : 'none'; // Use 'flex'
                     if (isHidden) {
                         actionsTab.classList.add('actions-tab-active');
                     } else {
                         actionsTab.classList.remove('actions-tab-active');
                     }
-
+                    // Note: The 'display: flex' for #actions-content when visible
+                    // was already specified in the CSS for #actions-content when it's active/shown.
+                    // The previous CSS had it as `display: flex` overriding `.tab-content display:none`.
+                    // Now, `.tab-content` no longer has `display:none`.
+                    // `#actions-content` specifically has `display:none` initially.
+                    // So JS must set it to `display:flex` to show it.
                 });
             }
 
