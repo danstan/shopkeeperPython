@@ -462,98 +462,233 @@
             </div>
         </div>
 
-        <div class="action-box">
-            <h2>Perform Action</h2>
-            <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
-                <div>
-                    <label for="action_name_select">Action:</label>
-                    <select id="action_name_select" name="action_name">
-                        <option value="wait">Wait</option>
-                        <option value="talk_to_self">Talk to Self</option>
-                        <option value="talk_to_customer" selected>Talk to Customer</option>
-                        <option value="check_shop_inventory">Check Shop Inventory</option>
-                        <option value="check_player_inventory">Check Player Inventory</option>
-                        <option value="craft">Craft Item</option>
-                        <option value="buy_from_own_shop">Buy from Shop</option>
-                        <option value="sell_to_own_shop">Sell to Shop</option>
-                        <option value="sleep_one_hour">Sleep for 1 Hour</option>
-                        <option value="sleep_eight_hours">Sleep for 8 Hours</option>
-                        <option value="explore_town">Explore Town</option>
-                        <option value="research_market">Research Market</option>
-                        <option value="travel_to_town">Travel to Town</option>
-                        <!-- Add other actions here -->
-                    </select>
-                </div>
+        <div class="action-box"> <!-- This class might be reused or restyled -->
+            <h2>Game Actions</h2> <!-- Changed title -->
 
+            <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
+                <input type="hidden" id="action_name_hidden" name="action_name" value="">
                 <input type="hidden" id="action_details" name="action_details" value="{}">
+                <!-- Submit button might be dynamically added or made visible by JS,
+                     or we can have a generic "Do Selected Action" button if an action is chosen.
+                     For now, let action buttons themselves trigger form submission. -->
+            </form>
+
+            <div id="world-map-container" class="action-box-section"> <!-- New class for styling -->
+                <h2>World Map</h2>
+                <div id="map-destinations">
+                    {% if available_towns %}
+                        <p>Choose a destination to travel to:</p>
+                        <ul>
+                            {% for town_name_key in available_towns %}
+                            <li><button class="map-destination-button" data-town-name="{{ town_name_key }}">{{ town_name_key }}</button></li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No destinations available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div id="current-location-container" class="action-box-section">
+                <h2>Current Location: <span id="current-town-display">{{ current_town_name }}</span></h2>
+                <div id="sub-locations-list">
+                    <!-- Sub-locations of the current town will be populated here by JavaScript -->
+                </div>
+                <div id="current-actions-list">
+                    <!-- Actions for the selected sub-location will be populated here by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Container for Action Detail Forms -->
+            <div id="action-details-container" class="action-box-section" style="flex-basis: 100%; display: none;"> <!-- Initially hidden, spans full width if flex items wrap -->
+                <h3>Action Details</h3>
 
                 <div id="div_craft_details" class="hidden-details details-section">
+                    <h4>Craft Item</h4>
                     <label for="craft_item_name">Item Name to Craft:</label>
-                    <input type="text" id="craft_item_name" name="craft_item_name" placeholder="e.g., Minor Healing Potion">
+                    <input type="text" id="craft_item_name" name="craft_item_name_detail_input" placeholder="e.g., Minor Healing Potion">
+                    <button type="button" class="submit-details-button" data-action="craft">Craft It!</button>
                 </div>
 
                 <div id="div_buy_details" class="hidden-details details-section">
+                    <h4>Buy from Your Shop</h4>
                     <label for="buy_item_name">Item Name to Buy:</label>
-                    <input type="text" id="buy_item_name" name="buy_item_name" placeholder="e.g., Simple Dagger">
+                    <input type="text" id="buy_item_name" name="buy_item_name_detail_input" placeholder="e.g., Simple Dagger">
                     <label for="buy_quantity">Quantity:</label>
-                    <input type="number" id="buy_quantity" name="buy_quantity" value="1" min="1">
+                    <input type="number" id="buy_quantity" name="buy_quantity_detail_input" value="1" min="1">
+                    <button type="button" class="submit-details-button" data-action="buy_from_own_shop">Buy Item(s)</button>
                 </div>
 
                 <div id="div_sell_details" class="hidden-details details-section">
+                    <h4>Sell to Your Shop</h4>
                     <label for="sell_item_name">Item Name to Sell:</label>
-                    <input type="text" id="sell_item_name" name="sell_item_name" placeholder="e.g., Stale Ale">
+                    <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale">
+                    <button type="button" class="submit-details-button" data-action="sell_to_own_shop">Sell Item</button>
                 </div>
-
-                <div id="div_travel_details" class="hidden-details details-section">
-                    <label for="travel_town_name">Destination Town Name:</label>
-                    <input type="text" id="travel_town_name" name="travel_town_name" placeholder="e.g., Steel Flow City">
-                </div>
-
-                <input type="submit" value="Perform Action">
-            </form>
-            <p style="font-size: 0.9em; margin-top: 10px;">
-                Instructions: Select an action. If the action requires details (like an item name), corresponding fields will appear.
-            </p>
+            </div>
         </div>
     </div>
 
     <script>
     // Main game interface script (relevant only if this block is rendered)
-    if (document.getElementById('actionForm')) {
-        document.addEventListener('DOMContentLoaded', function() { // Ensure this runs after DOM is loaded
-            const actionSelect = document.getElementById('action_name_select');
+    // Ensure this script is placed after the HTML elements it interacts with, or wrapped in DOMContentLoaded.
+    // For simplicity with Jinja, variables are passed here.
+    var currentTownSubLocations = {{ current_town_sub_locations_json | default('[]') | safe }}; // May not be strictly needed if allTownsData is comprehensive
+    var allTownsData = {{ all_towns_data_json | default('{}') | safe }};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (document.getElementById('actionForm')) {
+            const actionForm = document.getElementById('actionForm');
+            const hiddenActionNameInput = document.getElementById('action_name_hidden');
             const hiddenDetailsInput = document.getElementById('action_details');
 
+            const mapDestinationsDiv = document.getElementById('map-destinations');
+            const subLocationsListDiv = document.getElementById('sub-locations-list');
+            const currentActionsListDiv = document.getElementById('current-actions-list');
+            const currentTownDisplay = document.getElementById('current-town-display');
+
+            // Action Detail Divs and Inputs
+            const actionDetailsContainer = document.getElementById('action-details-container');
             const craftDetailsDiv = document.getElementById('div_craft_details');
             const craftItemNameInput = document.getElementById('craft_item_name');
-
             const buyDetailsDiv = document.getElementById('div_buy_details');
             const buyItemNameInput = document.getElementById('buy_item_name');
             const buyQuantityInput = document.getElementById('buy_quantity');
-
             const sellDetailsDiv = document.getElementById('div_sell_details');
             const sellItemNameInput = document.getElementById('sell_item_name');
 
-            const travelDetailsDiv = document.getElementById('div_travel_details');
-            const travelTownNameInput = document.getElementById('travel_town_name');
+            const allDetailDivs = [craftDetailsDiv, buyDetailsDiv, sellDetailsDiv];
+            let currentActionRequiringDetails = null; // Stores the action name when a detail form is shown
 
-            const allDetailDivs = [craftDetailsDiv, buyDetailsDiv, sellDetailsDiv, travelDetailsDiv];
-            const allDetailInputs = [
-                craftItemNameInput,
-                buyItemNameInput, buyQuantityInput,
-                sellItemNameInput,
-                travelTownNameInput
-            ];
+            function hideAllDetailForms() {
+                if (actionDetailsContainer) actionDetailsContainer.style.display = 'none';
+                allDetailDivs.forEach(div => { if (div) div.style.display = 'none'; });
+            }
 
-            function hideAllDetailDivs() {
-                allDetailDivs.forEach(div => { if(div) div.style.display = 'none'; });
+            function displaySubLocations(subLocations) {
+                if (!subLocationsListDiv) return;
+                subLocationsListDiv.innerHTML = '';
+                if (currentActionsListDiv) currentActionsListDiv.innerHTML = '';
+                hideAllDetailForms(); // Also hide detail forms when sub-locations are re-rendered
+
+                if (subLocations && subLocations.length > 0) {
+                    const ul = document.createElement('ul');
+                    subLocations.forEach(subLoc => {
+                        const li = document.createElement('li');
+                        const button = document.createElement('button');
+                        button.className = 'sub-location-button';
+                        button.dataset.sublocName = subLoc.name;
+                        button.textContent = subLoc.name;
+                        li.appendChild(button);
+                        if (subLoc.description) {
+                            li.append(` - ${subLoc.description}`);
+                        }
+                        ul.appendChild(li);
+                    });
+                    subLocationsListDiv.appendChild(ul);
+                } else {
+                    subLocationsListDiv.innerHTML = '<p>No sub-locations here.</p>';
+                }
+            }
+
+            // Function to display actions for a selected sub-location
+            function displayActions(subLocName) {
+                if (!currentActionsListDiv) return;
+                currentActionsListDiv.innerHTML = ''; // Clear previous
+
+                const currentTownName = currentTownDisplay ? currentTownDisplay.textContent : null;
+                if (!currentTownName || !allTownsData || !allTownsData[currentTownName] || !allTownsData[currentTownName].sub_locations) {
+                    console.error("Could not find current town data or sub-locations for action display.");
+                    return;
+                }
+                const subLocationsData = allTownsData[currentTownName].sub_locations;
+
+
+                const selectedSubLocation = subLocationsData.find(sl => sl.name === subLocName);
+
+                if (selectedSubLocation && selectedSubLocation.actions && selectedSubLocation.actions.length > 0) {
+                    const ul = document.createElement('ul');
+                    selectedSubLocation.actions.forEach(actionStr => {
+                        const li = document.createElement('li');
+                        const button = document.createElement('button');
+                        button.className = 'action-button';
+                        button.dataset.actionName = actionStr;
+                        button.textContent = actionStr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Prettify
+                        li.appendChild(button);
+                        ul.appendChild(li);
+                    });
+                    currentActionsListDiv.appendChild(ul);
+                } else {
+                    currentActionsListDiv.innerHTML = '<p>No actions available here.</p>';
+                }
+            }
+
+            // Event Listener for Map Destination Buttons
+            if (mapDestinationsDiv) {
+                mapDestinationsDiv.addEventListener('click', function(event) {
+                    if (event.target.classList.contains('map-destination-button')) {
+                        const townName = event.target.dataset.townName;
+                        if (hiddenActionNameInput) hiddenActionNameInput.value = 'travel_to_town';
+                        if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({ town_name: townName });
+                        if (actionForm) actionForm.submit();
+                    }
+                });
+            }
+
+            // Event Listener for Sub-location Buttons
+            if (subLocationsListDiv) {
+                subLocationsListDiv.addEventListener('click', function(event) {
+                    if (event.target.classList.contains('sub-location-button')) {
+                        const subLocName = event.target.dataset.sublocName;
+                        displayActions(subLocName);
+                    }
+                });
+            }
+
+            // Event Listener for Action Buttons (from current-actions-list)
+            if (currentActionsListDiv) {
+                currentActionsListDiv.addEventListener('click', function(event) {
+                    if (event.target.classList.contains('action-button')) {
+                        const actionName = event.target.dataset.actionName;
+                        hideAllDetailForms(); // Hide any open detail forms first
+                        currentActionRequiringDetails = null; // Reset
+
+                        if (hiddenActionNameInput) hiddenActionNameInput.value = actionName; // Set action name for the form
+
+                        switch (actionName) {
+                            case 'craft':
+                                if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
+                                if (craftDetailsDiv) craftDetailsDiv.style.display = 'block';
+                                currentActionRequiringDetails = actionName;
+                                // Do NOT submit form yet
+                                break;
+                            case 'buy_from_own_shop':
+                                if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
+                                if (buyDetailsDiv) buyDetailsDiv.style.display = 'block';
+                                currentActionRequiringDetails = actionName;
+                                // Do NOT submit form yet
+                                break;
+                            case 'sell_to_own_shop':
+                                if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
+                                if (sellDetailsDiv) sellDetailsDiv.style.display = 'block';
+                                currentActionRequiringDetails = actionName;
+                                // Do NOT submit form yet
+                                break;
+                            default:
+                                // For actions not needing details
+                                if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({});
+                                if (actionForm) actionForm.submit();
+                                break;
+                        }
+                    }
+                });
             }
 
             function compileAndSetActionDetails() {
-                const selectedAction = actionSelect.value;
                 let details = {};
+                if (!currentActionRequiringDetails) return; // Should not happen if a detail submit button was clicked
 
-                switch (selectedAction) {
+                switch (currentActionRequiringDetails) {
                     case 'craft':
                         if (craftItemNameInput && craftItemNameInput.value) {
                             details.item_name = craftItemNameInput.value;
@@ -572,46 +707,45 @@
                             details.item_name = sellItemNameInput.value;
                         }
                         break;
-                    case 'travel_to_town':
-                        if (travelTownNameInput && travelTownNameInput.value) {
-                            details.town_name = travelTownNameInput.value;
-                        }
-                        break;
                 }
-                if(hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify(details);
+                if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify(details);
             }
 
-            if(actionSelect) {
-                actionSelect.addEventListener('change', function() {
-                    hideAllDetailDivs();
-                    const selectedAction = this.value;
-
-                    switch (selectedAction) {
-                        case 'craft':
-                            if(craftDetailsDiv) craftDetailsDiv.style.display = 'block';
-                            break;
-                        case 'buy_from_own_shop':
-                            if(buyDetailsDiv) buyDetailsDiv.style.display = 'block';
-                            break;
-                        case 'sell_to_own_shop':
-                            if(sellDetailsDiv) sellDetailsDiv.style.display = 'block';
-                            break;
-                        case 'travel_to_town':
-                            if(travelDetailsDiv) travelDetailsDiv.style.display = 'block';
-                            break;
-                    }
-                    compileAndSetActionDetails();
-                });
-
-                allDetailInputs.forEach(input => {
-                    if (input) {
-                        input.addEventListener('input', compileAndSetActionDetails);
+            // Event Listener for "Submit Details" buttons within each detail form
+            if (actionDetailsContainer) {
+                actionDetailsContainer.addEventListener('click', function(event) {
+                    if (event.target.classList.contains('submit-details-button')) {
+                        if (!currentActionRequiringDetails) {
+                            console.error("Submit details button clicked but no currentActionRequiringDetails is set.");
+                            return;
+                        }
+                        // The 'data-action' on the button should match currentActionRequiringDetails for sanity,
+                        // but currentActionRequiringDetails is the primary driver here.
+                        compileAndSetActionDetails(); // Compile details based on the visible form (tracked by currentActionRequiringDetails)
+                        // action_name_hidden should already be set by the initial action button click.
+                        if (actionForm) actionForm.submit();
                     }
                 });
-                actionSelect.dispatchEvent(new Event('change')); // Initial setup
             }
-        });
-    }
+
+            // Initial Display Logic:
+            // currentTownSubLocations is passed from Jinja directly if character is loaded.
+            // This variable is already defined at the top of this script block.
+            // We need to use the sub-locations from allTownsData for the current town for consistency
+            // as currentTownSubLocations might just be names, whereas allTownsData has descriptions.
+            if (currentTownDisplay && currentTownDisplay.textContent && allTownsData && allTownsData[currentTownDisplay.textContent]) {
+                 const currentTownData = allTownsData[currentTownDisplay.textContent];
+                 if (currentTownData && currentTownData.sub_locations) {
+                    displaySubLocations(currentTownData.sub_locations);
+                 } else {
+                    displaySubLocations([]); // Call with empty if no sub_locations defined
+                 }
+            } else {
+                 // Fallback if current_town_name isn't set or no data for it
+                 displaySubLocations([]); // Call with empty array
+            }
+        }
+    });
     </script>
     {% endif %}
 </body>

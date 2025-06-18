@@ -473,6 +473,12 @@ def display_game_output():
     player_inventory_display = ["Empty"]
     dead_characters_info = [] # Initialize for passing to template
 
+    # --- Data for new UI elements ---
+    available_towns = list(game_manager_instance.towns_map.keys())
+    current_town_sub_locations = []
+    all_towns_data = {}
+    # --- End Data for new UI elements ---
+
     # Check if Google OAuth is configured
     google_auth_is_configured = bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET)
 
@@ -548,6 +554,14 @@ def display_game_output():
             player_gold_display = player_char.gold
             current_time_display = game_manager_instance.time.get_time_string()
             current_town_display = game_manager_instance.current_town.name
+            # Populate sub-locations and all_towns_data if a character is loaded
+            if game_manager_instance.current_town:
+                current_town_sub_locations = game_manager_instance.current_town.sub_locations
+
+            for town_obj in game_manager_instance.towns_map.values():
+                all_towns_data[town_obj.name] = {
+                    "sub_locations": town_obj.sub_locations
+                }
 
             shop_items = {}
             for item in game_manager_instance.shop.inventory:
@@ -619,7 +633,10 @@ def display_game_output():
                            current_town_name=current_town_display,
                            shop_inventory=shop_inventory_display,
                            player_inventory=player_inventory_display,
-                           google_auth_is_configured=google_auth_is_configured
+                           google_auth_is_configured=google_auth_is_configured,
+                           available_towns=available_towns,
+                           current_town_sub_locations_json=json.dumps(current_town_sub_locations),
+                           all_towns_data_json=json.dumps(all_towns_data)
                            )
 
 def parse_action_details(details_str: str) -> dict:
