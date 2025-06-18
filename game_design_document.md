@@ -6,7 +6,9 @@ Welcome to a whimsical, high-fantasy world where players take on the role of mag
 The core gameplay revolves around several key pillars:
 
 *   **User Account and Character Management:**
-    *   **User Accounts:** Before playing, individuals must create a user account by providing a unique username and a password. This account serves as their persistent identity in the game world.
+    *   **User Accounts & Authentication:** Before playing, individuals must create a user account. This account serves as their persistent identity in the game world. Players have two primary methods for authentication:
+        *   **Username/Password:** Traditional registration by providing a unique username and a password.
+        *   **Google OAuth 2.0:** Players can opt to register and log in using their existing Google account. This provides a streamlined and secure authentication experience. When using Google login, the game will store the user's unique Google ID and associate it with their game profile to manage their account.
     *   **Character Slots:** Each user account is allocated two character slots. This allows a player to have up to two distinct merchant characters, each with their own progression, shop, and story.
     *   **Initial Character Creation:** Upon selecting an available character slot, players are guided to a character creation screen. Here, they will:
         1.  Enter a unique name for their character.
@@ -21,9 +23,9 @@ The core gameplay revolves around several key pillars:
 *   **Time System:** The game operates on a 24-hour in-game day. Players can perform one significant action per hour, with 8 hours typically allocated for sleep as part of a long rest.
 *   **World Interaction:** The game world consists of randomly generated towns, each with unique properties such as specific nearby resources, unique NPC crafters, and distinct local events. These properties influence local market demands, affecting item pricing through percentage modifiers. Players can also dedicate hourly actions to conduct active market research.
 
-Social interaction is encouraged through features like moderated chat, emotes, direct player-to-player trading, and planned co-operative activities such as dungeons and special events. Players can also use 'Message' or 'Sending'-style spells to communicate with friends. The initial player experience involves logging into their account, then selecting an existing character or creating a new one if a slot is available.
+Social interaction is encouraged through features like moderated chat, emotes, direct player-to-player trading, and planned co-operative activities such as dungeons and special events. Players can also use 'Message' or 'Sending'-style spells to communicate with friends. The initial player experience involves logging into their account (either via username/password or Google), then selecting an existing character or creating a new one if a slot is available.
 
-The technical foundation consists of a C# backend utilizing ASP.NET Core Web API, with an HTML/CSS/JavaScript frontend. User accounts, their active character data, and their graveyard of deceased characters (player save states) are managed persistently using JSON files (e.g., `users.json`, `user_characters.json`, `graveyard.json`) on the server.
+The technical foundation consists of a C# backend utilizing ASP.NET Core Web API, with an HTML/CSS/JavaScript frontend. Google OAuth 2.0 integration is handled using the Flask-Dance library. User accounts, their active character data, and their graveyard of deceased characters (player save states) are managed persistently using JSON files (e.g., `users.json`, `user_characters.json`, `graveyard.json`) on the server.
 
 Looking towards the future, potential expansions include a 'Dungeon Crawl' mode for adventure and resource gathering, a 'Market Overhaul' tab for deeper economic insights, advanced multiplayer interactions, and eventual integration with Unity for enhanced visuals and cross-platform play.
 

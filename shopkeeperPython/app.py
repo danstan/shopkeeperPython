@@ -1,14 +1,132 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import io
 import json
+import os # Added for environment variables
 from game.game_manager import GameManager
 from game.character import Character
 # Assuming Item class is available for from_dict as it's used in Character.from_dict
 from game.item import Item
+from flask_dance.contrib.google import make_google_blueprint, google
+from flask_dance.consumer import oauth_authorized, oauth_error # Added for signals
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
 app.secret_key = 'dev_secret_key_!@#$%' # Replace with a strong, random key in production
+
+# --- Google OAuth Configuration ---
+# IMPORTANT: Set these environment variables in your shell before running the app.
+# For Linux/macOS:
+# export GOOGLE_OAUTH_CLIENT_ID="YOUR_CLIENT_ID_HERE"
+# export GOOGLE_OAUTH_CLIENT_SECRET="YOUR_CLIENT_SECRET_HERE"
+# For Windows (Command Prompt):
+# set GOOGLE_OAUTH_CLIENT_ID="YOUR_CLIENT_ID_HERE"
+# set GOOGLE_OAUTH_CLIENT_SECRET="YOUR_CLIENT_SECRET_HERE"
+# For Windows (PowerShell):
+# $env:GOOGLE_OAUTH_CLIENT_ID="YOUR_CLIENT_ID_HERE"
+# $env:GOOGLE_OAUTH_CLIENT_SECRET="YOUR_CLIENT_SECRET_HERE"
+
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
+
+if not GOOGLE_OAUTH_CLIENT_ID or not GOOGLE_OAUTH_CLIENT_SECRET:
+    print("WARNING: Google OAuth Client ID or Secret is not set in environment variables.")
+    print("Google Login will not work. Please set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET.")
+    # google_bp will not be registered if creds are missing.
+else:
+    google_bp = make_google_blueprint(
+        client_id=GOOGLE_OAUTH_CLIENT_ID,
+        client_secret=GOOGLE_OAUTH_CLIENT_SECRET,
+        scope=[
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile"
+        ],
+        # redirect_url="/login/google/authorized" # This is the default if not specified with this url_prefix
+        # The redirect URI in Google Cloud Console must be: http://localhost:5001/login/google/authorized
+        # (or https if using https)
+    )
+    app.register_blueprint(google_bp, url_prefix="/login")
+
+    # --- OAuth Signal Handlers (defined only if google_bp is created) ---
+    @oauth_authorized.connect_via(google_bp)
+    def google_logged_in(blueprint, token):
+        if not token:
+            flash("Failed to log in with Google.", "error")
+            return redirect(url_for("display_game_output"))
+
+        resp = blueprint.session.get("/oauth2/v2/userinfo")
+        if not resp.ok:
+            msg = "Failed to fetch user info from Google."
+            flash(msg, "error")
+            return redirect(url_for("display_game_output"))
+
+        google_user_info = resp.json()
+        google_id = str(google_user_info.get("id"))
+        email = google_user_info.get("email")
+        name = google_user_info.get("name")
+        # picture = google_user_info.get("picture") # Optional, not used currently
+
+        # 1. Check if user exists by google_id
+        username = find_user_by_google_id(google_id)
+
+        if username: # Existing Google-linked user
+            session['username'] = username
+            session.pop('selected_character_slot', None)
+            display_name = users[username].get('display_name_google') or users[username].get('email_google') or name
+            flash(f"Welcome back, {display_name}!", "success")
+            return redirect(url_for("display_game_output"))
+
+        # 2. Optional: Check if user exists by email (for linking or conflict warning)
+        # For this implementation, we'll prioritize google_id. If a user with this email
+        # exists but their google_id doesn't match, we'll create a new distinct user for this Google account.
+        # More complex linking logic could be added here if desired.
+        # existing_user_by_email = find_user_by_email(email)
+        # if existing_user_by_email and users[existing_user_by_email].get('google_id') != google_id:
+        #     flash(f"An account with email {email} already exists. Please log in using your original method or contact support if you wish to link accounts.", "warning")
+        #     return redirect(url_for("display_game_output"))
+
+
+        # 3. Create new game user if no existing link found
+        internal_username_base = email.split('@')[0] if email else "googleuser"
+        internal_username = internal_username_base
+        counter = 1
+        while internal_username in users: # Ensure username is unique
+            internal_username = f"{internal_username_base}{counter}"
+            counter += 1
+
+        users[internal_username] = {
+            'password': None, # No password for Google-only users
+            'google_id': google_id,
+            'email_google': email,
+            'display_name_google': name
+        }
+        save_users()
+
+        user_characters.setdefault(internal_username, [])
+        graveyard.setdefault(internal_username, [])
+        save_user_characters()
+        save_graveyard()
+
+        session['username'] = internal_username
+        session.pop('selected_character_slot', None)
+        flash(f"Logged in successfully with Google as {name}! Your game username is {internal_username}.", "success")
+        return redirect(url_for("display_game_output"))
+
+    @oauth_error.connect_via(google_bp)
+    def google_error(blueprint, error, error_description=None, error_uri=None):
+        msg = (
+            "OAuth error from {name}! "
+            "error={error} description={description} uri={uri}"
+        ).format(
+            name=blueprint.name,
+            error=error,
+            description=error_description,
+            uri=error_uri,
+        )
+        flash(msg, "error")
+        return redirect(url_for("display_game_output"))
+
 
 # --- Constants ---
 MAX_CHARS_PER_USER = 2
@@ -17,9 +135,22 @@ CHARACTERS_FILE = 'user_characters.json'
 GRAVEYARD_FILE = 'graveyard.json' # New file path for graveyard
 
 # --- User and Character Data Stores (Global for simplicity) ---
-users = {} # username: password
-user_characters = {} # username: [list of character_dicts]
-graveyard = {} # username: [list of dead character_dicts] - New data structure
+users = {}
+user_characters = {}
+graveyard = {}
+
+# --- Helper Functions for User Lookup ---
+def find_user_by_google_id(google_id_to_find):
+    for username, user_data in users.items():
+        if user_data.get('google_id') == google_id_to_find:
+            return username
+    return None
+
+def find_user_by_email(email_to_find):
+    for username, user_data in users.items():
+        if user_data.get('email_google') == email_to_find: # Check against Google email
+            return username
+    return None
 
 # --- Data Persistence Functions ---
 def load_data():
@@ -28,11 +159,24 @@ def load_data():
         with open(USERS_FILE, 'r') as f:
             users = json.load(f)
     except FileNotFoundError:
-        users = {"testuser": "password123"} # Default if file not found
-        save_users() # Create the file with default user
+        # Default user with a hashed password
+        users = {"testuser": {
+            "password": generate_password_hash("password123"),
+            "google_id": None,
+            "email_google": None,
+            "display_name_google": None
+            }
+        }
+        save_users()
     except json.JSONDecodeError:
-        print(f"Warning: Could not decode {USERS_FILE}. Starting with empty users or default.")
-        users = {"testuser": "password123"}
+        print(f"Warning: Could not decode {USERS_FILE}. Starting with default user.")
+        users = {"testuser": {
+            "password": generate_password_hash("password123"),
+            "google_id": None,
+            "email_google": None,
+            "display_name_google": None
+            }
+        }
         save_users()
 
 
@@ -92,15 +236,27 @@ game_manager_instance = GameManager(player_character=player_char, output_stream=
 
 # --- Authentication Routes ---
 
+@app.route('/login/google_initiate')
+def google_initiate_login_route():
+    # Check if Google OAuth is configured (i.e., if client ID and secret are set)
+    if not GOOGLE_OAUTH_CLIENT_ID or not GOOGLE_OAUTH_CLIENT_SECRET:
+        flash("Google Login is not currently configured by the server administrator.", "error")
+        return redirect(url_for('display_game_output')) # Redirect to main page or login page
+
+    # If configured, redirect to Flask-Dance's Google login endpoint.
+    # This endpoint is part of the 'google_bp' blueprint which was registered with url_prefix="/login".
+    # The default login endpoint in such a blueprint is typically 'google.login'.
+    return redirect(url_for('google.login'))
+
 @app.route('/login', methods=['POST'])
 def login_route():
     username = request.form.get('username')
     password = request.form.get('password')
+    user_data = users.get(username)
 
-    if username in users and users[username] == password:
+    if user_data and user_data.get('password') and check_password_hash(user_data['password'], password):
         session['username'] = username
         flash('Login successful!', 'success')
-        # When a user logs in, their character should be loaded in display_game_output
     else:
         flash('Invalid username or password.', 'login_error')
     return redirect(url_for('display_game_output'))
@@ -132,10 +288,15 @@ def register_page():
             flash('Username already exists. Please choose another.', 'error')
             return redirect(url_for('register_page'))
 
-        users[username] = password
+        users[username] = {
+            'password': generate_password_hash(password),
+            'google_id': None,
+            'email_google': None,
+            'display_name_google': None
+        }
         user_characters[username] = []
-        save_users() # Save updated users dictionary
-        save_user_characters() # Initialize character file for user if it wasn't (though it should be empty list)
+        save_users()
+        save_user_characters()
         flash('Registration successful! Please log in.', 'success')
         return redirect(url_for('display_game_output'))
 
