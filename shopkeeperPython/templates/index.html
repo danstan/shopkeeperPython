@@ -462,105 +462,111 @@
             </div>
         </div>
         <div id="actions-tab">
-            <div class="tab-title-bar">Actions & Log</div>
-            <div id="actions-content" class="tab-content">
-                <div class="log-box">
-                    <h2>Game Log</h2>
-                    <div id="game-output" style="white-space: pre-wrap; height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
-                        {{ game_output | safe }}
-                    </div>
-                </div>
-                <div id="action-controls-wrapper">
-                    <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
-                        <input type="hidden" id="action_name_hidden" name="action_name" value="">
-                        <input type="hidden" id="action_details" name="action_details" value="{}">
-                        <!-- Submit button might be dynamically added or made visible by JS,
-                             or we can have a generic "Do Selected Action" button if an action is chosen.
-                             For now, let action buttons themselves trigger form submission. -->
-                    </form>
-
-                    <div id="world-map-container" class="action-box-section"> <!-- New class for styling -->
-                        <h2>World Map</h2>
-                        <div id="map-destinations">
-                            {% if available_towns %}
-                                <p>Choose a destination to travel to:</p>
-                                <ul>
-                                    {% for town_name_key in available_towns %}
-                                    <li><button class="map-destination-button" data-town-name="{{ town_name_key }}">{{ town_name_key }}</button></li>
-                                    {% endfor %}
-                                </ul>
-                            {% else %}
-                                <p>No destinations available.</p>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div id="current-location-container" class="action-box-section">
-                        <h2>Current Location: <span id="current-town-display">{{ current_town_name }}</span></h2>
-                        <div id="sub-locations-list">
-                            <!-- Sub-locations of the current town will be populated here by JavaScript -->
-                        </div>
-                        <div id="current-actions-list">
-                            <!-- Actions for the selected sub-location will be populated here by JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- Container for Action Detail Forms -->
-                    <div id="action-details-container" class="action-box-section" style="flex-basis: 100%; display: none;"> <!-- Initially hidden, spans full width if flex items wrap -->
-                        <h3>Action Details</h3>
-
-                        <div id="div_craft_details" class="hidden-details details-section">
-                            <h4>Craft Item</h4>
-                            <label for="craft_item_name">Item Name to Craft:</label>
-                            <input type="text" id="craft_item_name" name="craft_item_name_detail_input" placeholder="e.g., Minor Healing Potion">
-                            <button type="button" class="submit-details-button" data-action="craft">Craft It!</button>
-                        </div>
-
-                        <div id="div_buy_details" class="hidden-details details-section">
-                            <h4>Buy from Your Shop</h4>
-                            <label for="buy_item_name">Item Name to Buy:</label>
-                            <input type="text" id="buy_item_name" name="buy_item_name_detail_input" placeholder="e.g., Simple Dagger">
-                            <label for="buy_quantity">Quantity:</label>
-                            <input type="number" id="buy_quantity" name="buy_quantity_detail_input" value="1" min="1">
-                            <button type="button" class="submit-details-button" data-action="buy_from_own_shop">Buy Item(s)</button>
-                        </div>
-
-                        <div id="div_sell_details" class="hidden-details details-section">
-                            <h4>Sell to Your Shop</h4>
-                            <label for="sell_item_name">Item Name to Sell:</label>
-                            <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale">
-                            <button type="button" class="submit-details-button" data-action="sell_to_own_shop">Sell Item</button>
-                        </div>
-                    </div>
-
-                    <!-- Buy Herbs from Hemlock Form -->
-                    <div class="action-box-section">
-                        <h3>Buy Herbs from Hemlock</h3>
-                        <form action="{{ url_for('perform_action') }}" method="post">
-                            <input type="hidden" name="action_name" value="buy_from_npc">
-                            <input type="hidden" name="npc_name" value="Old Man Hemlock">
-                            <div class="details-section">
-                                <label for="hemlock_item_name">Name of Herb:</label>
-                                <input type="text" id="hemlock_item_name" name="item_name" placeholder="e.g., Moonpetal" required>
-                            </div>
-                            <div class="details-section">
-                                <label for="hemlock_quantity">Quantity:</label>
-                                <input type="number" id="hemlock_quantity" name="quantity" value="1" min="1" required>
-                            </div>
-                            <button type="submit">Buy Herbs</button>
-                        </form>
-                    </div>
-
-                    <!-- Gather Resources Button -->
-                    <div class="action-box-section">
-                        <h3>General Actions</h3>
-                        <button type="button" id="gatherResourcesButton" class="general-action-button">Gather Resources</button>
-                        <!-- Add other general town/area actions here if needed -->
-                    </div>
-
-                </div>
+            <div class="actions-log-tab-buttons">
+                <div id="actions-tab-button">Actions</div>
+                <div id="log-tab-button">Log</div>
             </div>
-        </div>
+            <div id="actions-content" class="tab-content">
+                <div id="actions-panel-content"> <!-- Panel for Actions -->
+                    <div id="action-controls-wrapper">
+                        <!-- All original form elements and action sections MUST be HERE -->
+                        <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
+                            <input type="hidden" id="action_name_hidden" name="action_name" value="">
+                            <input type="hidden" id="action_details" name="action_details" value="{}">
+                            <!-- ... other hidden inputs if any ... -->
+
+                            <div id="world-map-container" class="action-box-section">
+                                <h2>World Map</h2>
+                                <div id="map-destinations">
+                                    {% if available_towns %}
+                                        <p>Choose a destination to travel to:</p>
+                                        <ul>
+                                            {% for town_name_key in available_towns %}
+                                            <li><button class="map-destination-button" data-town-name="{{ town_name_key }}">{{ town_name_key }}</button></li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <p>No destinations available.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div id="current-location-container" class="action-box-section">
+                                <h2>Current Location: <span id="current-town-display">{{ current_town_name }}</span></h2>
+                                <div id="sub-locations-list">
+                                    <!-- Sub-locations of the current town will be populated here by JavaScript -->
+                                </div>
+                                <div id="current-actions-list">
+                                    <!-- Actions for the selected sub-location will be populated here by JavaScript -->
+                                </div>
+                            </div>
+
+                            <!-- Container for Action Detail Forms -->
+                            <div id="action-details-container" class="action-box-section" style="flex-basis: 100%; display: none;"> <!-- Initially hidden, spans full width if flex items wrap -->
+                                <h3>Action Details</h3>
+
+                                <div id="div_craft_details" class="hidden-details details-section">
+                                    <h4>Craft Item</h4>
+                                    <label for="craft_item_name">Item Name to Craft:</label>
+                                    <input type="text" id="craft_item_name" name="craft_item_name_detail_input" placeholder="e.g., Minor Healing Potion">
+                                    <button type="button" class="submit-details-button" data-action="craft">Craft It!</button>
+                                </div>
+
+                                <div id="div_buy_details" class="hidden-details details-section">
+                                    <h4>Buy from Your Shop</h4>
+                                    <label for="buy_item_name">Item Name to Buy:</label>
+                                    <input type="text" id="buy_item_name" name="buy_item_name_detail_input" placeholder="e.g., Simple Dagger">
+                                    <label for="buy_quantity">Quantity:</label>
+                                    <input type="number" id="buy_quantity" name="buy_quantity_detail_input" value="1" min="1">
+                                    <button type="button" class="submit-details-button" data-action="buy_from_own_shop">Buy Item(s)</button>
+                                </div>
+
+                                <div id="div_sell_details" class="hidden-details details-section">
+                                    <h4>Sell to Your Shop</h4>
+                                    <label for="sell_item_name">Item Name to Sell:</label>
+                                    <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale">
+                                    <button type="button" class="submit-details-button" data-action="sell_to_own_shop">Sell Item</button>
+                                </div>
+                            </div>
+
+                            <!-- Buy Herbs from Hemlock Form -->
+                            <div class="action-box-section">
+                                <h3>Buy Herbs from Hemlock</h3>
+                                <form action="{{ url_for('perform_action') }}" method="post"> <!-- This is a nested form. HTML allows this but it can be tricky. -->
+                                    <input type="hidden" name="action_name" value="buy_from_npc">
+                                    <input type="hidden" name="npc_name" value="Old Man Hemlock">
+                                    <div class="details-section">
+                                        <label for="hemlock_item_name">Name of Herb:</label>
+                                        <input type="text" id="hemlock_item_name" name="item_name" placeholder="e.g., Moonpetal" required>
+                                    </div>
+                                    <div class="details-section">
+                                        <label for="hemlock_quantity">Quantity:</label>
+                                        <input type="number" id="hemlock_quantity" name="quantity" value="1" min="1" required>
+                                    </div>
+                                    <button type="submit">Buy Herbs</button>
+                                </form>
+                            </div>
+
+                            <!-- Gather Resources Button -->
+                            <div class="action-box-section">
+                                <h3>General Actions</h3>
+                                <button type="button" id="gatherResourcesButton" class="general-action-button">Gather Resources</button>
+                                <!-- Add other general town/area actions here if needed -->
+                            </div>
+                        </form> <!-- Close actionForm -->
+                    </div> <!-- Close action-controls-wrapper -->
+                </div> <!-- Close actions-panel-content -->
+
+                <div id="log-panel-content"> <!-- Panel for Log -->
+                    <div class="log-box">
+                        <h2>Game Log</h2>
+                        <div id="game-output" style="white-space: pre-wrap; height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
+                            {{ game_output | safe }}
+                        </div>
+                    </div>
+                </div> <!-- Close log-panel-content -->
+            </div> <!-- Close actions-content -->
+        </div> <!-- Close actions-tab -->
         <div id="settings-popup" style="display: none;">
             <ul>
                 <li id="settings-option">Settings</li>
@@ -865,8 +871,14 @@
             const statsContent = document.getElementById('stats-content');
             const inventoryTab = document.getElementById('inventory-tab');
             const inventoryContent = document.getElementById('inventory-content');
-            const actionsTab = document.getElementById('actions-tab');
-            const actionsContent = document.getElementById('actions-content');
+            // const actionsTab = document.getElementById('actions-tab'); // Old reference
+            // const actionsContent = document.getElementById('actions-content'); // Old reference for direct toggle
+
+            // New elements for Actions/Log tabs
+            const actionsTabButton = document.getElementById('actions-tab-button');
+            const logTabButton = document.getElementById('log-tab-button');
+            const actionsPanelContent = document.getElementById('actions-panel-content');
+            const logPanelContent = document.getElementById('log-panel-content');
 
             const infoTab = document.getElementById('info-tab');
             const infoContent = document.getElementById('info-content');
@@ -879,25 +891,33 @@
             // REMOVED JavaScript hover listeners for statsTab, inventoryTab, and infoTab
             // CSS :hover will now handle their visibility and animation.
 
-            if (actionsTab && actionsContent) {
-                actionsTab.addEventListener('click', () => {
-                    // For actionsContent, we toggle between 'none' and 'flex'
-                    // because #actions-content is a flex container itself.
-                    const isHidden = actionsContent.style.display === 'none' || actionsContent.style.display === '';
-                    actionsContent.style.display = isHidden ? 'flex' : 'none'; // Use 'flex'
-                    if (isHidden) {
-                        actionsTab.classList.add('actions-tab-active');
-                    } else {
-                        actionsTab.classList.remove('actions-tab-active');
-                    }
-                    // Note: The 'display: flex' for #actions-content when visible
-                    // was already specified in the CSS for #actions-content when it's active/shown.
-                    // The previous CSS had it as `display: flex` overriding `.tab-content display:none`.
-                    // Now, `.tab-content` no longer has `display:none`.
-                    // `#actions-content` specifically has `display:none` initially.
-                    // So JS must set it to `display:flex` to show it.
+            // Old listener for #actions-tab (the container) is removed.
+            // if (actionsTab && actionsContent) { ... }
+
+            // New listeners for Actions/Log tab buttons
+            if (actionsTabButton && actionsPanelContent && logTabButton && logPanelContent) {
+                actionsTabButton.addEventListener('click', () => {
+                    actionsPanelContent.classList.add('panel-visible');
+                    logPanelContent.classList.remove('panel-visible');
+                    actionsTabButton.classList.add('active-tab-button');
+                    logTabButton.classList.remove('active-tab-button');
                 });
+
+                logTabButton.addEventListener('click', () => {
+                    logPanelContent.classList.add('panel-visible');
+                    actionsPanelContent.classList.remove('panel-visible');
+                    logTabButton.classList.add('active-tab-button');
+                    actionsTabButton.classList.remove('active-tab-button');
+                });
+
+                // Initial state: Make Actions tab active by default
+                actionsTabButton.classList.add('active-tab-button');
+                actionsPanelContent.classList.add('panel-visible');
+                // Ensure log tab is not active/visible initially
+                logTabButton.classList.remove('active-tab-button');
+                logPanelContent.classList.remove('panel-visible');
             }
+
 
             if (topRightMenuButton && settingsPopup) {
                 topRightMenuButton.addEventListener('click', () => {

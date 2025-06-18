@@ -122,16 +122,46 @@ body {
     border-left: 1px solid #999; /* Add separator */
 }
 
+/* New styles for Actions/Log Tabs */
+.actions-log-tab-buttons {
+    display: flex;
+    flex-shrink: 0; /* Prevent shrinking if content below is too large */
+}
+
+#actions-tab-button, #log-tab-button {
+    flex-grow: 1; /* Each button takes equal width */
+    padding: 8px 5px; /* Adjusted padding */
+    background-color: #b0b0b0; /* Slightly lighter than #actions-tab bg */
+    border-bottom: 1px solid #888; /* Separator from content */
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    border-right: 1px solid #888; /* Separator between buttons */
+}
+
+#log-tab-button {
+    border-right: none; /* No right border for the last button */
+}
+
+#actions-tab-button:hover, #log-tab-button:hover {
+    background-color: #a0a0a0;
+}
+
+.active-tab-button {
+    background-color: #f9f9f9 !important; /* Same as .tab-content bg for seamless look */
+    color: #333;
+    border-bottom: 1px solid #f9f9f9 !important; /* Make it look like it's part of the content area */
+}
+
 
 /* Common styles for all tab types (stats, info, inventory, actions) */
 #stats-tab, #info-tab, #inventory-tab, #actions-tab {
     /* Common properties already defined above or per specific ID */
 }
 
-.actions-tab-active .tab-title-bar { /* This is for JS interactivity, keep it */
-    background-color: #a8d5e2; /* Highlight color for active tab */
-    font-weight: bold;
-}
+/* REMOVE: .actions-tab-active .tab-title-bar - This is replaced by .active-tab-button */
 
 /* Settings Menu Button and Popup */
 #top-right-menu-button {
@@ -213,9 +243,7 @@ body {
     cursor: default; /* Default cursor for non-interactive titles */
 }
 
-#actions-tab .tab-title-bar {
-    cursor: pointer; /* Clickable title for actions tab */
-}
+/* REMOVE: #actions-tab .tab-title-bar - This element is gone */
 
 .tab-content {
     /* display: none; /* REMOVED for hover tabs. JS still hides #actions-content initially */
@@ -230,13 +258,43 @@ body {
 }
 
 /* Specifics for #actions-content (which also has .tab-content class) */
-/* This will be click-toggled, so it needs display:none initially */
 #actions-content {
-    display: none; /* Initially hidden, JS toggles to display:flex */
-    flex-direction: row; /* This is applied when JS makes it visible */
-    gap: 8px;
-    padding: 8px; /* Consistent padding */
+    display: block; /* Changed from none/flex, visibility now controlled by panels */
+    /* flex-direction: row; /* Not needed if panels stack vertically */
+    /* gap: 8px; /* Not needed if panels stack vertically */
+    /* padding: 8px; /* Padding will be on panels if needed, or keep if desired for overall content area */
+    height: calc(100% - 35px); /* Adjust based on tab button height, assuming buttons are around 35px */
+    overflow: hidden; /* To contain the sliding panels */
+    position: relative; /* For positioning panels if needed, though max-height should handle it */
 }
+
+#actions-panel-content, #log-panel-content {
+    width: 100%; /* Take full width of #actions-content */
+    height: 100%; /* Take full height of #actions-content when visible */
+    background-color: #f9f9f9; /* Match tab-content bg */
+    overflow: hidden; /* Important for max-height transition */
+    max-height: 0; /* Initially hidden */
+    transition: max-height 0.5s ease-in-out;
+    box-sizing: border-box; /* Include padding/border in height */
+}
+
+#actions-panel-content.panel-visible,
+#log-panel-content.panel-visible {
+    max-height: calc(20vh - 35px); /* Allows panel to use full height of #actions-content (parent) */
+    /* If content inside panels needs scrolling, add overflow-y: auto; here
+       and ensure #action-controls-wrapper and .log-box don't have fixed height:100%
+       if this parent has overflow-y: auto as well.
+       For now, assuming content fits or internal elements scroll.
+    */
+}
+
+/* Ensure the direct children of panels can fill the space */
+#actions-panel-content > #action-controls-wrapper,
+#log-panel-content > .log-box {
+    height: 100%; /* Fill the visible height of the panel */
+    overflow-y: auto; /* Allow scrolling within these if content exceeds panel height */
+}
+
 
 /* Add overflow:hidden to tab containers */
 #stats-tab, #info-tab, #inventory-tab {
@@ -283,7 +341,7 @@ body {
     border-radius: 4px;
     padding: 6px;
 }
-#actions-content > .log-box #game-output {
+#actions-content > .log-box #game-output { /* This selector is fine as .log-box is inside #actions-content */
     white-space: pre-wrap;
     border: 1px solid #ddd; /* Lighter border */
     padding: 5px;
@@ -293,7 +351,8 @@ body {
     font-size: 0.9em;
     color: #2c3e50;
     flex-grow: 1; /* Takes available vertical space */
-    min-height: 30px; /* Minimum height */
+    /* height: 300px; /* REMOVE fixed height */
+    min-height: 50px; /* Adjusted minimum height */
     border-radius: 3px;
 }
 
