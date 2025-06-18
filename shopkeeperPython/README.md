@@ -34,38 +34,45 @@ This project includes a simple web-based user interface to allow for interactive
 
 Follow these steps to run the web UI:
 
-1.  **Navigate to the Directory**:
-    Open your terminal or command prompt and navigate to the root `shopkeeperPython` directory of this project.
+1.  **Navigate to this Directory (`shopkeeperPython`):**
+    Open your terminal or command prompt. Ensure you are in the `shopkeeperPython` directory (the one containing *this* README.md and `app.py`).
+    If you are in the project root, type:
     ```bash
-    cd path/to/shopkeeperPython
+    cd shopkeeperPython
     ```
 
 2.  **Create and Activate a Virtual Environment (Recommended)**:
-    It's a best practice to use a virtual environment to manage project dependencies.
+    It's a best practice to use a virtual environment. If you created one in the project root, ensure it's active. If creating one here:
     ```bash
     # Create a virtual environment (e.g., named .venv)
     python -m venv .venv
     # Activate it
     # On Windows:
-    # .venv\Scripts\activate
+    # .venv\Scriptsctivate
     # On macOS/Linux:
     # source .venv/bin/activate
     ```
 
 3.  **Install Dependencies**:
-    With your virtual environment active, install the required Python packages.
+    With your virtual environment active, install the required Python packages from this directory:
     ```bash
     pip install -r requirements.txt
     ```
 
-4.  **Run the Flask Application**:
-    Execute the `app.py` file to start the Flask development server.
+4.  **Run the Flask Application (Method 1: Directly):**
+    Since `app.py` now uses relative imports, you can run it directly from this directory:
     ```bash
     python app.py
     ```
-    You should see output indicating the server is running, typically on `http://127.0.0.1:5001/` (as configured in `app.py`) or `http://127.0.0.1:5000/` if not specified.
 
-5.  **Open in Browser**:
+5.  **Run the Flask Application (Method 2: As a module from parent directory):**
+    The standard Python way for packaged applications is to run them as a module from the parent (project root) directory. To do this:
+    ```bash
+    cd ..
+    python -m shopkeeperPython.app
+    ```
+    (Then, if you want to return to this directory: `cd shopkeeperPython`)
+
+
+6.  **Open in Browser**:
     Open your web browser and navigate to the address shown in your terminal (e.g., `http://127.0.0.1:5001/`).
-
-You should now see the Shopkeeper Playtest UI and be able to interact with the game.
