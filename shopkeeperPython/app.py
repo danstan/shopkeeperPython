@@ -163,6 +163,7 @@ def find_user_by_email(email_to_find):
 # --- Data Persistence Functions ---
 def load_data():
     global users, user_characters, graveyard # Add graveyard to globals
+
     users_migrated = False # Flag to track if migration occurred
     try:
         with open(USERS_FILE, 'r') as f:
@@ -189,6 +190,7 @@ def load_data():
         if users_migrated:
             save_users()
 
+
     except FileNotFoundError:
         # Default user with a hashed password
         default_user_data = {"testuser": {
@@ -198,6 +200,7 @@ def load_data():
             "display_name_google": None
             }
         }
+
         users.clear()
         users.update(default_user_data)
         # No need to call save_users() here if FileNotFoundError, as it will be created with default user
@@ -205,6 +208,7 @@ def load_data():
         # However, to ensure it's saved if the file truly didn't exist and no migration happened (e.g. empty users dict from json.load on empty file that somehow passed FileNotFoundError)
         # it's safer to keep the original save_users() or rely on the migration save.
         # For this refactor, we'll ensure the default user is saved if created.
+
         save_users()
     except json.JSONDecodeError:
         print(f"Warning: Could not decode {USERS_FILE}. Starting with default user.")
@@ -215,6 +219,7 @@ def load_data():
             "display_name_google": None
             }
         }
+
         users.clear()
         users.update(default_user_data)
         save_users() # Save the default user if JSON was corrupted
@@ -250,6 +255,7 @@ def load_data():
 
 
 def save_users():
+    print(f"DEBUG_SAVE_USERS: Attempting to save users. Current users dict to be saved: {users}")
     with open(USERS_FILE, 'w') as f:
         json.dump(users, f, indent=4)
 
