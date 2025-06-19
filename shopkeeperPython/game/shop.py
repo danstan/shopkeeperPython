@@ -12,6 +12,32 @@ class Shop:
     """
     Represents a shop in the Shopkeeper Python game.
     """
+    SHOP_LEVEL_CONFIG = {
+        1: {"cost_to_upgrade": 500, "max_inventory_slots": 20, "crafting_quality_bonus": 0},
+        2: {"cost_to_upgrade": 1500, "max_inventory_slots": 30, "crafting_quality_bonus": 1},
+        3: {"cost_to_upgrade": 3000, "max_inventory_slots": 40, "crafting_quality_bonus": 2},
+    }
+    MAX_SHOP_LEVEL = 3
+
+    CRITICAL_SUCCESS_CHANCE = 0.05
+    CRITICAL_FAILURE_CHANCE = 0.05
+    CRITICAL_SUCCESS_QUALITY_BONUS = 1  # Index shift in QUALITY_TIERS
+    CRITICAL_FAILURE_QUALITY_PENALTY = -1 # Index shift in QUALITY_TIERS
+
+    SPECIALIZATION_TYPES = ["General Store", "Blacksmith", "Alchemist"]
+
+    ADVANCED_RECIPES = {
+        "Blacksmith": {
+            "Iron Armor": {"base_value": 50, "type": "armor", "description": "A sturdy set of iron armor.", "crafting_difficulty": 15, "effects": {"defense": 10}, "ingredients": {"Iron Ingot": 5, "Leather Straps": 2}},
+            "Steel Sword": {"base_value": 70, "type": "weapon", "description": "A well-crafted steel sword.", "crafting_difficulty": 18, "effects": {"damage": "1d10"}, "ingredients": {"Steel Ingot": 3, "Oak Wood": 1}}
+        },
+        "Alchemist": {
+            "Greater Healing Potion": {"base_value": 50, "type": "potion", "description": "Restores a significant amount of health.", "effects": {"healing": 25}, "crafting_difficulty": 12, "is_consumable": True, "ingredients": {"Concentrated Herbs": 2, "Purified Water": 1, "Crystal Vial": 1}},
+            "Potion of Strength": {"base_value": 60, "type": "potion", "description": "Temporarily increases strength.", "effects": {"stat_boost": {"STR": 2, "duration_hours": 1}}, "crafting_difficulty": 16, "is_consumable": True, "ingredients": {"Dragon's Blood Resin": 1, "Mountain Flower": 3, "Crystal Vial": 1}}
+        },
+        "General Store": {}
+    }
+
     BASIC_RECIPES = {
         "Stale Ale": {"base_value": 1, "type": "food", "description": "Barely drinkable ale.", "crafting_difficulty": 1, "effects": {"stamina_recovery": 1}, "is_consumable": True, "ingredients": {"Dirty Water": 1, "Moldy Fruit": 2}},
         "Simple Dagger": {"base_value": 5, "type": "weapon", "description": "A crude but functional dagger.", "crafting_difficulty": 5, "effects": {"damage": "1d4"}, "ingredients": {"Leather Scraps": 1, "Scrap Metal": 2}},
@@ -36,15 +62,19 @@ class Shop:
         self.town = town
         self.inventory = []
         self.gold = initial_gold
-        self.specialization = "General"
+        self.specialization = "General Store"  # Default to "General Store"
         self.crafting_experience = {}
         self.shop_level = 1
+        self.max_inventory_slots = self.SHOP_LEVEL_CONFIG[self.shop_level]["max_inventory_slots"]
+        self.reputation = 0
+        self.MAX_REPUTATION = 100
+        self.MIN_REPUTATION = -20
         self.markup_percentage = 1.2 # Default markup (e.g., 20% over value for player)
         self.buyback_percentage = 0.5 # Default buyback (e.g., 50% of value for player)
 
     def __repr__(self):
         return (f"Shop(name='{self.name}', owner='{self.owner_name}', town='{self.town.name if self.town else 'None'}', "
-                f"gold={self.gold}, specialization='{self.specialization}', level={self.shop_level})")
+                f"gold={self.gold}, specialization='{self.specialization}', level={self.shop_level}, reputation={self.reputation}, slots={len(self.inventory)}/{self.max_inventory_slots})")
 
     def update_town(self, new_town: 'Town'):
         """Updates the shop's associated town."""
@@ -52,7 +82,21 @@ class Shop:
         print(f"Shop '{self.name}' has updated its town to {new_town.name}.")
 
     def add_item_to_inventory(self, item: Item):
+        # Check if the item is stackable and already exists in inventory
+        for existing_item in self.inventory:
+            if existing_item.name == item.name and existing_item.quality == item.quality and hasattr(existing_item, 'quantity') and hasattr(item, 'quantity'):
+                existing_item.quantity += item.quantity
+                print(f"SHOP: Stacked {item.quantity}x {item.name} (Total: {existing_item.quantity}). Inventory slots: {len(self.inventory)}/{self.max_inventory_slots}.")
+                return
+
+        # If not stackable or doesn't exist, check for new slot
+        if len(self.inventory) >= self.max_inventory_slots:
+            print(f"SHOP: Cannot add {item.name}. Inventory is full ({len(self.inventory)}/{self.max_inventory_slots} slots).")
+            return
+
         self.inventory.append(item)
+        print(f"SHOP: Added {item.name} to inventory. Inventory slots: {len(self.inventory)}/{self.max_inventory_slots}.")
+
 
     def remove_item_from_inventory(self, item_name: str, specific_item_to_remove: Item = None) -> Item | None:
         item_to_remove = None
@@ -69,14 +113,23 @@ class Shop:
             pass
         return item_to_remove
 
-    def can_craft(self, item_name: str, character_skills=None):
-        return item_name in self.BASIC_RECIPES
+    def can_craft(self, item_name: str, character_skills=None) -> bool:
+        if item_name in self.BASIC_RECIPES:
+            return True
+        if self.specialization in self.ADVANCED_RECIPES and \
+           item_name in self.ADVANCED_RECIPES[self.specialization]:
+            # TODO: Add skill check here if character_skills are provided and recipes define skill requirements
+            return True
+        return False
 
     def _determine_quality(self, item_name: str) -> str:
-        craft_count = self.crafting_experience.get(item_name, 0)
+        base_craft_count = self.crafting_experience.get(item_name, 0)
+        quality_bonus = self.SHOP_LEVEL_CONFIG[self.shop_level]["crafting_quality_bonus"]
+        effective_craft_count = base_craft_count + quality_bonus
+
         determined_quality = self.QUALITY_THRESHOLDS[0][1]
         for threshold, quality in self.QUALITY_THRESHOLDS:
-            if craft_count >= threshold:
+            if effective_craft_count >= threshold:
                 determined_quality = quality
             else:
                 break
@@ -88,7 +141,17 @@ class Shop:
             # print(f"Cannot craft {item_name}. Recipe unknown or prerequisites not met.")
             return None
 
-        recipe = self.BASIC_RECIPES[item_name]
+        recipe = None
+        if item_name in self.BASIC_RECIPES:
+            recipe = self.BASIC_RECIPES[item_name]
+        elif self.specialization in self.ADVANCED_RECIPES and \
+             item_name in self.ADVANCED_RECIPES[self.specialization]:
+            recipe = self.ADVANCED_RECIPES[self.specialization][item_name]
+        else:
+            # This should not be reached if can_craft was called first
+            print(f"SHOP: Recipe for {item_name} not found for specialization {self.specialization}.")
+            return None
+
         ingredients = recipe.get("ingredients", {})
 
         if ingredients:
@@ -100,7 +163,41 @@ class Shop:
 
         # Proceed with crafting if ingredients are present or not required
         self.crafting_experience[item_name] = self.crafting_experience.get(item_name, 0) + 1
-        quality = self._determine_quality(item_name)
+        base_quality_name = self._determine_quality(item_name)
+        final_quality_name = base_quality_name
+
+        # Critical Success/Failure Roll
+        import random # Make sure to import random if not already done globally in the file
+        crit_roll = random.random()
+
+        current_quality_names = [q_name for _, q_name in self.QUALITY_THRESHOLDS]
+
+        if crit_roll <= self.CRITICAL_SUCCESS_CHANCE:
+            try:
+                current_index = current_quality_names.index(base_quality_name)
+                new_index = min(current_index + self.CRITICAL_SUCCESS_QUALITY_BONUS, len(current_quality_names) - 1)
+                final_quality_name = current_quality_names[new_index]
+                if final_quality_name != base_quality_name:
+                    print(f"SHOP: Critical Success! Crafted {item_name} resulted in {final_quality_name} quality (up from {base_quality_name}).")
+                else:
+                    print(f"SHOP: Critical Success! Crafted {item_name} at {base_quality_name} (already max or no change).")
+            except ValueError:
+                print(f"SHOP: Warning - base quality {base_quality_name} not in defined tiers for critical success.")
+        elif crit_roll <= self.CRITICAL_SUCCESS_CHANCE + self.CRITICAL_FAILURE_CHANCE: # Check only if not crit success
+            try:
+                current_index = current_quality_names.index(base_quality_name)
+                new_index = max(current_index + self.CRITICAL_FAILURE_QUALITY_PENALTY, 0)
+                final_quality_name = current_quality_names[new_index]
+                if final_quality_name != base_quality_name:
+                    print(f"SHOP: Critical Failure! Crafted {item_name} resulted in {final_quality_name} quality (down from {base_quality_name}).")
+                else:
+                     print(f"SHOP: Critical Failure! Crafted {item_name} at {base_quality_name} (already min or no change).")
+            except ValueError:
+                print(f"SHOP: Warning - base quality {base_quality_name} not in defined tiers for critical failure.")
+        else:
+            # Normal success, quality remains base_quality_name
+            pass
+
 
         # Consume ingredients before adding item to inventory
         if ingredients:
@@ -116,7 +213,7 @@ class Shop:
             description=recipe.get("description", "A crafted item."),
             base_value=recipe["base_value"],
             item_type=recipe["type"],
-            quality=quality,
+            quality=final_quality_name, # Use the final determined quality
             effects=recipe.get("effects", {}),
             is_magical=recipe.get("is_magical", recipe["type"] in ["potion", "scroll", "weapon", "armor", "ring", "amulet"]),
             is_attunement=recipe.get("is_attunement", False),
@@ -142,13 +239,34 @@ class Shop:
                     item_instance_to_sell = item_in_stock
                     break
         if item_instance_to_sell:
-            # Use calculate_sale_price for consistency, assuming npc_offer_percentage is a negotiation result on top of base sale price
             base_selling_price = self.calculate_sale_price(item_instance_to_sell)
-            final_selling_price = int(base_selling_price * npc_offer_percentage)
 
+            # Apply reputation bonus to NPC offer percentage
+            effective_npc_offer_percentage = npc_offer_percentage + (self.reputation * 0.001)
+            # Cap effective_npc_offer_percentage to avoid excessively high prices (e.g., max 110% of base offer)
+            effective_npc_offer_percentage = min(effective_npc_offer_percentage, npc_offer_percentage * 1.1)
+
+
+            final_selling_price = int(base_selling_price * effective_npc_offer_percentage)
             self.gold += final_selling_price
             self.remove_item_from_inventory(item_instance_to_sell.name, specific_item_to_remove=item_instance_to_sell)
 
+            # Reputation gain logic
+            rep_change = 0
+            quality_rep_bonus = {"Rare": 2, "Very Rare": 3, "Legendary": 4, "Mythical": 5}
+            if item_instance_to_sell.quality in quality_rep_bonus:
+                rep_change += quality_rep_bonus[item_instance_to_sell.quality]
+
+            if self.specialization in self.ADVANCED_RECIPES and \
+               item_instance_to_sell.name in self.ADVANCED_RECIPES[self.specialization]:
+                rep_change += 1
+
+            if rep_change > 0:
+                old_rep = self.reputation
+                self.reputation = min(self.reputation + rep_change, self.MAX_REPUTATION)
+                if self.reputation != old_rep:
+                    print(f"SHOP: Selling {item_instance_to_sell.quality} {item_instance_to_sell.name} improved your shop's reputation to {self.reputation} (+{self.reputation - old_rep}).")
+            return final_selling_price
         else:
             # print(f"Item '{item_name}' (Quality: {quality_to_sell if quality_to_sell else 'any'}) not found in inventory for sale to NPC.")
             return 0
@@ -240,14 +358,40 @@ class Shop:
         return price_paid_by_shop
 
     def set_specialization(self, specialization_type: str):
+        if specialization_type not in self.SPECIALIZATION_TYPES:
+            print(f"SHOP: Invalid specialization type '{specialization_type}'. Shop specialization remains {self.specialization}.")
+            return
         self.specialization = specialization_type
-        print(f"Shop specialization set to: {self.specialization}")
+        print(f"SHOP: {self.name}'s specialization set to: {self.specialization}")
+
+    def upgrade_shop(self) -> bool:
+        if self.shop_level >= self.MAX_SHOP_LEVEL:
+            print(f"SHOP: {self.name} is already at the maximum level ({self.MAX_SHOP_LEVEL}).")
+            return False
+
+        next_level = self.shop_level + 1
+        if next_level not in self.SHOP_LEVEL_CONFIG:
+            print(f"SHOP: Configuration for level {next_level} not found. Cannot upgrade.")
+            return False
+
+        self.shop_level = next_level
+        self.max_inventory_slots = self.SHOP_LEVEL_CONFIG[self.shop_level]["max_inventory_slots"]
+        quality_bonus = self.SHOP_LEVEL_CONFIG[self.shop_level]["crafting_quality_bonus"]
+
+        print(f"SHOP: {self.name} upgraded to Level {self.shop_level}!")
+        print(f"  - Max Inventory Slots: {self.max_inventory_slots}")
+        print(f"  - Crafting Quality Bonus: +{quality_bonus}")
+        if self.shop_level < self.MAX_SHOP_LEVEL:
+             cost_for_next = self.SHOP_LEVEL_CONFIG[self.shop_level +1 ]['cost_to_upgrade'] if self.shop_level + 1 <= self.MAX_SHOP_LEVEL else "N/A" # Check to prevent key error
+             if cost_for_next != "N/A" and (self.shop_level +1) in self.SHOP_LEVEL_CONFIG : # Check if next level exists
+                  print(f"  - Cost for next upgrade (Level {self.shop_level + 1}): {self.SHOP_LEVEL_CONFIG[self.shop_level + 1]['cost_to_upgrade']}g")
+        return True
 
     def display_inventory(self):
         if not self.inventory:
-            print(f"{self.name}'s inventory is empty.")
+            print(f"{self.name}'s inventory is empty. (Slots: 0/{self.max_inventory_slots})")
             return
-        print(f"\n--- {self.name}'s Inventory (in {self.town.name if self.town else 'N/A'}) ---")
+        print(f"\n--- {self.name}'s Inventory (Level {self.shop_level}, Slots: {len(self.inventory)}/{self.max_inventory_slots}) (in {self.town.name if self.town else 'N/A'}) ---")
         for item in self.inventory:
             print(f"- {item}")
         print("---------------------------")
@@ -262,6 +406,7 @@ class Shop:
             "specialization": self.specialization,
             "crafting_experience": self.crafting_experience.copy(),
             "shop_level": self.shop_level,
+            "reputation": self.reputation,
             "markup_percentage": self.markup_percentage,
             "buyback_percentage": self.buyback_percentage,
         }
@@ -276,9 +421,17 @@ class Shop:
 
         shop = cls(data["name"], data["owner_name"], town_object, initial_gold=data["gold"])
         shop.inventory = [Item.from_dict(item_data) for item_data in data.get("inventory", [])]
-        shop.specialization = data.get("specialization", "General")
+        shop.specialization = data.get("specialization", "General Store") # Default to General Store if not in save
         shop.crafting_experience = data.get("crafting_experience", {})
         shop.shop_level = data.get("shop_level", 1)
+        shop.reputation = data.get("reputation", 0)
+        # Recalculate max_inventory_slots based on loaded shop_level and config
+        if shop.shop_level in Shop.SHOP_LEVEL_CONFIG:
+            shop.max_inventory_slots = Shop.SHOP_LEVEL_CONFIG[shop.shop_level]["max_inventory_slots"]
+        else:
+            print(f"Warning: Shop level {shop.shop_level} from save data not found in SHOP_LEVEL_CONFIG. Defaulting slots for level 1.")
+            shop.max_inventory_slots = Shop.SHOP_LEVEL_CONFIG[1]["max_inventory_slots"] # Fallback
+
         shop.markup_percentage = data.get("markup_percentage", 1.2)
         shop.buyback_percentage = data.get("buyback_percentage", 0.5)
         return shop
@@ -338,6 +491,9 @@ if __name__ == "__main__":
     town_with_mods = MockTown("Whiterun", market_demand_modifiers={"Minor Healing Potion": 1.5, "Simple Dagger": 0.8})
     # The shop owner is just a name, the actual character object is passed during crafting
     shop_in_whiterun = Shop(name="Warmaiden's", owner_name="Adrianne Avenicci", town=town_with_mods)
+    shop_in_whiterun.set_specialization("Blacksmith") # Test specialization
+
+    print(f"Initial shop: {shop_in_whiterun}")
 
     # Create a mock character (the shop owner or a player)
     test_crafter = MockCharacter(name="Test Crafter", gold=100)
@@ -347,6 +503,14 @@ if __name__ == "__main__":
     test_crafter.add_item_to_inventory(Item(name="Clean Water", base_value=1, item_type="component")) # more water
     test_crafter.add_item_to_inventory(Item(name="Scrap Metal", base_value=2, item_type="component"))
     test_crafter.add_item_to_inventory(Item(name="Scrap Metal", base_value=2, item_type="component"))
+    # Ingredients for advanced recipes
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Leather Straps", base_value=5, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Leather Straps", base_value=5, item_type="component"))
 
 
     print("\n--- Crafting Test (Minor Healing Potion) ---")
@@ -370,6 +534,134 @@ if __name__ == "__main__":
         print(f"Failed to craft Simple Dagger.")
     shop_in_whiterun.display_inventory()
     print(f"{test_crafter.name} inventory after dagger: {[i.name for i in test_crafter.inventory]}")
+
+    print("\n--- Crafting Test (Iron Armor - Blacksmith Specialization) ---")
+    # Shop is Blacksmith, Crafter has Iron Ingots and Leather Straps
+    shop_in_whiterun.set_specialization("Blacksmith") # Ensure it's set
+    print(f"{test_crafter.name} inventory before Iron Armor: {[i.name for i in test_crafter.inventory]}")
+    crafted_armor = shop_in_whiterun.craft_item("Iron Armor", test_crafter)
+    if crafted_armor:
+        print(f"Successfully crafted: {crafted_armor.name} (Quality: {crafted_armor.quality})")
+    else:
+        print(f"Failed to craft Iron Armor.")
+    shop_in_whiterun.display_inventory()
+    print(f"{test_crafter.name} inventory after Iron Armor: {[i.name for i in test_crafter.inventory]}")
+
+    print("\n--- Inventory Slot Limit Test ---")
+    # Fill up inventory to test slot limit
+    for i in range(shop_in_whiterun.max_inventory_slots - len(shop_in_whiterun.inventory) + 2): # Try to add 2 more than limit
+        item_to_add = Item(name=f"Filler Item {i+1}", base_value=1, item_type="misc")
+        shop_in_whiterun.add_item_to_inventory(item_to_add) # add_item_to_inventory now prints messages
+
+    # Test stacking
+    stackable_item = Item(name="Iron Ingot", base_value=10, item_type="component", quantity=1)
+    shop_in_whiterun.add_item_to_inventory(stackable_item) # Should stack with existing Iron Ingots if any, or add new
+    shop_in_whiterun.add_item_to_inventory(stackable_item) # Should stack
+
+
+    print("\n--- Shop Upgrade Test ---")
+    print(f"Shop level before upgrade: {shop_in_whiterun.shop_level}, Slots: {shop_in_whiterun.max_inventory_slots}")
+    # Simulate player having enough gold (GameManager would handle this)
+    shop_in_whiterun.upgrade_shop() # Level 2
+    shop_in_whiterun.upgrade_shop() # Level 3
+    shop_in_whiterun.upgrade_shop() # Try to upgrade past max
+
+    print(f"Shop after upgrades: {shop_in_whiterun}")
+
+    print("\n--- Critical Crafting Test (Minor Healing Potion) ---")
+    # Temporarily increase chances for testing, or run many times
+    # Shop.CRITICAL_SUCCESS_CHANCE = 0.5
+    # Shop.CRITICAL_FAILURE_CHANCE = 0.5
+    print(f"Shop Level: {shop_in_whiterun.shop_level}, Quality Bonus: {Shop.SHOP_LEVEL_CONFIG[shop_in_whiterun.shop_level]['crafting_quality_bonus']}")
+    print(f"Crafting {test_crafter.name} inventory before crit test: {[i.name for i in test_crafter.inventory]}")
+    # Ensure crafter has ingredients for many potions
+    for _ in range(20):
+        test_crafter.add_item_to_inventory(Item(name="Herb Bundle", base_value=5, item_type="component"))
+        test_crafter.add_item_to_inventory(Item(name="Clean Water", base_value=1, item_type="component"))
+
+    crit_success_count = 0
+    crit_failure_count = 0
+    normal_count = 0
+    original_quality_tiers = [q_name for _, q_name in Shop.QUALITY_THRESHOLDS]
+
+    for i in range(20): # Craft 20 potions to observe crits
+        # Reset crafting experience for this item to get consistent base quality for testing observation
+        # shop_in_whiterun.crafting_experience["Minor Healing Potion"] = 0
+        crafted_potion = shop_in_whiterun.craft_item("Minor Healing Potion", test_crafter)
+        if crafted_potion:
+            base_quality_for_this_craft = shop_in_whiterun._determine_quality("Minor Healing Potion") # Recalc base for comparison
+            base_idx = original_quality_tiers.index(base_quality_for_this_craft)
+            final_idx = original_quality_tiers.index(crafted_potion.quality)
+
+            if final_idx > base_idx : crit_success_count +=1
+            elif final_idx < base_idx : crit_failure_count +=1
+            else: normal_count +=1
+            # print(f"  Crafted: {crafted_potion.name} (Quality: {crafted_potion.quality}, Base: {base_quality_for_this_craft})")
+    print(f"Crit Successes: {crit_success_count}/20")
+    print(f"Crit Failures: {crit_failure_count}/20")
+    print(f"Normal Successes: {normal_count}/20")
+    shop_in_whiterun.display_inventory()
+    # Reset chances if they were changed for testing
+    # Shop.CRITICAL_SUCCESS_CHANCE = 0.05
+    # Shop.CRITICAL_FAILURE_CHANCE = 0.05
+
+    print("\n--- Reputation Test (Selling High Quality/Specialized Items) ---")
+    # Ensure shop is Blacksmith and has an advanced recipe item
+    shop_in_whiterun.set_specialization("Blacksmith")
+    # Craft a "Steel Sword" (advanced recipe for Blacksmith) and make it "Rare"
+    # To guarantee "Rare", we might need to manipulate crafting_experience or quality directly for test
+    shop_in_whiterun.crafting_experience["Steel Sword"] = 20 # Ensure it's high enough for Rare
+    test_crafter.add_item_to_inventory(Item(name="Steel Ingot", base_value=25, item_type="component", quantity=3))
+    test_crafter.add_item_to_inventory(Item(name="Oak Wood", base_value=8, item_type="component", quantity=1))
+
+    # Temporarily set crit chances to 0 to ensure predictable quality for this specific test item
+    _orig_crit_s = Shop.CRITICAL_SUCCESS_CHANCE
+    _orig_crit_f = Shop.CRITICAL_FAILURE_CHANCE
+    Shop.CRITICAL_SUCCESS_CHANCE = 0.0
+    Shop.CRITICAL_FAILURE_CHANCE = 0.0
+
+    steel_sword = shop_in_whiterun.craft_item("Steel Sword", test_crafter)
+    Shop.CRITICAL_SUCCESS_CHANCE = _orig_crit_s # Restore
+    Shop.CRITICAL_FAILURE_CHANCE = _orig_crit_f # Restore
+
+    if steel_sword:
+        print(f"Crafted for reputation test: {steel_sword}")
+        shop_in_whiterun.display_inventory()
+        initial_reputation = shop_in_whiterun.reputation
+        print(f"Reputation before sale: {initial_reputation}")
+        # Simulate NPC buying it
+        sale_price = shop_in_whiterun.complete_sale_to_npc(steel_sword.name, quality_to_sell=steel_sword.quality, npc_offer_percentage=0.9)
+        if sale_price > 0:
+            print(f"Sold {steel_sword.name} to NPC for {sale_price}g.")
+            print(f"Reputation after sale: {shop_in_whiterun.reputation}")
+            assert shop_in_whiterun.reputation > initial_reputation
+        else:
+            print(f"Failed to sell {steel_sword.name} to NPC for reputation test.")
+    else:
+        print("Failed to craft Steel Sword for reputation test.")
+    shop_in_whiterun.display_inventory()
+
+
+    print("\n--- Crafting Test (Greater Healing Potion - Wrong Specialization) ---")
+    # Shop is Blacksmith, trying to craft Alchemist recipe
+    print(f"{test_crafter.name} inventory before Greater Healing Potion: {[i.name for i in test_crafter.inventory]}")
+    # Add ingredients for potion to test can_craft correctly
+    test_crafter.add_item_to_inventory(Item(name="Concentrated Herbs", base_value=15, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Concentrated Herbs", base_value=15, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Purified Water", base_value=5, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Crystal Vial", base_value=10, item_type="component"))
+
+    if shop_in_whiterun.can_craft("Greater Healing Potion"):
+        crafted_g_potion = shop_in_whiterun.craft_item("Greater Healing Potion", test_crafter)
+        if crafted_g_potion:
+            print(f"Successfully crafted: {crafted_g_potion.name} (Quality: {crafted_g_potion.quality})")
+        else:
+            print(f"Failed to craft Greater Healing Potion (craft_item stage).")
+    else:
+        print(f"Cannot craft Greater Healing Potion: Recipe not available for {shop_in_whiterun.specialization} specialization.")
+    shop_in_whiterun.display_inventory() # Should not have the potion
+    print(f"{test_crafter.name} inventory after Greater Healing Potion attempt: {[i.name for i in test_crafter.inventory]}")
+
 
     print("\n--- Crafting Test (Leather Scraps) - No Rawhide ---")
     # Attempt to craft Leather Scraps - should fail as Test Crafter has no Rawhide
