@@ -175,7 +175,7 @@ event_lucky_find = Event(
 event_shady_customer = Event(
     name="Shady Customer",
     description="A shifty-looking individual wants to buy your most expensive-looking item for a suspiciously low price, but hints at a 'generous tip' if you're 'understanding'.",
-    skill_check={"skill": "WIS", "dc": 14},
+    skill_check={"skill": "Insight", "dc": 14}, # Changed from "WIS"
     outcomes={
         "success": {"message": "You see through their ruse and decline politely. They leave in a huff. You feel a bit wiser.", "xp_reward": 50},
         "failure": {"message": "You try to negotiate, but they suddenly snatch a valuable-looking item and run! You lost an item worth around 50 gold.", "consequence": "lose_item_value", "value": 50, "xp_penalty": 10}
@@ -184,7 +184,7 @@ event_shady_customer = Event(
 event_persuade_guard = Event(
     name="Persuade Guard",
     description="A city guard is blocking your way, citing a new toll. You try to persuade them to let you pass.",
-    skill_check={"skill": "CHA", "dc": 15},
+    skill_check={"skill": "Persuasion", "dc": 15}, # Changed from "CHA"
     outcomes={
         "success": {"message": "The guard grumbles but waves you through, impressed by your argument.", "xp_reward": 30},
         "failure": {"message": "The guard is unmoved and demands you pay the 10 gold toll or turn back.", "consequence": "lose_gold", "value": 10}
@@ -193,7 +193,7 @@ event_persuade_guard = Event(
 event_supply_shortage_rumor = Event(
     name="Supply Shortage Rumor",
     description="You hear rumors of a supply shortage for crafting materials you often use.",
-    skill_check={"skill": "INT", "dc": 12},
+    skill_check={"skill": "Investigation", "dc": 12}, # Changed from "INT"
     outcomes={
         "success": {"message": "You investigate and find the rumors are true! You manage to stock up before prices rise.", "xp_reward": 20, "effects": [{"type": "cheaper_materials", "duration": 72}]},
         "failure": {"message": "You dismiss the rumors, but later find out they were true. Material costs have temporarily increased."}
