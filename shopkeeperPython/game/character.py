@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .shop import Shop
 
+import datetime # Added for timestamping journal entries
+
 # Helper function for stat rolling (4d6 drop lowest)
 def _roll_4d6_drop_lowest():
     rolls = [random.randint(1, 6) for _ in range(4)]
@@ -21,6 +23,35 @@ EXHAUSTION_EFFECTS = {
     5: "Speed reduced to 0",
     6: "Death"
 }
+
+
+class JournalEntry:
+    def __init__(self, timestamp: datetime.datetime, action_type: str, summary: str, details: str = None, outcome: str = None):
+        self.timestamp = timestamp
+        self.action_type = action_type
+        self.summary = summary
+        self.details = details
+        self.outcome = outcome
+
+    def to_dict(self) -> dict:
+        return {
+            "timestamp": self.timestamp.isoformat(),
+            "action_type": self.action_type,
+            "summary": self.summary,
+            "details": self.details,
+            "outcome": self.outcome,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'JournalEntry':
+        return cls(
+            timestamp=datetime.datetime.fromisoformat(data["timestamp"]),
+            action_type=data["action_type"],
+            summary=data["summary"],
+            details=data.get("details"),
+            outcome=data.get("outcome"),
+        )
+
 
 class Character:
     LEVEL_XP_THRESHOLDS = { 1: 0, 2: 300, 3: 900, 4: 2700, 5: 6500 }
@@ -71,6 +102,7 @@ class Character:
         self.speed = 30
         self.is_dead = False # Added for perma-death
         self.current_town_name = "Starting Village" # Initialize current town name
+        self.journal = []  # Initialize journal for storing JournalEntry objects
         self._recalculate_all_attributes()
 
     @property
@@ -457,6 +489,7 @@ class Character:
             "speed": self.speed,
             "is_dead": self.is_dead, # Added for perma-death
             "current_town_name": town_name_to_save,
+            "journal": [entry.to_dict() for entry in self.journal], # Serialize journal entries
         }
 
     @classmethod
@@ -482,6 +515,13 @@ class Character:
         char.is_dead = data.get("is_dead", False) # Added for perma-death
         # Load current_town_name, defaulting if not found (e.g., older save files)
         char.current_town_name = data.get("current_town_name", "Starting Village")
+
+        # Load journal entries
+        journal_data = data.get("journal", [])
+        if journal_data: # Check if journal data exists
+            char.journal = [JournalEntry.from_dict(entry_data) for entry_data in journal_data]
+        else:
+            char.journal = [] # Default to empty list if no journal data
 
         # If character is dead, ensure HP is 0.
         if char.is_dead:

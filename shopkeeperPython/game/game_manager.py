@@ -1,7 +1,7 @@
 import random
 import json # Import json for save/load
 from .time_system import GameTime
-from .character import Character
+from .character import Character, JournalEntry # Import JournalEntry
 from .g_event import EventManager, SAMPLE_EVENTS, Event
 from .shop import Shop
 from .item import Item
@@ -141,6 +141,42 @@ class GameManager:
         self.is_game_setup = False
         self._print("GameManager basic initialization complete. Call setup_for_character for full game world setup for a character.")
 
+    def add_journal_entry(self, action_type: str, summary: str, details: dict = None, outcome: str = None, timestamp: str = None):
+        """Adds an entry to the character's journal."""
+        if not self.character or not hasattr(self.character, 'journal'):
+            self._print("DEBUG: Cannot add journal entry - character or journal not available.")
+            return
+
+        # Ensure timestamp is a datetime object
+        if timestamp:
+            if isinstance(timestamp, str):
+                try:
+                    entry_timestamp_dt = datetime.datetime.fromisoformat(timestamp)
+                except ValueError:
+                    self._print(f"  [Journal Error] Invalid timestamp format: {timestamp}. Using current time.")
+                    entry_timestamp_dt = self.time.get_current_datetime()
+            elif isinstance(timestamp, datetime.datetime): # Ensure datetime is imported
+                 entry_timestamp_dt = timestamp
+            else:
+                self._print(f"  [Journal Error] Unexpected timestamp type: {type(timestamp)}. Using current time.")
+                entry_timestamp_dt = self.time.get_current_datetime()
+        else:
+            entry_timestamp_dt = self.time.get_current_datetime()
+
+        try:
+            entry = JournalEntry(
+                timestamp=entry_timestamp_dt,
+                action_type=action_type,
+                summary=summary,
+                details=details if details is not None else {},
+                outcome=outcome
+            )
+            self.character.journal.append(entry)
+            # self._print(f"  [Journal Added] Type: {action_type}, Summary: {summary}") # Already printed by caller context usually
+        except Exception as e:
+            self._print(f"  [Journal Error] Failed to add entry for '{action_type}': {e}")
+
+
     def _handle_player_craft_item(self, action_details: dict) -> int:
         """Handles player-initiated crafting."""
         item_name_to_craft = action_details.get("item_name")
@@ -266,7 +302,7 @@ class GameManager:
         self._print(f"Stocked initial items in {self.shop.name}.")
 
         # Initialize EventManager for the character
-        self.event_manager = EventManager(self.character)
+        self.event_manager = EventManager(self.character, self) # Pass GameManager instance (self)
         self._print(f"EventManager initialized/updated for character: {self.character.name}.")
 
         self._reset_daily_trackers() # Reset daily stats for the new character setup
@@ -286,9 +322,11 @@ class GameManager:
                 if dialogue_options and isinstance(dialogue_options, list) and len(dialogue_options) > 0:
                     dialogue_line = random.choice(dialogue_options)
                     self._print(f"  {npc_name_to_find} says: \"{dialogue_line}\"")
+                    # Journal entry is handled by the calling action in perform_hourly_action
                     return 1  # XP for successful dialogue
                 else:
                     self._print(f"  {npc_name_to_find} has nothing to say right now.")
+                    # Journal entry for "nothing to say" could be added here or in calling action
                     return 0
 
         self._print(f"  Could not find '{npc_name_to_find}' in {self.current_town.name}.")
@@ -376,11 +414,24 @@ class GameManager:
                 quantity=quantity_to_buy # Pass quantity here
             )
             self.character.add_item_to_inventory(new_herb_item)
-            self._print(f"  {self.character.name} bought {quantity_to_buy}x {item_name_to_buy} from Old Man Hemlock for {total_cost}g.")
+            outcome_msg = f"Bought {quantity_to_buy}x {item_name_to_buy} for {total_cost}g. Gold: {self.character.gold}."
+            self._print(f"  {self.character.name} {outcome_msg}")
+            self.add_journal_entry(
+                action_type="Purchase (NPC)",
+                summary=f"Bought {quantity_to_buy}x {item_name_to_buy} from {npc_name}",
+                outcome=outcome_msg,
+                details={"item": item_name_to_buy, "quantity": quantity_to_buy, "cost": total_cost, "npc": npc_name}
+            )
             self.daily_gold_spent_on_purchases_by_player += total_cost
             return 1 # XP for successful purchase
         else:
             self._print(f"  Buying items from '{npc_name}' is not implemented yet.")
+            self.add_journal_entry(
+                action_type="Purchase (NPC)",
+                summary=f"Attempted to buy from {npc_name}",
+                outcome="Purchase not implemented for this NPC.",
+                details={"npc": npc_name, "item": item_name_to_buy}
+            )
             return 0
 
     def _handle_customer_interaction(self, is_sale_or_purchase_by_player_shop:bool = False):
@@ -470,25 +521,44 @@ class GameManager:
 
     def _run_end_of_day_summary(self, day_ended):
         self._print(f"--- End of Day {day_ended} Summary ---")
-        self._print(f"  Gold earned from sales: {self.daily_gold_earned_from_sales}")
-        self._print(f"  Gold spent by player (shop/NPCs): {self.daily_gold_spent_on_purchases_by_player}") # Updated label
-        self._print(f"  Gold earned by player selling to shop: {self.daily_gold_player_earned_selling_to_shop}")
-        self._print(f"  Visitors: {self.daily_visitors}")
-        self._print(f"  Items crafted: {', '.join(self.daily_items_crafted) if self.daily_items_crafted else 'None'}")
-        sold_item_names_eod = [name for name, price in self.daily_items_sold_by_shop_to_npcs]
-        self._print(f"  Items sold to NPCs: {', '.join(sold_item_names_eod) if sold_item_names_eod else 'None'}")
-        self._print(f"  Items player bought: {', '.join(self.daily_items_player_bought_from_shop) if self.daily_items_player_bought_from_shop else 'None'}")
-        self._print(f"  Items player sold: {', '.join(self.daily_items_player_sold_to_shop) if self.daily_items_player_sold_to_shop else 'None'}")
-        self._print(f"  Special events: {', '.join(self.daily_special_events) if self.daily_special_events else 'None'}")
-        if self.daily_customer_dialogue_snippets:
+        summary_details = {
+            "gold_earned_sales": self.daily_gold_earned_from_sales,
+            "gold_spent_player": self.daily_gold_spent_on_purchases_by_player,
+            "gold_earned_player_selling": self.daily_gold_player_earned_selling_to_shop,
+            "visitors": self.daily_visitors,
+            "items_crafted": self.daily_items_crafted,
+            "items_sold_shop_to_npcs": [name for name, price in self.daily_items_sold_by_shop_to_npcs],
+            "items_player_bought": self.daily_items_player_bought_from_shop,
+            "items_player_sold": self.daily_items_player_sold_to_shop,
+            "special_events": self.daily_special_events,
+            "customer_dialogue_snippets": self.daily_customer_dialogue_snippets
+        }
+        self._print(f"  Gold earned from sales: {summary_details['gold_earned_sales']}")
+        self._print(f"  Gold spent by player (shop/NPCs): {summary_details['gold_spent_player']}")
+        self._print(f"  Gold earned by player selling to shop: {summary_details['gold_earned_player_selling']}")
+        self._print(f"  Visitors: {summary_details['visitors']}")
+        self._print(f"  Items crafted: {', '.join(summary_details['items_crafted']) if summary_details['items_crafted'] else 'None'}")
+        self._print(f"  Items sold to NPCs: {', '.join(summary_details['items_sold_shop_to_npcs']) if summary_details['items_sold_shop_to_npcs'] else 'None'}")
+        self._print(f"  Items player bought: {', '.join(summary_details['items_player_bought']) if summary_details['items_player_bought'] else 'None'}")
+        self._print(f"  Items player sold: {', '.join(summary_details['items_player_sold']) if summary_details['items_player_sold'] else 'None'}")
+        self._print(f"  Special events: {', '.join(summary_details['special_events']) if summary_details['special_events'] else 'None'}")
+        if summary_details['customer_dialogue_snippets']:
             self._print("  Overheard Customer Snippets (EOD):")
-            for snippet in self.daily_customer_dialogue_snippets:
+            for snippet in summary_details['customer_dialogue_snippets']:
                 self._print(f"    - {snippet}")
 
-        # Commit XP only if character is alive and exists
+        xp_committed_today = 0
         if self.character and hasattr(self.character, 'is_dead') and not self.character.is_dead :
-            xp_committed = self.character.commit_pending_xp()
-            self._print(f"  XP committed from pending (EOD): {xp_committed}")
+            xp_committed_today = self.character.commit_pending_xp()
+            self._print(f"  XP committed from pending (EOD): {xp_committed_today}")
+        summary_details["xp_committed_eod"] = xp_committed_today
+
+        self.add_journal_entry(
+            action_type="Daily Summary",
+            summary=f"End of Day {day_ended}.",
+            details=summary_details,
+            outcome=f"Total XP committed: {xp_committed_today}."
+        )
 
         self._reset_daily_trackers() # Reset for the new day
         self._print(f"--- Start of Day {self.time.current_day} ---")
@@ -502,6 +572,12 @@ class GameManager:
             if self.character and hasattr(self.character, 'is_dead') and self.character.is_dead:
                  char_name = self.character.name if hasattr(self.character, 'name') else 'Character'
                  self._print(f"{char_name} is resting. Not peacefully.")
+                 # Logging player death here if not already logged by gain_exhaustion or similar
+                 # This might lead to multiple "Player Death" logs if not careful.
+                 # A flag self.character.death_logged_in_journal could prevent this.
+                 # For now, let's assume death is logged once when it occurs.
+                 # However, if an action is attempted *while* dead, it's worth noting.
+                 self.add_journal_entry(action_type="Action Attempt (Dead)", summary=f"Attempted {action_name} while dead.", outcome="No action taken.")
             return
 
         action_details = action_details if action_details else {}
@@ -520,7 +596,18 @@ class GameManager:
 
         # Handle actions for dead characters separately
         if hasattr(self.character, 'is_dead') and self.character.is_dead:
-            self._print(f"  {self.character.name} is dead and cannot perform actions.")
+            char_name_for_log = self.character.name if self.character else "Character"
+            self._print(f"  {char_name_for_log} is dead and cannot perform actions.")
+            # Check if a death journal entry has been made for this "session" or instance of being dead.
+            # This is a simplified check. A more robust way would be a flag on the character.
+            last_journal_entry = self.character.journal[-1] if self.character.journal else None
+            if not (last_journal_entry and last_journal_entry.action_type == "Player Death" and last_journal_entry.summary.startswith(char_name_for_log)):
+                self.add_journal_entry(
+                    action_type="Player Death",
+                    summary=f"{char_name_for_log} has died.",
+                    outcome="Unable to perform actions.",
+                    timestamp=self.time.get_time_string() # Use current time for this log
+                )
             time_advanced_by_action_hours = 1 # Dead characters still pass time
         else:
             # --- Action Implementations (character is alive) ---
@@ -578,6 +665,7 @@ class GameManager:
                     else:
                         # shop.craft_item should print failure reasons (missing ingredients, wrong spec, etc.)
                         self._print(f"  {self.shop.name} failed to craft {item_name_to_craft}.")
+                    self.add_journal_entry(action_type="Crafting (Shop)", summary=f"Attempted to craft {item_name_to_craft}", outcome="Failed", details={"item": item_name_to_craft, "reason": "See game log for details."}) # Assuming craft_item prints reason
 
             # Removed redundant 'craft' block that called _handle_player_craft_item directly.
             # All crafting should ideally go through the shop instance now.
@@ -585,6 +673,7 @@ class GameManager:
             elif action_name == "buy_from_own_shop":
                 item_name = action_details.get("item_name")
                 quantity = int(action_details.get("quantity", 1))
+                outcome_msg = ""
                 if item_name and quantity > 0:
                     items_bought, total_spent = self.character.buy_item_from_shop(item_name, quantity, self.shop)
                     if items_bought:
@@ -593,29 +682,42 @@ class GameManager:
                         self.daily_gold_spent_on_purchases_by_player += total_spent
                         self._handle_customer_interaction(is_sale_or_purchase_by_player_shop=True)
                         action_xp_reward = 2
+                        outcome_msg = f"Bought {quantity}x {item_name} for {total_spent}g."
+                    else: # Failed to buy
+                        outcome_msg = f"Failed to buy {quantity}x {item_name}."
                 else:
                     self._print("  Invalid item_name or quantity for buying from shop.")
+                    outcome_msg = "Invalid item_name or quantity."
+                self.add_journal_entry(action_type="Purchase (Player)", summary=f"Player bought from own shop", details={"item": item_name, "quantity": quantity}, outcome=outcome_msg)
+
 
             elif action_name == "sell_to_own_shop":
                 item_name = action_details.get("item_name")
+                outcome_msg = ""
                 if item_name:
-                    # Find the first instance of the item in inventory
                     item_instance_to_sell = next((item for item in self.character.inventory if item.name == item_name), None)
                     if item_instance_to_sell:
                         price_paid = self.character.sell_item_to_shop(item_instance_to_sell, self.shop)
-                        if price_paid > 0: # sell_item_to_shop returns price or 0
+                        if price_paid > 0:
                             self.daily_items_player_sold_to_shop.append(item_name)
                             self.daily_gold_player_earned_selling_to_shop += price_paid
                             self._handle_customer_interaction(is_sale_or_purchase_by_player_shop=True)
                             action_xp_reward = 2
-                        # else: Character.sell_item_to_shop prints failure reasons
+                            outcome_msg = f"Sold {item_name} for {price_paid}g."
+                        else: # Failed to sell (e.g. shop won't buy)
+                            outcome_msg = f"Failed to sell {item_name} (shop declined or error)."
                     else:
                         self._print(f"  Item '{item_name}' not found in {self.character.name}'s inventory.")
+                        outcome_msg = f"Item '{item_name}' not found in inventory."
                 else:
                     self._print("  No item_name provided for selling to shop.")
+                    outcome_msg = "No item_name provided."
+                self.add_journal_entry(action_type="Sale (Player)", summary=f"Player sold to own shop", details={"item": item_name}, outcome=outcome_msg)
+
 
             elif action_name == "talk_to_self":
                 self._print(f"  {self.character.name} mutters something unintelligible.")
+                self.add_journal_entry(action_type="Misc.", summary="Talked to self.", outcome="Muttered unintelligibly.")
                 action_xp_reward = 1
 
             elif action_name == "check_shop_inventory":
@@ -651,16 +753,17 @@ class GameManager:
                     crafters = [f"{c['name']} ({c['specialty']})" for c in self.current_town.unique_npc_crafters]
                     self._print(f"    Unique NPCs: {', '.join(crafters) if crafters else 'None'}")
 
+                exploration_outcome_msg = "Found nothing of note."
                 if random.random() < 0.20: # 20% chance to find something
                     found_what = random.choice(EXPLORATION_FINDS)
                     if found_what["type"] == "gold":
                         amount = found_what["amount"]
                         self.character.gold += amount
-                        self._print(f"  While exploring, {self.character.name} found {amount}g!")
+                        exploration_outcome_msg = f"Found {amount}g!"
+                        self._print(f"  While exploring, {self.character.name} {exploration_outcome_msg}")
                     elif found_what["type"] == "item":
                         item_effects = found_what.get("effects", {})
                         item_is_consumable = found_what.get("is_consumable", False)
-
                         found_item_obj = Item(
                             name=found_what["name"],
                             description=found_what["description"],
@@ -672,7 +775,12 @@ class GameManager:
                             is_consumable=item_is_consumable
                         )
                         self.character.add_item_to_inventory(found_item_obj)
-                        self._print(f"  While exploring, {self.character.name} found a {found_item_obj.name}!")
+                        exploration_outcome_msg = f"Found a {found_item_obj.name}!"
+                        self._print(f"  While exploring, {self.character.name} {exploration_outcome_msg}")
+                else: # No specific find
+                    self._print(f"  {exploration_outcome_msg}")
+
+                self.add_journal_entry(action_type="Exploration", summary=f"Explored {town_name_display}", outcome=exploration_outcome_msg, details={"town": town_name_display})
                 action_xp_reward = 5
 
             elif action_name == "talk_to_customer":
@@ -701,16 +809,19 @@ class GameManager:
                         travel_time_hours = 3 # Example fixed travel time
                         self._print(f"  Traveling from {current_town_name} to {town_name}... (This will take {travel_time_hours} hours)")
                         self.current_town = self.towns_map[town_name]
+                        travel_outcome = f"Arrived in {self.current_town.name}."
                         if self.shop: # Ensure shop exists before updating its town
                             self.shop.update_town(self.current_town) # Update shop's current town reference
-                            # Shop's town is updated, no need to re-initialize specialization unless desired
                             self._print(f"  Arrived in {self.current_town.name}. Shop '{self.shop.name}' (Specialization: {self.shop.specialization}) is now operating here.")
                         else: # Should not happen if is_game_setup is True
                             self._print(f"  Arrived in {self.current_town.name}. (Shop not initialized - this is an issue!)")
                         time_advanced_by_action_hours = travel_time_hours
                         action_xp_reward = 15
+                        self.add_journal_entry(action_type="Travel", summary=f"Traveled from {current_town_name} to {town_name}", outcome=travel_outcome, details={"from_town": current_town_name, "to_town": town_name, "duration_hours": travel_time_hours})
                 else:
                     self._print(f"  Invalid town name for travel: {town_name}. Available: {list(self.towns_map.keys())}")
+                    self.add_journal_entry(action_type="Travel", summary=f"Attempted travel to {town_name}", outcome="Invalid town name.", details={"target_town": town_name})
+
 
             elif action_name == "debug_trigger_event":
                 if self.event_manager and SAMPLE_EVENTS: # Ensure event_manager and SAMPLE_EVENTS exist
@@ -736,6 +847,7 @@ class GameManager:
                     gathered_quantity = random.randint(1, 3)
 
                     details = RESOURCE_ITEM_DEFINITIONS.get(resource_name)
+                    gathering_outcome = ""
                     if details:
                         new_item = Item(
                             name=resource_name,
@@ -745,40 +857,71 @@ class GameManager:
                             quality="Common", # Gathered resources are typically common
                             quantity=gathered_quantity
                         )
-                        # Assuming add_item_to_inventory handles stacking or creates new stack
                         self.character.add_item_to_inventory(new_item)
+                        gathering_outcome = f"Found {new_item.quantity}x {new_item.name}."
                         self._print(f"  {self.character.name} gathered {new_item.quantity}x {new_item.name}.")
                         action_xp_reward = 3
                     else:
-                        self._print(f"  Could not find definition for resource: {resource_name}")
+                        gathering_outcome = f"Could not find definition for resource: {resource_name}"
+                        self._print(f"  {gathering_outcome}")
+                    self.add_journal_entry(action_type="Gathering", summary=f"Gathered resources in {self.current_town.name if self.current_town else 'unknown area'}", outcome=gathering_outcome, details={"resource": resource_name, "quantity": gathered_quantity})
 
             # --- New Placeholder Actions from Sub-locations ---
             elif action_name == "talk_to_villager":
-                # For now, generic villager dialogue
-                generic_villager_dialogues = [
-                    "Nice weather we're having, eh?",
-                    "Watch out for the goblins if you're heading east.",
-                    "Welcome to our village!",
-                    "Hmm? Oh, just admiring the clouds.",
-                    "Need something?"
+                dialogue_options = [
+                    "Nice weather we're having, eh?", "Watch out for the goblins if you're heading east.",
+                    "Welcome to our village!", "Hmm? Oh, just admiring the clouds.", "Need something?"
                 ]
-                if self.current_town and self.current_town.name == "Steel Flow City":
-                     generic_villager_dialogues.extend([
-                         "This city never sleeps, always the sound of the forges!",
-                         "Heard Borin's working on a special commission."
-                     ])
-                elif self.current_town and self.current_town.name == "Starting Village":
-                     generic_villager_dialogues.extend([
-                         "Old Man Hemlock knows all the secrets of the woods.",
-                         "The crops are doing well this season, thankfully."
-                     ])
+                if self.current_town:
+                    if self.current_town.name == "Steel Flow City":
+                        dialogue_options.extend(["This city never sleeps!", "Heard Borin's busy."])
+                    elif self.current_town.name == "Starting Village":
+                        dialogue_options.extend(["Hemlock knows the woods.", "Crops are good this year."])
 
-                self._print(f"  You chat with a villager. They say: \"{random.choice(generic_villager_dialogues)}\"")
+                chosen_dialogue = random.choice(dialogue_options)
+                self._print(f"  You chat with a villager. They say: \"{chosen_dialogue}\"")
+                self.add_journal_entry(action_type="Dialogue", summary="Spoke with Villager", outcome=f"Villager said: '{chosen_dialogue}'", details={"npc_type": "Generic Villager", "town": self.current_town.name if self.current_town else "Unknown"})
                 action_xp_reward = 1
+
             elif action_name == "talk_to_hemlock":
+                original_xp = self.character.xp + self.character.pending_xp # Store before _handle_npc_dialogue
                 action_xp_reward = self._handle_npc_dialogue("Old Man Hemlock")
-            elif action_name == "buy_from_npc": # Changed from buy_herbs_hemlock
+                # Find what Hemlock said (this is tricky as _handle_npc_dialogue prints directly)
+                # For now, we'll use a generic outcome message for the journal. A better way would be for _handle_npc_dialogue to return the line.
+                dialogue_line_for_journal = "Old Man Hemlock responded." # Placeholder
+                if self.character.xp + self.character.pending_xp > original_xp or action_xp_reward > 0 : # Implies successful interaction from XP gain
+                     # This is a guess, ideally _handle_npc_dialogue returns the actual line.
+                     if self.current_town and self.current_town.unique_npc_crafters:
+                         hemlock_data = next((n for n in self.current_town.unique_npc_crafters if n['name'] == "Old Man Hemlock"), None)
+                         if hemlock_data and hemlock_data.get('dialogue'):
+                             # This doesn't guarantee it's the *exact* line shown, but it's a plausible one.
+                             dialogue_line_for_journal = f"Hemlock said: '{random.choice(hemlock_data.get('dialogue'))}' (actual line may vary)"
+                         else:
+                             dialogue_line_for_journal = "Old Man Hemlock spoke."
+                else: # Interaction might have failed or no dialogue options
+                    dialogue_line_for_journal = "Old Man Hemlock had little to say or interaction failed."
+
+                self.add_journal_entry(action_type="Dialogue", summary="Spoke with Old Man Hemlock", outcome=dialogue_line_for_journal, details={"npc_name": "Old Man Hemlock"})
+
+            elif action_name == "buy_from_npc": # Journal entry for this is now inside _handle_buy_from_npc
                 action_xp_reward = self._handle_buy_from_npc(action_details)
+
+            elif action_name == "talk_to_borin":
+                original_xp_borin = self.character.xp + self.character.pending_xp
+                action_xp_reward = self._handle_npc_dialogue("Borin Stonebeard")
+                dialogue_line_for_journal_borin = "Borin Stonebeard responded." # Placeholder
+                if self.character.xp + self.character.pending_xp > original_xp_borin or action_xp_reward > 0:
+                     if self.current_town and self.current_town.unique_npc_crafters:
+                         borin_data = next((n for n in self.current_town.unique_npc_crafters if n['name'] == "Borin Stonebeard"), None)
+                         if borin_data and borin_data.get('dialogue'):
+                             dialogue_line_for_journal_borin = f"Borin said: '{random.choice(borin_data.get('dialogue'))}' (actual line may vary)"
+                         else:
+                            dialogue_line_for_journal_borin = "Borin Stonebeard spoke."
+                else:
+                    dialogue_line_for_journal_borin = "Borin Stonebeard had little to say or interaction failed."
+                self.add_journal_entry(action_type="Dialogue", summary="Spoke with Borin Stonebeard", outcome=dialogue_line_for_journal_borin, details={"npc_name": "Borin Stonebeard"})
+
+            # --- Placeholder actions that don't have specific journal entries yet, general one will be added ---
             elif action_name == "visit_general_store_sfc":
                 self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You enter the general store in Steel Flow City.")
                 action_xp_reward = 1
@@ -788,8 +931,6 @@ class GameManager:
             elif action_name == "gather_rumors_tavern":
                 self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You listen for rumors in the tavern.")
                 action_xp_reward = 3
-            elif action_name == "talk_to_borin":
-                action_xp_reward = self._handle_npc_dialogue("Borin Stonebeard")
             elif action_name == "repair_gear_borin":
                 self._print(f"  Action '{action_name}' at '{self.current_town.name}' (sub-location specific) - not fully implemented yet. You ask Borin about repairs.")
                 action_xp_reward = 1
@@ -797,11 +938,18 @@ class GameManager:
 
             else: # Unrecognized action
                 self._print(f"  Action '{action_name}' is not recognized or implemented yet.")
+                self.add_journal_entry(action_type="Unknown Action", summary=f"Attempted action: {action_name}", outcome="Action not recognized.")
 
             # Award XP if character is alive and action yielded XP
             if action_xp_reward > 0:
-                self.character.award_xp(action_xp_reward)
-                self.daily_xp_awarded_this_day += action_xp_reward
+                # Ensure character exists and has award_xp method
+                if self.character and hasattr(self.character, 'award_xp'):
+                    self.character.award_xp(action_xp_reward)
+                    self.daily_xp_awarded_this_day += action_xp_reward
+                elif self.character:
+                    self._print(f"Warning: Character {self.character.name} has no award_xp method.")
+                # If self.character is None, this block shouldn't be reached due to earlier checks.
+
 
         # --- Post-action processing (Time advancement, EOD, Random Events, NPC Sales) ---
 

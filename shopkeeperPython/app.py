@@ -518,6 +518,7 @@ def display_game_output():
     current_town_display = "N/A"
     shop_inventory_display = ["Empty"]
     player_inventory_display = ["Empty"]
+    player_journal_display = [] # Initialize journal display
     dead_characters_info = []
     character_creation_stats_display = None # For passing to template
 
@@ -629,6 +630,8 @@ def display_game_output():
                 current_game_output = output_stream.getvalue()
                 if game_manager_instance.shop:
                     available_recipes = game_manager_instance.shop.BASIC_RECIPES
+                if hasattr(player_char, 'journal'): # Ensure journal attribute exists
+                    player_journal_display = player_char.journal
             else: # No character is active/loaded (and not showing creation form from action=create_new_char)
                 output_stream.truncate(0)
                 output_stream.seek(0)
@@ -668,6 +671,10 @@ def display_game_output():
     if show_character_creation_form or (not player_char_loaded_or_selected and not user_logged_in) or (user_logged_in and not player_char_loaded_or_selected):
         player_gold_display = player_char.gold # Should be 50 from unnamed_char
 
+    # If no character is loaded, journal should be empty
+    if not player_char_loaded_or_selected:
+        player_journal_display = []
+
     return render_template('index.html',
                            user_logged_in=user_logged_in,
                            show_character_selection=show_character_selection,
@@ -690,6 +697,7 @@ def display_game_output():
                            current_town_sub_locations_json=json.dumps(current_town_sub_locations),
                            all_towns_data_json=json.dumps(all_towns_data),
                            available_recipes=available_recipes,
+                           player_journal=player_journal_display, # Pass journal to template
                            popup_action_result=popup_action_result, # Pass to template
                            hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Added Hemlock's herbs
                            character_creation_stats=character_creation_stats_display # Pass to template
@@ -812,23 +820,52 @@ def perform_action():
         # ---- END NEW SAVE LOGIC ----
 
         # After action, check for death
-        if player_char.is_dead: # This check should be safe even if player_char was reset due to death
+        if player_char.is_dead:
             username = session.get('username')
             slot_index = session.get('selected_character_slot')
+            char_name_for_log = player_char.name if player_char and player_char.name else "Character"
+
+            # Log death to journal
+            # Ensure game_manager_instance and its time object are available
+            death_timestamp_str = None
+            if game_manager_instance and hasattr(game_manager_instance, 'time') and hasattr(game_manager_instance.time, 'get_time_string'):
+                death_timestamp_str = game_manager_instance.time.get_time_string()
+
+            # Check if death was already logged for this character instance in this "death event"
+            # This is a simple check; a more robust solution might involve a flag on the character object
+            # or checking the last few journal entries more thoroughly.
+            already_logged_this_death = False
+            if game_manager_instance and game_manager_instance.character and hasattr(game_manager_instance.character, 'journal') and game_manager_instance.character.journal:
+                last_entry = game_manager_instance.character.journal[-1]
+                if last_entry.action_type == "Death" and last_entry.summary.startswith(char_name_for_log):
+                    # A death entry for this character is the last one, assume it's this death.
+                    # This might not be perfectly accurate if other actions could happen after death but before this block.
+                    already_logged_this_death = True
+
+            if not already_logged_this_death and game_manager_instance and hasattr(game_manager_instance, 'add_journal_entry'):
+                game_manager_instance.add_journal_entry(
+                    action_type="Death", # Using "Death" as type
+                    summary=f"{char_name_for_log} has succumbed to their fate.",
+                    outcome="Character data moved to graveyard.",
+                    timestamp=death_timestamp_str # Pass string timestamp, add_journal_entry handles conversion
+                )
+                # Save character data one last time to ensure the death journal entry is persisted with the character
+                # before they are moved to the graveyard.
+                if username and slot_index is not None and user_characters.get(username) and 0 <= slot_index < len(user_characters[username]):
+                    # We need to save the version of player_char that has the death entry.
+                    # game_manager_instance.character should be player_char.
+                    user_characters[username][slot_index] = game_manager_instance.character.to_dict(current_town_name=game_manager_instance.current_town.name if game_manager_instance.current_town else "Unknown")
+                    save_user_characters()
+
 
             if username and slot_index is not None:
                 if username in user_characters and 0 <= slot_index < len(user_characters[username]):
-                    # Move character from active list to graveyard
                     dead_char_data = user_characters[username].pop(slot_index)
-                    # Ensure 'is_dead' is explicitly true in the data moved to graveyard,
-                    # though player_char.to_dict() should already handle this.
-                    dead_char_data['is_dead'] = True
-
+                    dead_char_data['is_dead'] = True # Ensure it's marked dead
+                    # The journal entry should be part of dead_char_data if saved correctly above.
                     graveyard.setdefault(username, []).append(dead_char_data)
-
-                    save_user_characters() # Save updated (shorter) list of active characters
-                    save_graveyard()       # Save updated graveyard
-
+                    save_user_characters()
+                    save_graveyard()
                     flash(f"{dead_char_data.get('name', 'The character')} has died and been moved to the graveyard. Their slot is now free.", "error")
                     session.pop('selected_character_slot', None)
                 else:
