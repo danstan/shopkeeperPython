@@ -273,6 +273,28 @@ def save_graveyard(): # New function to save graveyard data
 # Load data at application startup
 load_data()
 
+# --- Helper Function for Global Character Name Uniqueness ---
+def is_character_name_taken(name_to_check: str, all_user_chars: dict, all_graveyards: dict) -> bool:
+    """
+    Checks if a character name is already taken globally, case-insensitively.
+    Iterates through all active characters and all characters in graveyards.
+    """
+    lower_name_to_check = name_to_check.lower()
+
+    # Check active characters
+    for username_key in all_user_chars:
+        for char_data in all_user_chars[username_key]:
+            if isinstance(char_data, dict) and 'name' in char_data:
+                if char_data['name'].lower() == lower_name_to_check:
+                    return True
+
+    # Check characters in graveyards
+    for username_key in all_graveyards:
+        for char_data in all_graveyards[username_key]:
+            if isinstance(char_data, dict) and 'name' in char_data:
+                if char_data['name'].lower() == lower_name_to_check:
+                    return True
+    return False
 
 # Global StringIO object and GameManager instance
 output_stream = io.StringIO()
@@ -314,6 +336,7 @@ def login_route():
 def logout_route():
     session.pop('username', None)
     session.pop('selected_character_slot', None) # Clear selected character on logout
+    session.pop('character_creation_stats', None) # Clear pending creation stats
     get_flashed_messages()
     flash('You have been logged out.', 'success')
     # Reset global player_char to avoid carrying over state
@@ -377,6 +400,8 @@ def select_character_route(slot_index: int):
 
     if 0 <= slot_index < len(characters_list):
         session['selected_character_slot'] = slot_index
+        # Clear pending character creation stats when selecting an existing character
+        session.pop('character_creation_stats', None)
         flash(f"Character slot {slot_index + 1} selected.", "success")
     else:
         flash("Invalid character slot.", "error")
@@ -400,6 +425,12 @@ def create_character_route():
         flash('Character name cannot be empty or just whitespace.', 'error')
         return redirect(url_for('display_game_output', action='create_new_char'))
 
+    # --- Global Character Name Uniqueness Check ---
+    if is_character_name_taken(char_name, user_characters, graveyard):
+        flash(f"Character name '{char_name}' is already taken. Please choose another.", 'error')
+        return redirect(url_for('display_game_output', action='create_new_char'))
+    # --- End of Uniqueness Check ---
+
     if username not in user_characters:
         user_characters[username] = [] # Should have been created at registration, but good safeguard
 
@@ -409,19 +440,21 @@ def create_character_route():
     # Now, it should be len(active_characters_list) because dead chars are moved out.
     if len(active_characters_list) >= MAX_CHARS_PER_USER:
         flash(f'You have reached the maximum of {MAX_CHARS_PER_USER} active characters. A dead character frees up their slot.', 'error')
+        # Ensure creation stats are cleared if they somehow reach here at limit
+        session.pop('character_creation_stats', None)
         return redirect(url_for('display_game_output'))
 
-    stats = {}
-    stat_keys_map = {
-        'stat_str': 'STR', 'stat_dex': 'DEX', 'stat_con': 'CON',
-        'stat_int': 'INT', 'stat_wis': 'WIS', 'stat_cha': 'CHA'
-    }
-    for form_key, actual_key in stat_keys_map.items():
-        stats[actual_key] = int(request.form.get(form_key, 0))
+    if 'character_creation_stats' not in session or 'stats' not in session['character_creation_stats']:
+        flash('Character creation session data not found. Please try starting over.', 'error')
+        return redirect(url_for('display_game_output', action='create_new_char'))
+
+    creation_data = session['character_creation_stats']
+    stats = creation_data['stats']
 
     new_character = Character(name=char_name)
-    new_character.stats = stats
+    new_character.stats = stats.copy() # Use a copy of the stats
 
+    # CON modifier should be calculated based on the actual stat value
     con_modifier = new_character._calculate_modifier(new_character.stats["CON"], is_base_stat_score=True)
     new_character.base_max_hp = 10 + (con_modifier * new_character.level)
     new_character.hp = new_character.get_effective_max_hp()
@@ -448,9 +481,12 @@ def create_character_route():
     # Confirmation message (optional, as setup_for_character is verbose)
     if game_manager_instance.is_game_setup:
         game_manager_instance._print(f"Character {new_character.name} (user: {username}) created and game world prepared.")
+        # Clear character creation stats from session after successful creation
+        session.pop('character_creation_stats', None)
     else:
         game_manager_instance._print(f"Attempted to create character {new_character.name}, but game world setup failed. Check logs.")
         flash(f"Failed to initialize game for {new_character.name}. The character data might be incomplete or corrupted. Please try creating the character again or contact support if the issue persists.", "error")
+        # Do not clear creation_stats here, so the user can see the stats and try again or modify if needed.
 
     return redirect(url_for('display_game_output'))
 
@@ -483,6 +519,7 @@ def display_game_output():
     shop_inventory_display = ["Empty"]
     player_inventory_display = ["Empty"]
     dead_characters_info = []
+    character_creation_stats_display = None # For passing to template
 
     available_towns = list(game_manager_instance.towns_map.keys())
     current_town_sub_locations = []
@@ -519,12 +556,23 @@ def display_game_output():
                 player_char.gold = 50 # Default gold for creation form display
                 game_manager_instance.setup_for_character(unnamed_char) # Reset GM
 
+                # Stat rolling for character creation
+                if 'character_creation_stats' not in session:
+                    initial_stats = Character.roll_all_stats()
+                    session['character_creation_stats'] = {'stats': initial_stats, 'reroll_used': False}
+                    flash("Stats rolled for new character! You can reroll one stat if you wish.", "info")
+
+                character_creation_stats_display = session['character_creation_stats']
+
+
                 if not characters_list:
                     current_game_output = "Welcome! Please create your first character."
                 else:
                     current_game_output = "Create your new character."
             else: # At character limit
                 flash(f"You cannot create more than {MAX_CHARS_PER_USER} characters.", "warning")
+                # Clear pending creation stats if user hits limit and is sent away from creation screen
+                session.pop('character_creation_stats', None)
                 # Let flow continue to potentially show selected character or selection screen
                 # show_character_creation_form remains False
 
@@ -643,8 +691,39 @@ def display_game_output():
                            all_towns_data_json=json.dumps(all_towns_data),
                            available_recipes=available_recipes,
                            popup_action_result=popup_action_result, # Pass to template
-                           hemlock_herbs_json=json.dumps(HEMLOCK_HERBS) # Added Hemlock's herbs
+                           hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Added Hemlock's herbs
+                           character_creation_stats=character_creation_stats_display # Pass to template
                            )
+
+# --- Reroll Stat Route ---
+@app.route('/reroll_stat/<stat_name>', methods=['POST'])
+def reroll_stat_route(stat_name):
+    if 'username' not in session:
+        flash('You must be logged in to reroll stats.', 'error')
+        return redirect(url_for('display_game_output'))
+
+    if 'character_creation_stats' not in session:
+        flash('No character creation stats found in session. Please start character creation.', 'error')
+        return redirect(url_for('display_game_output', action='create_new_char'))
+
+    creation_data = session['character_creation_stats']
+
+    if creation_data.get('reroll_used', False):
+        flash('You have already used your reroll for this character.', 'warning')
+        return redirect(url_for('display_game_output', action='create_new_char'))
+
+    if stat_name not in Character.STAT_NAMES:
+        flash(f"Invalid stat name '{stat_name}' for reroll.", 'error')
+        return redirect(url_for('display_game_output', action='create_new_char'))
+
+    new_stat_value = Character.reroll_single_stat()
+    creation_data['stats'][stat_name] = new_stat_value
+    creation_data['reroll_used'] = True
+    session['character_creation_stats'] = creation_data # Re-assign to session to ensure it's saved
+
+    flash(f"{stat_name} rerolled to {new_stat_value}!", "success")
+    return redirect(url_for('display_game_output', action='create_new_char'))
+
 
 def parse_action_details(details_str: str) -> dict:
     """

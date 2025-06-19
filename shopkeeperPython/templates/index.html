@@ -330,102 +330,39 @@
             </div>
 
             <h3>Character Stats:</h3>
-            <p>Roll for your initial stats. You can reroll <em>one</em> stat <em>once</em>.</p>
-            <div id="stats_container">
-                <div>
-                    <span>STR: <span id="stat_str_value">--</span></span>
-                    <button type="button" class="reroll-stat-button" data-stat="STR">Reroll STR</button>
+            <h3>Character Stats:</h3>
+            {% if character_creation_stats %}
+                <p>
+                    Your rolled stats are below.
+                    {% if not character_creation_stats.reroll_used %}
+                        You can reroll <strong>one</strong> stat <strong>once</strong>.
+                    {% else %}
+                        You have used your reroll.
+                    {% endif %}
+                </p>
+                <div id="stats_container">
+                    {% for stat_key, stat_value in character_creation_stats.stats.items() %}
+                    <div>
+                        <span>{{ stat_key }}: {{ stat_value }}</span>
+                        {% if not character_creation_stats.reroll_used %}
+                        <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" style="display: inline;">
+                            <button type="submit">Reroll {{ stat_key }}</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
                 </div>
-                <div>
-                    <span>DEX: <span id="stat_dex_value">--</span></span>
-                    <button type="button" class="reroll-stat-button" data-stat="DEX">Reroll DEX</button>
-                </div>
-                <div>
-                    <span>CON: <span id="stat_con_value">--</span></span>
-                    <button type="button" class="reroll-stat-button" data-stat="CON">Reroll CON</button>
-                </div>
-                <div>
-                    <span>INT: <span id="stat_int_value">--</span></span>
-                    <button type="button" class="reroll-stat-button" data-stat="INT">Reroll INT</button>
-                </div>
-                <div>
-                    <span>WIS: <span id="stat_wis_value">--</span></span>
-                    <button type="button" class="reroll-stat-button" data-stat="WIS">Reroll WIS</button>
-                </div>
-                <div>
-                    <span>CHA: <span id="stat_cha_value">--</span></span>
-                    <button type="button" class="reroll-stat-button" data-stat="CHA">Reroll CHA</button>
-                </div>
-            </div>
-            <input type="hidden" id="rerolled_stat_name" name="rerolled_stat_name" value="">
-            <input type="hidden" id="rerolled_stat_value" name="rerolled_stat_value" value="">
-
+            {% else %}
+                <p>Stats not available. Please try starting character creation again.</p>
+            {% endif %}
 
             <div style="text-align: center; margin-top: 20px;">
                 <button type="submit" id="createCharacterButton">Create Character</button>
             </div>
         </form>
     </div>
-    <script>
-    // Character Creation Script (relevant only if this block is rendered)
-    // This script should ideally be loaded conditionally or be specific to this section
-    // For simplicity, keeping it here, but note it might run even if form not visible without further checks
-    if (document.getElementById('characterCreationForm')) {
-        let rerollUsed = false;
-        const rerollButtons = document.querySelectorAll('.reroll-stat-button');
-        const rerolledStatNameInput = document.getElementById('rerolled_stat_name');
-        const rerolledStatValueInput = document.getElementById('rerolled_stat_value');
-        // const createCharacterButton = document.getElementById('createCharacterButton'); // Already declared by form
-
-        function rollStat() {
-            return Math.floor(Math.random() * 6) + 1 +
-                   Math.floor(Math.random() * 6) + 1 +
-                   Math.floor(Math.random() * 6) + 1;
-        }
-
-        const stats = ["STR", "DEX", "CON", "INT", "WIS", "CHA"];
-        let currentStats = {};
-
-        stats.forEach(stat => {
-            const rolledValue = rollStat();
-            currentStats[stat] = rolledValue;
-            const statValueElement = document.getElementById(`stat_${stat.toLowerCase()}_value`);
-            if (statValueElement) {
-                statValueElement.textContent = rolledValue;
-            }
-        });
-
-        rerollButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                if (!rerollUsed) {
-                    const statName = this.dataset.stat;
-                    const newValue = rollStat();
-                    const statValueElement = document.getElementById(`stat_${statName.toLowerCase()}_value`);
-                    if (statValueElement) {
-                        statValueElement.textContent = newValue;
-                    }
-                    currentStats[statName] = newValue;
-                    if(rerolledStatNameInput) rerolledStatNameInput.value = statName;
-                    if(rerolledStatValueInput) rerolledStatValueInput.value = newValue;
-                    rerollUsed = true;
-                    rerollButtons.forEach(btn => btn.disabled = true);
-                    this.disabled = true;
-                }
-            });
-        });
-
-        const characterCreationForm = document.getElementById('characterCreationForm');
-        characterCreationForm.addEventListener('submit', function() {
-            for (const stat in currentStats) {
-                let input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = `stat_${stat.toLowerCase()}`;
-                input.value = currentStats[stat];
-                this.appendChild(input);
-            }
-        });
-    }
-    </script>
+    {# Removed the old JavaScript for client-side stat rolling and rerolling.
+       The backend now handles this via session. #}
 
     {% else %}
     {# Main Game Interface #}
