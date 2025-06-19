@@ -1,34 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
+
+:root {
+    --font-primary: 'MedievalSharp', serif;
+    --font-secondary: 'Lora', serif;
+    --color-parchment-bg: #FFF8DC; /* Cornsilk - for main page background */
+    --color-aged-paper: #F5DEB3; /* NavajoWhite/Wheat - for panel backgrounds, slightly darker than parchment */
+    --color-dark-ink: #4A3B31; /* Dark Brown - for text and primary borders */
+    --color-deep-brown-border: #5D4037; /* Slightly richer brown for heavier borders if needed */
+    --color-highlight-red: #8B0000; /* DarkRed - for important actions/buttons */
+    --color-highlight-gold: #FFD700; /* Gold - for accents */
+    --color-light-border: #C8AD7F; /* Lighter brown for subtle borders, derived from aged paper */
+}
+
 /* Global settings */
 html, body {
-
     width: 100%; /* Full viewport width */
     height: 100%; /* Full viewport height */
     margin: 0;
     padding: 0;
     overflow: hidden;
-
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #333;
+    /* font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Replaced by new body styling */
+    /* color: #333; /* Replaced by new body styling */
     line-height: 1.6;
 }
 
 body {
-
-    background-color: #f4f4f4; /* Existing background */
+    font-family: var(--font-secondary);
+    background-color: var(--color-parchment-bg);
+    color: var(--color-dark-ink);
     /* display: flex; align-items: center; justify-content: center; /* REMOVED for full screen */
 }
 
 /* Game Container - Full screen */
 .game-container {
-    width: 100vw; /* Full viewport width */
-    height: 100vh; /* Full viewport height */
-    border: none; /* REMOVED border: 2px solid #333; */
-    /* margin: auto; /* REMOVED */
+    width: 95%;
+    max-width: 1200px;
+    min-height: 90vh;
+    height: auto;
+    margin: 20px auto;
+    border: 3px solid var(--color-deep-brown-border);
+    background-color: var(--color-aged-paper);
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+    border-radius: 8px; /* Added for worn corners */
     position: relative;
     box-sizing: border-box;
     display: flex;
     flex-wrap: wrap;
-    background-color: #f0f0f0; /* Light gray background for the whole game area */
 }
 
 /* Child elements of .game-container */
@@ -39,8 +56,11 @@ body {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    background-color: #e0e0e0; /* Background for the container itself */
-    border-right: 1px solid #777; /* Separator line */
+    background-color: var(--color-parchment-bg); /* Background for the container itself */
+    /* border-right: 1px solid #777; /* Separator line */
+    border: 1px solid var(--color-light-border);
+    border-right-color: var(--color-light-border);
+
 
 }
 
@@ -48,7 +68,7 @@ body {
     width: 100%;
     flex: 1; /* Distribute space equally within left-tabs-container */
 
-    /* background-color: #e0e0e0; /* Moved to parent #left-tabs-container */
+    /* background-color: var(--color-parchment-bg); /* Background now handled by #left-tabs-container */
     /* border: 1px solid #999; /* REMOVED individual borders */
 
     padding: 0;
@@ -61,7 +81,7 @@ body {
 
 #info-tab {
 
-    border-top: 1px solid #777; /* Separator within left tabs, slightly softer */
+    border-top: 1px solid var(--color-light-border); /* Separator within left tabs, slightly softer */
 
 }
 
@@ -78,8 +98,8 @@ body {
     padding: 5px; /* Keep padding for SVG */
     box-sizing: border-box;
 
-    background-color: #ffffff; /* White background for map area */
-    border-right: 1px solid #777; /* Separator line */
+    background-color: var(--color-parchment-bg); /* White background for map area */
+    border-right: 1px solid var(--color-light-border); /* Separator line */
 
 }
 
@@ -94,8 +114,9 @@ body {
 
     width: 15%;
     height: 80vh; /* Adjusted height */
-    background-color: #e0e0e0; /* Background for the container itself */
-    /* border: 1px solid #999; /* REMOVED individual borders */
+    background-color: var(--color-parchment-bg); /* Background for the container itself */
+    /* border: 1px solid #999; /* REMOVED individual borders, now uses consistent border */
+    border-left: 1px solid var(--color-light-border); /* Added for consistency */
     padding: 0;
     box-sizing: border-box;
     position: relative;
@@ -109,9 +130,9 @@ body {
     /* order: 4; */ /* Removed for absolute positioning */
     width: 100%;
     /* height: 20vh; */ /* Removed, height now determined by content */
-    background-color: #c0c0c0;
+    background-color: var(--color-aged-paper);
     /* border: 1px solid #888; /* REMOVED individual border */
-    border-top: 1px solid #555; /* Stronger separator from content above */
+    border-top: 2px solid var(--color-deep-brown-border); /* Stronger separator from content above */
 
     padding: 0;
     box-sizing: border-box;
@@ -134,14 +155,16 @@ body {
 #actions-tab-button, #log-tab-button {
     flex-grow: 1; /* Each button takes equal width */
     padding: 8px 5px; /* Adjusted padding */
-    background-color: #b0b0b0; /* Slightly lighter than #actions-tab bg */
-    border-bottom: 1px solid #888; /* Separator from content */
+    background-color: var(--color-light-border);
+    color: var(--color-dark-ink);
+    font-family: var(--font-primary);
+    border-bottom: 1px solid var(--color-deep-brown-border); /* Separator from content */
     text-align: center;
     font-weight: bold;
     font-size: 0.85em;
     cursor: pointer;
     transition: background-color 0.3s ease;
-    border-right: 1px solid #888; /* Separator between buttons */
+    border-right: 1px solid var(--color-deep-brown-border); /* Separator between buttons */
 }
 
 #log-tab-button {
@@ -153,9 +176,9 @@ body {
 }
 
 .active-tab-button {
-    background-color: #f9f9f9 !important; /* Same as .tab-content bg for seamless look */
-    color: #333;
-    border-bottom: 1px solid #f9f9f9 !important; /* Make it look like it's part of the content area */
+    background-color: var(--color-parchment-bg) !important; /* Same as .tab-content bg for seamless look */
+    color: var(--color-dark-ink) !important;
+    border-bottom-color: var(--color-parchment-bg) !important; /* Make it look like it's part of the content area */
 }
 
 
@@ -190,8 +213,8 @@ body {
     top: 35px; /* Position below button */
     right: 5px;
     width: 180px; /* Slightly narrower */
-    background-color: #fff;
-    border: 1px solid #aaa;
+    background-color: var(--color-aged-paper);
+    border: 1px solid var(--color-deep-brown-border);
     padding: 0;
     box-shadow: 0 2px 5px rgba(0,0,0,0.15);
     z-index: 1001; /* Above button */
@@ -207,7 +230,9 @@ body {
 #settings-popup li {
     padding: 8px 12px; /* Adjusted padding */
     cursor: pointer;
-    border-bottom: 1px solid #eee;
+    font-family: var(--font-secondary);
+    color: var(--color-dark-ink);
+    border-bottom: 1px solid var(--color-light-border);
     font-size: 0.9em; /* Consistent font size */
 }
 
@@ -216,12 +241,13 @@ body {
 }
 
 #settings-popup li:hover {
-    background-color: #f5f5f5;
+    background-color: var(--color-parchment-bg);
+    color: var(--color-highlight-red);
 }
 
 #settings-popup a {
     text-decoration: none;
-    color: inherit;
+    color: var(--color-dark-ink);
     display: block;
 }
 
@@ -229,15 +255,17 @@ body {
 #map-container svg text {
     font-weight: bold;
     font-size: 10px; /* Example size, adjust as needed */
-    fill: #333;
+    fill: var(--color-dark-ink);
 }
 
 
 /* Tab Titles and Content Area Styling */
 .tab-title-bar {
     padding: 5px 8px; /* Adjusted padding */
-    background-color: #d0d0d0;
-    border-bottom: 1px solid #999;
+    font-family: var(--font-primary);
+    background-color: transparent;
+    color: var(--color-dark-ink);
+    border-bottom: 1px solid var(--color-light-border);
     text-align: center;
     font-weight: bold;
     font-size: 0.85em; /* Slightly increased font size */
@@ -253,7 +281,8 @@ body {
     padding: 8px; /* Consistent padding */
     /* border: 1px dashed #777; /* Kept for now */
     margin-top: 0; /* No margin, spacing handled by padding */
-    background-color: #f9f9f9;
+    background-color: var(--color-parchment-bg);
+    color: var(--color-dark-ink);
     height: 100%; /* Fill the parent tab area */
     overflow-y: auto; /* Scroll if content overflows */
     box-sizing: border-box;
@@ -266,6 +295,7 @@ body {
     /* flex-direction: row; /* Not needed if panels stack vertically */
     /* gap: 8px; /* Not needed if panels stack vertically */
     /* padding: 8px; /* Padding will be on panels if needed, or keep if desired for overall content area */
+    background-color: var(--color-parchment-bg); /* Added this line */
     height: auto; /* Was calc(100% - 35px) */
     overflow: hidden; /* To contain the sliding panels */
     position: relative; /* For positioning panels if needed, though max-height should handle it */
@@ -275,7 +305,7 @@ body {
 #actions-panel-content, #log-panel-content {
     width: 100%; /* Take full width of #actions-content */
     height: 100%; /* Take full height of #actions-content when visible */
-    background-color: #f9f9f9; /* Match tab-content bg */
+    background-color: var(--color-parchment-bg); /* Match tab-content bg */
     overflow: hidden; /* Important for max-height transition */
     max-height: 0; /* Initially hidden */
     transition: max-height 0.5s ease-in-out;
@@ -349,20 +379,20 @@ body {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    background-color: #fff; /* Distinct background */
-    border: 1px solid #ccc;
+    background-color: var(--color-parchment-bg); /* Distinct background */
+    border: 1px solid var(--color-light-border);
     border-radius: 4px;
     padding: 6px;
 }
 #actions-content > .log-box #game-output { /* This selector is fine as .log-box is inside #actions-content */
     white-space: pre-wrap;
-    border: 1px solid #ddd; /* Lighter border */
+    border: 1px solid var(--color-light-border); /* Lighter border */
     padding: 5px;
     overflow-y: auto;
-    background-color: #fdfdfd; /* Slightly off-white */
-    font-family: 'Courier New', Courier, monospace;
+    background-color: var(--color-aged-paper); /* Slightly off-white */
+    font-family: var(--font-secondary);
     font-size: 0.9em;
-    color: #2c3e50;
+    color: var(--color-dark-ink);
     flex-grow: 1; /* Takes available vertical space */
     /* height: 300px; /* REMOVE fixed height */
     min-height: 50px; /* Adjusted minimum height */
@@ -375,8 +405,8 @@ body {
     overflow-y: auto; /* Scroll if content overflows */
     height: 100%; /* Fill height of #actions-content */
     padding: 8px; /* Consistent padding */
-    border: 1px solid #b0b0b0;
-    background-color: #fdfdfd;
+    border: 1px solid var(--color-light-border);
+    background-color: var(--color-parchment-bg);
     box-sizing: border-box;
     border-radius: 4px;
     scrollbar-width: thin;
@@ -421,53 +451,81 @@ body {
 #action-controls-wrapper label {
     display: block;
     margin-bottom: 4px;
+    font-family: var(--font-primary);
+    color: var(--color-dark-ink);
     font-weight: bold;
-    font-size: 0.8em; /* Slightly smaller labels */
+    font-size: 0.9em;
 }
 
 #action-controls-wrapper input[type="text"],
 #action-controls-wrapper input[type="number"] {
-    width: calc(100% - 16px); /* Adjust for padding */
-    padding: 6px 8px; /* Smaller padding */
-    border: 1px solid #ccc;
+    width: calc(100% - 20px);
+    padding: 8px 10px;
+    border: 1px solid var(--color-light-border);
+    background-color: var(--color-parchment-bg);
+    color: var(--color-dark-ink);
+    font-family: var(--font-secondary);
     border-radius: 3px;
     box-sizing: border-box;
-    margin-bottom: 8px; /* Consistent margin */
+    margin-bottom: 8px;
     font-size: 0.85em;
+}
+#action-controls-wrapper input[type="text"]:focus,
+#action-controls-wrapper input[type="number"]:focus {
+    border-color: var(--color-deep-brown-border);
+    box-shadow: 0 0 3px var(--color-light-border);
 }
 
 #action-controls-wrapper input[type="submit"],
-#action-controls-wrapper .submit-details-button, /* Generic class for submit buttons */
+#action-controls-wrapper .submit-details-button,
 #action-controls-wrapper .map-destination-button,
 #action-controls-wrapper .sub-location-button,
 #action-controls-wrapper .action-button,
-#action-controls-wrapper .general-action-button { /* General class for other buttons */
-    background-color: #5cb85c;
-    color: white;
-    padding: 6px 10px; /* Adjusted padding */
-    border: none;
+#action-controls-wrapper .general-action-button {
+    background-color: var(--color-deep-brown-border);
+    color: var(--color-parchment-bg);
+    font-family: var(--font-primary);
+    padding: 6px 10px;
+    border: 2px outset var(--color-light-border);
     border-radius: 3px;
     cursor: pointer;
-    font-size: 0.85em; /* Consistent font size */
-    margin-right: 5px; /* Spacing for multiple buttons */
+    font-size: 0.85em;
+    margin-right: 5px;
     margin-bottom: 5px;
-    text-align: center; /* Center text in buttons */
-}
-#action-controls-wrapper input[type="submit"]:hover,
-#action-controls-wrapper .submit-details-button:hover,
-#action-controls-wrapper .map-destination-button:hover,
-#action-controls-wrapper .sub-location-button:hover,
-#action-controls-wrapper .action-button:hover,
-#action-controls-wrapper .general-action-button:hover {
-    opacity: 0.9; /* Slight hover effect */
+    text-align: center;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    text-shadow: 1px 1px 1px var(--color-dark-ink);
 }
 
-/* Specific button type styling */
-#action-controls-wrapper .map-destination-button { background-color: #007bff; }
-#action-controls-wrapper .sub-location-button { background-color: #28a745; }
-#action-controls-wrapper .action-button { background-color: #ffc107; color: #333; }
-#action-controls-wrapper .submit-details-button { background-color: #17a2b8; }
-#action-controls-wrapper .general-action-button { background-color: #6c757d; }
+/* Specific button type overrides for important actions */
+#action-controls-wrapper .map-destination-button,
+#action-controls-wrapper .submit-details-button {
+    background-color: var(--color-highlight-red);
+}
+
+/* Hover/Focus States for buttons in #action-controls-wrapper */
+#action-controls-wrapper input[type="submit"]:hover,
+#action-controls-wrapper .general-action-button:hover,
+#action-controls-wrapper .sub-location-button:hover,
+#action-controls-wrapper .action-button:hover {
+    background-color: #7a5c4f; /* Lighter deep brown */
+    border-style: inset;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
+}
+
+#action-controls-wrapper .map-destination-button:hover,
+#action-controls-wrapper .submit-details-button:hover {
+    background-color: #A52A2A; /* Darker red */
+    border-style: inset;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
+}
+
+/* Comments to clarify which original specific styles are now overridden or use defaults */
+/* #action-controls-wrapper .map-destination-button { background-color: #007bff; } */ /* Now var(--color-highlight-red) */
+/* #action-controls-wrapper .sub-location-button { background-color: #28a745; } */  /* Now var(--color-deep-brown-border) */
+/* #action-controls-wrapper .action-button { background-color: #ffc107; color: #333; } */ /* Now var(--color-deep-brown-border) & themed text */
+/* #action-controls-wrapper .submit-details-button { background-color: #17a2b8; } */ /* Now var(--color-highlight-red) */
+/* #action-controls-wrapper .general-action-button { background-color: #6c757d; } */ /* Now var(--color-deep-brown-border) */
 
 #action-controls-wrapper ul {
     list-style-type: none;
@@ -493,16 +551,17 @@ body {
 #action-controls-wrapper h2,
 #action-controls-wrapper h3,
 #action-controls-wrapper h4 {
-    color: #333;
+    font-family: var(--font-primary);
+    color: var(--color-dark-ink);
     margin-top: 0; /* Remove default top margin */
     margin-bottom: 8px; /* Consistent bottom margin */
     padding-bottom: 4px; /* Space before border */
-    border-bottom: 1px solid #eee; /* Subtle separator */
+    border-bottom: 1px solid var(--color-light-border);
 }
-#action-controls-wrapper h1 { font-size: 1.2em; }
-#action-controls-wrapper h2 { font-size: 1.1em; }
-#action-controls-wrapper h3 { font-size: 1.0em; }
-#action-controls-wrapper h4 { font-size: 0.9em; border-bottom: none; margin-bottom: 4px;} /* No border for h4 */
+#action-controls-wrapper h1 { font-size: 1.2em; font-family: var(--font-primary); color: var(--color-dark-ink); }
+#action-controls-wrapper h2 { font-size: 1.1em; font-family: var(--font-primary); color: var(--color-dark-ink); }
+#action-controls-wrapper h3 { font-size: 1.0em; font-family: var(--font-primary); color: var(--color-dark-ink); }
+#action-controls-wrapper h4 { font-size: 0.9em; border-bottom: none; margin-bottom: 4px; font-family: var(--font-primary); color: var(--color-dark-ink);}
 
 #action-controls-wrapper #current-town-display {
     font-weight: bold;
@@ -546,26 +605,30 @@ body {
 
 /* Content styling for Stats, Info, Inventory tabs */
 #stats-content h2, #info-content h2, #inventory-content h2:first-child {
+    font-family: var(--font-primary);
     font-size: 1.0em;
     margin-top: 0;
     margin-bottom: 8px;
-    color: #333;
+    color: var(--color-dark-ink);
     text-align: left;
     padding: 2px 0;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--color-light-border);
 }
 #inventory-content h2 { /* Subsequent h2 in inventory */
+    font-family: var(--font-primary);
     font-size: 1.0em;
     margin-top: 10px;
     margin-bottom: 6px;
-    border-bottom: 1px solid #ddd;
+    color: var(--color-dark-ink);
+    border-bottom: 1px solid var(--color-light-border);
     padding-bottom: 3px;
 }
 
 #stats-content p, #info-content p, #inventory-content p {
+    font-family: var(--font-secondary);
     font-size: 0.85em; /* Slightly smaller text */
     margin: 4px 0;
-    color: #444;
+    color: var(--color-dark-ink);
     text-align: left;
     word-wrap: break-word;
 }
@@ -577,9 +640,10 @@ body {
 }
 
 #stats-content li, #info-content li, #inventory-content li {
+    font-family: var(--font-secondary);
     font-size: 0.8em; /* Smaller list item text */
     padding: 1px 0;
-    color: #555;
+    color: var(--color-dark-ink);
     text-align: left;
     word-wrap: break-word;
     margin-bottom: 2px; /* Space between list items */
@@ -675,16 +739,309 @@ body {
 .modal #modal-actions-list .action-button {
     width: 100%;
     padding: 12px 15px; /* Generous padding */
-    background-color: #007bff; /* Primary blue */
-    color: white;
-    border: none;
-    border-radius: 5px; /* Slightly more rounded */
+    background-color: var(--color-highlight-red);
+    color: var(--color-parchment-bg);
+    font-family: var(--font-primary);
+    border: 2px outset var(--color-light-border);
+    border-radius: 3px;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    text-shadow: 1px 1px 1px var(--color-dark-ink);
     cursor: pointer;
     font-size: 1em; /* Clear font size */
     text-align: center;
-    transition: background-color 0.2s ease-in-out;
+    transition: background-color 0.2s ease-in-out, border-style 0.2s ease-in-out;
 }
 
 .modal #modal-actions-list .action-button:hover {
-    background-color: #0056b3; /* Darker blue on hover */
+    background-color: #A52A2A; /* Darker red */
+    border-style: inset;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
+}
+
+/* General input field styling - to be added if not present or to modify existing */
+/* This is a placeholder, assuming there might not be a global input style yet */
+input[type="text"],
+input[type="number"],
+input[type="password"] {
+    background-color: var(--color-parchment-bg);
+    color: var(--color-dark-ink);
+    border: 1px solid var(--color-light-border);
+    border-radius: 3px;
+    font-family: var(--font-secondary);
+    padding: 8px 10px;
+    box-sizing: border-box; /* ensure padding doesn't expand element size */
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="password"]:focus {
+    border-color: var(--color-deep-brown-border);
+    box-shadow: 0 0 3px var(--color-light-border);
+    outline: none; /* Remove default browser outline */
+}
+
+/* General label styling */
+label {
+    color: var(--color-dark-ink);
+    font-family: var(--font-primary);
+    /* font-size: 0.9em; /* Adjust if primary font is too large */
+}
+
+/* General heading styling - ensure they use primary font and dark ink */
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-primary);
+    color: var(--color-dark-ink);
+}
+
+/* Styles moved from index.html */
+.hidden-details {
+    display: none;
+    margin-top: 10px;
+}
+.details-section label {
+    display: block;
+    margin-top: 5px;
+}
+.details-section input {
+    width: calc(100% - 10px);
+    padding: 5px;
+    margin-top: 2px;
+    /* Theming will be inherited from global input styles */
+}
+/* Styles for character creation, login, selection */
+.character-creation-container, .login-container, .character-selection-container {
+    width: 50%;
+    margin: 20px auto;
+    padding: 20px;
+    border: 1px solid var(--color-deep-brown-border);
+    border-radius: 8px;
+    background-color: var(--color-aged-paper);
+    color: var(--color-dark-ink);
+}
+.login-container {
+    width: 350px;
+}
+.character-creation-container h2, .login-container h2, .character-selection-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    /* font-family and color inherited from general h2 styling */
+}
+.character-creation-container div, .login-container div {
+    margin-bottom: 10px;
+}
+.character-creation-container label, .login-container label {
+    display: inline-block;
+    width: auto;
+    margin-right: 10px;
+    /* font-family and color inherited from general label styling */
+}
+/* Inputs in these containers will inherit from global input[type="text"] etc. styles */
+
+/* Buttons in Character Creation, Login, Character Selection, and Popups */
+.character-creation-container button,
+.login-container button,
+.character-selection-container li a, /* Styled as a button */
+.character-selection-container .create-new-link, /* Styled as a button */
+#action-result-popup #close-popup-button {
+    padding: 8px 15px; /* Adjusted padding */
+    font-family: var(--font-primary);
+    color: var(--color-parchment-bg);
+    background-color: var(--color-highlight-red); /* Primary action color */
+    border: 2px outset var(--color-light-border);
+    border-radius: 3px;
+    cursor: pointer;
+    text-decoration: none; /* For anchor tags styled as buttons */
+    display: inline-block;
+    line-height: normal;
+    text-shadow: 1px 1px 1px var(--color-dark-ink);
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    margin: 5px;
+}
+
+/* Hover/Focus States for the above buttons */
+.character-creation-container button:hover,
+.login-container button:hover,
+.character-selection-container li a:hover,
+.character-selection-container .create-new-link:hover,
+#action-result-popup #close-popup-button:hover {
+    background-color: #A52A2A; /* Darker red */
+    border-style: inset;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
+}
+
+/* Google Login Button - Specific styling */
+.google-login-button {
+    padding: 8px 15px; /* Adjusted padding */
+    font-family: var(--font-secondary); /* Non-themed font */
+    color: white !important; /* Ensure white text */
+    background-color: #4285F4 !important; /* Google's blue */
+    border: 2px outset var(--color-light-border);
+    border-radius: 3px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    line-height: normal;
+    text-shadow: 1px 1px 1px #333; /* Subtle shadow for depth */
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    margin: 5px;
+}
+.google-login-button:hover {
+    background-color: #357ae8 !important; /* Google's hover blue */
+    border-style: inset;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
+}
+.google-login-button img {
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+.character-creation-container button:disabled {
+    background-color: var(--color-light-border); /* Muted */
+    color: var(--color-aged-paper);
+    border-style: solid; /* Not outset/inset */
+    text-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.login-container p { /* For "Don't have an account?" text */
+    margin-top: 15px;
+    font-family: var(--font-secondary);
+}
+.character-selection-container ul {
+    list-style-type: none;
+    padding: 0;
+}
+.character-selection-container li {
+    background-color: var(--color-parchment-bg);
+    border: 1px solid var(--color-light-border);
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.graveyard-container {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--color-light-border);
+}
+.graveyard-container h3 {
+    margin-bottom: 15px;
+    /* font-family and color inherited from general h3 styling */
+}
+.graveyard-container ul {
+    list-style-type: none;
+    padding: 0;
+}
+.graveyard-container li {
+    background-color: var(--color-aged-paper);
+    color: var(--color-dark-ink);
+    padding: 8px 15px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--color-light-border);
+}
+.character-creation-container #stats_container div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+}
+.character-creation-container #stats_container span {
+    flex-grow: 1;
+    font-family: var(--font-secondary);
+}
+#action-result-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--color-aged-paper);
+    color: var(--color-dark-ink);
+    padding: 20px;
+    border: 2px solid var(--color-deep-brown-border);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    display: none;
+    border-radius: 5px;
+}
+
+/* Ensure flash messages are themed if they exist */
+.flash-success {
+    color: green;
+    background-color: lightgreen;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid green;
+    border-radius: 4px;
+}
+.flash-error {
+    color: var(--color-highlight-red);
+    background-color: #ffdddd; /* Light red */
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid var(--color-highlight-red);
+    border-radius: 4px;
+}
+/* Add other flash categories as needed */
+/* Final check on modal content theming */
+.modal-content {
+    background-color: var(--color-aged-paper);
+    border: 2px solid var(--color-deep-brown-border);
+    color: var(--color-dark-ink);
+}
+.modal-content h3 {
+    font-family: var(--font-primary);
+    color: var(--color-dark-ink);
+    border-bottom-color: var(--color-light-border);
+}
+.modal .close-button {
+    color: var(--color-dark-ink);
+}
+.modal .close-button:hover {
+    color: var(--color-highlight-red);
+}
+
+/* Scrollbar Styling - WebKit */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: var(--color-parchment-bg);
+    border-left: 1px solid var(--color-light-border); /* For vertical scrollbars */
+    border-top: 1px solid var(--color-light-border); /* For horizontal scrollbars */
+}
+::-webkit-scrollbar-thumb {
+    background-color: var(--color-light-border);
+    border-radius: 2px;
+    border: 1px solid var(--color-deep-brown-border);
+}
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-deep-brown-border);
+}
+::-webkit-scrollbar-corner {
+    background: var(--color-parchment-bg);
+}
+
+/* Scrollbar Styling - Firefox */
+/* Apply to body and specific scrollable elements as needed */
+body, .tab-content, #action-controls-wrapper, #game-output { /* Add other key scrollable elements if missed */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-light-border) var(--color-parchment-bg);
+}
+
+strong, b {
+    font-weight: bold; /* Ensure it's bold */
+    color: var(--color-highlight-red); /* Optional: make bold text stand out more */
+}
+em, i {
+    font-family: var(--font-secondary); /* Keep secondary for readability in italics */
+    font-style: italic;
+    color: var(--color-deep-brown-border); /* Slightly richer for emphasis */
 }
