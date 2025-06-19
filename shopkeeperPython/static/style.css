@@ -1044,3 +1044,93 @@ em, i {
     font-style: italic;
     color: var(--color-deep-brown-border); /* Slightly richer for emphasis */
 }
+
+/* Journal Display Styles */
+#log-panel-content .log-box {
+    height: 300px; /* Or match other panel heights like 40vh */
+    overflow-y: auto;
+    padding: 10px;
+    background-color: var(--color-aged-paper);
+    border: 1px solid var(--color-light-border); /* Ensure consistent border if not already applied */
+}
+
+#journal-entries-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#journal-entries-list li {
+    background-color: var(--color-parchment-bg);
+    border: 1px solid var(--color-light-border);
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.journal-timestamp {
+    display: block;
+    font-size: 0.75em;
+    color: #777;
+    margin-bottom: 5px;
+    text-align: right;
+}
+
+.journal-action-type {
+    display: block; /* Ensures it takes its own line if needed and respects margin-bottom */
+    font-weight: bold;
+    color: var(--color-highlight-red);
+    margin-bottom: 3px;
+}
+
+.journal-summary {
+    font-size: 0.9em;
+    color: var(--color-dark-ink);
+    margin-top: 0; /* Reset default p margin */
+    margin-bottom: 5px;
+}
+
+.journal-details {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding-left: 15px;
+    border-left: 2px solid var(--color-light-border);
+    font-size: 0.8em;
+    background-color: rgba(0,0,0,0.02);
+    padding: 8px; /* Increased padding slightly */
+    border-radius: 3px;
+}
+
+.journal-details strong { /* Targeting the "Details:" text */
+    color: var(--color-dark-ink); /* Keep it consistent, not necessarily red */
+    font-weight: bold;
+}
+
+
+.journal-details ul {
+    list-style-type: disc;
+    margin: 5px 0 5px 20px; /* Indent bullets */
+    padding-left: 0; /* Reset browser default if any */
+}
+
+.journal-details li {
+    margin-bottom: 2px;
+    color: var(--color-dark-ink); /* Ensure text color contrasts with subtle background */
+}
+
+.journal-outcome {
+    font-size: 0.85em;
+    color: #333; /* Using a fairly dark grey for now */
+    margin-top: 8px; /* Increased margin-top for better separation */
+    font-style: italic;
+    padding: 8px; /* Increased padding */
+    background-color: rgba(0,0,0,0.02);
+    border-radius: 3px;
+    border-top: 1px dashed var(--color-light-border); /* Add a subtle separator */
+}
+
+.journal-outcome strong { /* Targeting the "Outcome:" text */
+    color: var(--color-dark-ink); /* Keep it consistent */
+    font-weight: bold;
+}

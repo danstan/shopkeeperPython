@@ -298,12 +298,34 @@
 
                 <div id="log-panel-content"> <!-- Panel for Log -->
                     <div class="log-box">
-                        <h2>Game Log</h2>
-                        <div id="game-output" style="white-space: pre-wrap; height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; background: #f9f9f9;">
-                            {{ game_output | safe }}
-                        </div>
+                        <h2>Journal</h2>
+                        {% if player_journal %}
+                        <ul id="journal-entries-list">
+                            {% for entry in player_journal | reverse %}
+                            <li>
+                                <span class="journal-timestamp">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M:%S') if entry.timestamp else 'No timestamp' }}</span>
+                                <strong class="journal-action-type">{{ entry.action_type }}</strong>
+                                <p class="journal-summary">{{ entry.summary }}</p>
+                                {% if entry.details and entry.details is mapping and entry.details | length > 0 %} {# Ensure details is a non-empty mapping #}
+                                <div class="journal-details">
+                                    <strong>Details:</strong>
+                                    <ul>
+                                        {% for key, value in entry.details.items() %}
+                                        <li>{{ key }}: {{ value }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                {% if entry.outcome %}
+                                <p class="journal-outcome"><strong>Outcome:</strong> {{ entry.outcome }}</p>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p>No journal entries yet.</p>
+                        {% endif %}
                     </div>
-
                 </div> <!-- Close log-panel-content -->
             </div> <!-- Close actions-content -->
         </div> <!-- Close actions-tab -->

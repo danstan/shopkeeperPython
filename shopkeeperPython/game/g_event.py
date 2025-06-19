@@ -69,8 +69,9 @@ class Event:
 
 
 class EventManager:
-    def __init__(self, character: Character):
+    def __init__(self, character: Character, game_manager): # Added game_manager
         self.character = character
+        self.game_manager = game_manager # Store game_manager instance
 
     def trigger_random_event(self, possible_events: list[Event]) -> str | None: # Return event name or None
         if not possible_events:
@@ -163,6 +164,25 @@ class EventManager:
                 print(f"  Lost an item of value around {consequence_value}. (Actual item removal not implemented here yet).")
             # Add more consequence handling here if needed
 
+        # Add journal entry for the event outcome
+        if self.game_manager and hasattr(self.game_manager, 'add_journal_entry'):
+            event_details_for_journal = {
+                "event_name": event_instance.name,
+                "skill_check_details": event_instance.skill_check if event_instance.skill_check else "None",
+                "outcome_key": outcome_key,
+                "outcome_message": chosen_outcome.get('message', 'No message.'),
+                "raw_outcome_data": chosen_outcome # Captures all effects, rewards, consequences
+            }
+            self.game_manager.add_journal_entry(
+                action_type="Game Event",
+                summary=f"Event: {event_instance.name}",
+                details=event_details_for_journal,
+                outcome=chosen_outcome.get('message', 'Event resolved.')
+            )
+        else:
+            print("EventManager: GameManager reference not available or add_journal_entry method missing. Cannot log event to journal.")
+
+
 # --- Sample Event Definitions ---
 event_lucky_find = Event(
     name="Lucky Find",
@@ -245,7 +265,28 @@ if __name__ == "__main__":
     except Exception as e: print(f"Could not create/add Lucky Charm: {e}")
 
     if hasattr(test_char, 'display_character_info'): test_char.display_character_info()
-    event_manager = EventManager(character=test_char)
+
+    # Mock GameManager for EventManager testing if actual GameManager is not available/suitable for unit test
+    class MockGameManager:
+        def __init__(self):
+            self.time = lambda: None # Mock time object
+            setattr(self.time, 'get_current_datetime', lambda: datetime.datetime.now()) # Mock time method
+            self.character = test_char # EventManager needs character via game_manager or direct
+            self.journal = []
+        def add_journal_entry(self, action_type, summary, details=None, outcome=None, timestamp=None):
+            print(f"MOCK_GM_JOURNAL: Type='{action_type}', Summary='{summary}', Outcome='{outcome}'")
+            # Basic journal add for testing if needed
+            entry_ts = timestamp if timestamp else (self.time.get_current_datetime() if hasattr(self.time, 'get_current_datetime') else datetime.datetime.now())
+            if isinstance(entry_ts, str) : entry_ts = datetime.datetime.fromisoformat(entry_ts) # Basic parsing if string
+
+            self.journal.append({"ts":entry_ts, "type":action_type, "summary":summary, "details":details, "outcome":outcome})
+
+
+    # Use mock_gm if full GameManager isn't desired for this test scope
+    mock_gm = MockGameManager()
+    # event_manager = EventManager(character=test_char) # Old init
+    event_manager = EventManager(character=test_char, game_manager=mock_gm)
+
 
     print("\n--- Resolving Specific Event: Lucky Find ---")
     event_manager.resolve_event(event_lucky_find)
