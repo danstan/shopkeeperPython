@@ -672,8 +672,15 @@
 
             const mapDestinationsDiv = document.getElementById('map-destinations');
             const subLocationsListDiv = document.getElementById('sub-locations-list');
-            const currentActionsListDiv = document.getElementById('current-actions-list');
+            // const currentActionsListDiv = document.getElementById('current-actions-list'); // No longer primary target for displayActions
+            let currentActionsListDiv = document.getElementById('current-actions-list'); // Keep for event listener for now
             const currentTownDisplay = document.getElementById('current-town-display');
+
+            // Modal elements
+            const subLocationActionsModal = document.getElementById('subLocationActionsModal');
+            const modalActionsListDiv = document.getElementById('modal-actions-list');
+            const modalCloseButton = subLocationActionsModal ? subLocationActionsModal.querySelector('.close-button') : null;
+
 
             // Action Detail Divs and Inputs
             const actionDetailsContainer = document.getElementById('action-details-container');
@@ -708,6 +715,7 @@
                     subLocations.forEach(subLoc => {
                         const li = document.createElement('li');
                         const button = document.createElement('button');
+                        button.type = 'button'; // <--- ADD THIS LINE
                         button.className = 'sub-location-button';
                         button.dataset.sublocName = subLoc.name;
                         button.textContent = subLoc.name;
@@ -725,8 +733,13 @@
 
             // Function to display actions for a selected sub-location
             function displayActions(subLocName) {
-                if (!currentActionsListDiv) return;
-                currentActionsListDiv.innerHTML = ''; // Clear previous
+                // if (!currentActionsListDiv) return; // Old target
+                // currentActionsListDiv.innerHTML = ''; // Clear previous
+                if (!modalActionsListDiv || !subLocationActionsModal) {
+                    console.error("Modal elements not found for displayActions");
+                    return;
+                }
+                modalActionsListDiv.innerHTML = ''; // Clear previous modal actions
                 currentSubLocationName = subLocName; // Store the sub-location name
 
                 const currentTownName = currentTownDisplay ? currentTownDisplay.textContent : null;
@@ -744,16 +757,43 @@
                     selectedSubLocation.actions.forEach(actionStr => {
                         const li = document.createElement('li');
                         const button = document.createElement('button');
-                        button.className = 'action-button';
+                        button.className = 'action-button'; // Keep class for existing event listeners
                         button.dataset.actionName = actionStr;
                         button.textContent = actionStr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Prettify
                         li.appendChild(button);
                         ul.appendChild(li);
                     });
-                    currentActionsListDiv.appendChild(ul);
+                    modalActionsListDiv.appendChild(ul);
+                    subLocationActionsModal.style.display = 'block'; // Show modal
                 } else {
-                    currentActionsListDiv.innerHTML = '<p>No actions available here.</p>';
+                    modalActionsListDiv.innerHTML = '<p>No actions available here.</p>';
+                    subLocationActionsModal.style.display = 'block'; // Show modal even if no actions, to indicate it was opened
                 }
+            }
+
+            // Modal Close Functionality
+            if (modalCloseButton) {
+                modalCloseButton.addEventListener('click', function() {
+                    if (subLocationActionsModal) subLocationActionsModal.style.display = 'none';
+                });
+            }
+
+            if (subLocationActionsModal) {
+                // REMOVED:
+                // window.addEventListener('click', function(event) {
+                //     if (event.target == subLocationActionsModal) { // Clicked outside of the modal content
+                //         subLocationActionsModal.style.display = 'none';
+                //     }
+                // });
+
+                // ADDED:
+                subLocationActionsModal.addEventListener('click', function(event) {
+                    // If the click is directly on the modal backdrop (event.target is the modal itself)
+                    // then close the modal.
+                    if (event.target === subLocationActionsModal) {
+                        subLocationActionsModal.style.display = 'none';
+                    }
+                });
             }
 
             // Event Listener for Map Destination Buttons
@@ -778,11 +818,25 @@
                 });
             }
 
-            // Event Listener for Action Buttons (from current-actions-list)
-            if (currentActionsListDiv) {
-                currentActionsListDiv.addEventListener('click', function(event) {
-                    if (event.target.classList.contains('action-button')) {
-                        const actionName = event.target.dataset.actionName;
+            // Event Listener for Action Buttons (now potentially inside modal or other containers)
+            // This listener should be attached to a static parent that exists at load time,
+            // or re-evaluate if currentActionsListDiv is still the correct parent for all actions.
+            // For now, we assume action buttons are still eventually handled if they bubble up
+            // or if the modal's content is part of a structure listened to by 'currentActionsListDiv's parent.
+            // Let's refine this: if actions are ONLY in the modal, this listener needs to be on modalActionsListDiv or its parent.
+            // However, the original setup might have used event delegation on a higher-up container.
+            // The most robust change is to make the listener target the modal if that's where buttons are now.
+            // For the subtask, the buttons are moved to `modal-actions-list`.
+            // So, the listener for these specific buttons should be on `modalActionsListDiv`.
+            // The old `currentActionsListDiv` might still be used for other things or might become obsolete for this.
+
+            const actionButtonClickHandler = function(event) {
+                if (event.target.classList.contains('action-button')) {
+                    const actionName = event.target.dataset.actionName;
+                    // Hide the modal if an action button inside it is clicked
+                    if (subLocationActionsModal && subLocationActionsModal.contains(event.target)) {
+                        subLocationActionsModal.style.display = 'none';
+                    }
                         hideAllDetailForms(); // Hide any open detail forms first
                         currentActionRequiringDetails = null; // Reset
 
@@ -840,8 +894,24 @@
                             if (actionForm) actionForm.submit();
                         }
                     }
-                });
+            };
+
+            // Attach the handler to the modal list for actions populated by displayActions
+            if (modalActionsListDiv) {
+                modalActionsListDiv.addEventListener('click', actionButtonClickHandler);
             }
+
+            // If currentActionsListDiv is still used for other buttons (e.g. not from displayActions),
+            // it needs its own listener or a shared one if they are in a common parent.
+            // For now, assuming actions from displayActions are the primary concern for the modal.
+            // If currentActionsListDiv was only for sub-location actions, it might not need a listener anymore
+            // if all sub-location actions now go to the modal.
+            // Let's keep its original listener for now, in case it handles other dynamically added buttons
+            // that are NOT part of sub-location actions.
+             if (currentActionsListDiv) {
+                currentActionsListDiv.addEventListener('click', actionButtonClickHandler);
+             }
+
 
             // Event Listener for the new Craft Recipe Buttons
             const craftingRecipesList = document.getElementById('crafting-recipes-list');
@@ -1112,6 +1182,16 @@
     <div id="action-result-popup" style="display: none;">
         <div id="action-result-message"></div>
         <button id="close-popup-button">Close</button>
+    </div>
+
+    <div id="subLocationActionsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3>Actions</h3>
+            <div id="modal-actions-list">
+                <!-- Action buttons will be dynamically inserted here -->
+            </div>
+        </div>
     </div>
 </body>
 </html>
