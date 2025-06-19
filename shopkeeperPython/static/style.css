@@ -595,3 +595,96 @@ body {
 /* The specific #stats-tab, #inventory-tab, #actions-tab fixed px widths from older versions are removed */
 /* The multiple html, body definitions are consolidated at the top */
 /* The multiple .game-container definitions are consolidated */
+
+/* Modal styles - Transferred and Refined */
+.modal { /* Targets #subLocationActionsModal */
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1050; /* Higher than most elements, adjust if needed (e.g. Bootstrap modals are often 1050) */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if modal content is too long */
+    background-color: rgba(0,0,0,0.5); /* Slightly darker backdrop */
+}
+
+.modal-content { /* Class for the content area of the modal */
+    background-color: #fefefe;
+    /* margin: 15% auto; /* Replaced with transform for better centering */
+    position: fixed; /* Changed to fixed for transform centering */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding: 25px; /* Increased padding */
+    border: 1px solid #888;
+    border-radius: 8px; /* Added border-radius */
+    width: 90%; /* Responsive width */
+    max-width: 450px; /* Slightly increased max-width */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3); /* Enhanced box-shadow */
+}
+
+.modal-content h3 { /* Styling for heading within modal */
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.close-button { /* For the 'X' button */
+    color: #555; /* Darker for better visibility */
+    position: absolute; /* Position relative to modal-content */
+    top: 10px; /* Adjusted position */
+    right: 15px; /* Adjusted position */
+    font-size: 32px; /* Larger size */
+    font-weight: bold;
+    line-height: 1; /* Ensure proper vertical alignment */
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #000; /* Black on hover/focus */
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#modal-actions-list {
+    margin-top: 15px; /* Space above the buttons list */
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Space between action buttons */
+}
+
+#modal-actions-list ul { /* If an UL is still used, though direct buttons are more likely with flex */
+    list-style-type: none;
+    padding: 0;
+    margin: 0; /* Reset margin if UL is present */
+    display: flex;
+    flex-direction: column;
+    gap: 12px; /* Space between li elements if ul is used */
+}
+
+#modal-actions-list li { /* If an LI is still used */
+    margin-bottom: 0; /* Handled by gap in parent (ul or #modal-actions-list) */
+}
+
+/* Styling for buttons specifically within the modal, using .action-button class */
+/* This ensures consistency if .action-button is used elsewhere but needs specific modal styling */
+.modal #modal-actions-list .action-button {
+    width: 100%;
+    padding: 12px 15px; /* Generous padding */
+    background-color: #007bff; /* Primary blue */
+    color: white;
+    border: none;
+    border-radius: 5px; /* Slightly more rounded */
+    cursor: pointer;
+    font-size: 1em; /* Clear font size */
+    text-align: center;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.modal #modal-actions-list .action-button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+}
