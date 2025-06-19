@@ -44,7 +44,17 @@ RESOURCE_ITEM_DEFINITIONS = {
     "Small Twig": {"description": "A thin twig.", "base_value": 0, "item_type": "component"},
     "Wild Herb": {"description": "A common medicinal herb.", "base_value": 2, "item_type": "component"},
     "Stone Fragment": {"description": "A sharp piece of stone.", "base_value": 0, "item_type": "component"},
-    "Bird Feather": {"description": "A bird feather.", "base_value": 1, "item_type": "component"}
+    "Bird Feather": {"description": "A bird feather.", "base_value": 1, "item_type": "component"},
+    # New ingredients for advanced crafting
+    "Iron Ingot": {"description": "A bar of refined iron.", "base_value": 10, "item_type": "component"},
+    "Leather Straps": {"description": "Strips of treated leather.", "base_value": 5, "item_type": "component"},
+    "Steel Ingot": {"description": "A bar of strong steel.", "base_value": 25, "item_type": "component"},
+    "Oak Wood": {"description": "A sturdy piece of oak wood.", "base_value": 8, "item_type": "component"},
+    "Concentrated Herbs": {"description": "A potent distillation of magical herbs.", "base_value": 15, "item_type": "component"},
+    "Purified Water": {"description": "Magically purified water.", "base_value": 5, "item_type": "component"},
+    "Crystal Vial": {"description": "A delicate crystal vial for potions.", "base_value": 10, "item_type": "component"},
+    "Dragon's Blood Resin": {"description": "Hardened sap with magical properties.", "base_value": 20, "item_type": "component"},
+    "Mountain Flower": {"description": "A rare flower found high in the mountains.", "base_value": 12, "item_type": "component"}
 }
 
 HEMLOCK_HERBS = {
@@ -235,6 +245,14 @@ class GameManager:
         # Initialize Shop for the character
         self.shop = Shop(name=f"{self.character.name}'s Emporium", owner_name=self.character.name, town=self.current_town)
         self._print(f"Shop '{self.shop.name}' initialized/updated in {self.current_town.name} for owner {self.character.name}.")
+
+        # Set default specialization if not loaded (Shop.from_dict handles this, but good to be explicit)
+        if not hasattr(self.shop, 'specialization') or not self.shop.specialization:
+            self.shop.set_specialization("General Store") # Explicitly set for new shops
+        elif self.shop.specialization not in Shop.SPECIALIZATION_TYPES:
+             self._print(f"Warning: Shop loaded with invalid specialization '{self.shop.specialization}'. Resetting to 'General Store'.")
+             self.shop.set_specialization("General Store")
+
 
         # Stock initial items in the shop
         self.shop.inventory = [] # Clear any previous inventory
@@ -506,9 +524,63 @@ class GameManager:
             time_advanced_by_action_hours = 1 # Dead characters still pass time
         else:
             # --- Action Implementations (character is alive) ---
-            if action_name == "craft":
-                action_xp_reward = self._handle_player_craft_item(action_details)
-                # self.daily_items_crafted is now handled within _handle_player_craft_item
+            if action_name == "set_shop_specialization":
+                specialization_name = action_details.get("specialization_name")
+                if specialization_name:
+                    if self.shop:
+                        self.shop.set_specialization(specialization_name) # Shop method handles validation and printing
+                        action_xp_reward = 10 # XP for changing specialization
+                    else:
+                        self._print("  Cannot set specialization: Shop not initialized.")
+                else:
+                    self._print("  No specialization_name provided.")
+
+            elif action_name == "upgrade_shop":
+                if not self.shop:
+                    self._print("  Shop is not initialized. Cannot upgrade.")
+                elif self.shop.shop_level >= Shop.MAX_SHOP_LEVEL:
+                    self._print(f"  {self.shop.name} is already at the maximum level (Level {Shop.MAX_SHOP_LEVEL}).")
+                else:
+                    current_level_config = Shop.SHOP_LEVEL_CONFIG.get(self.shop.shop_level)
+                    if not current_level_config:
+                         self._print(f"  Error: Configuration for current shop level {self.shop.shop_level} not found.")
+                    else:
+                        cost_to_upgrade = current_level_config["cost_to_upgrade"]
+                        if self.character.gold < cost_to_upgrade:
+                            self._print(f"  Not enough gold to upgrade {self.shop.name}. Needs {cost_to_upgrade}g, has {self.character.gold}g.")
+                        else:
+                            self.character.gold -= cost_to_upgrade
+                            if self.shop.upgrade_shop(): # This method now prints success details
+                                self._print(f"  {self.character.name} paid {cost_to_upgrade}g to upgrade the shop.")
+                                action_xp_reward = 50 # Significant XP for upgrading shop
+                            else:
+                                # Shop.upgrade_shop() prints failure reasons (e.g. already max level, config issue)
+                                # Refund gold if upgrade_shop itself failed for an unexpected reason after cost was deducted.
+                                self.character.gold += cost_to_upgrade
+                                self._print(f"  Shop upgrade failed for an unexpected reason. Gold refunded.")
+
+
+            elif action_name == "craft":
+                # Modified to use shop's crafting method
+                item_name_to_craft = action_details.get("item_name")
+                if not item_name_to_craft:
+                    self._print("  No item_name provided for crafting.")
+                elif not self.shop:
+                    self._print("  Cannot craft: Shop not initialized.")
+                else:
+                    # The shop's craft_item method now handles ingredient checks from character inventory
+                    # and adds the item to its own (shop's) inventory.
+                    crafted_item_instance = self.shop.craft_item(item_name_to_craft, self.character)
+                    if crafted_item_instance:
+                        self._print(f"  {self.shop.name} successfully crafted {crafted_item_instance.quantity}x {crafted_item_instance.quality} {crafted_item_instance.name}.")
+                        self.daily_items_crafted.append(f"{crafted_item_instance.quantity}x {crafted_item_instance.name} (by shop)")
+                        action_xp_reward = 10 # Higher XP for shop crafting
+                    else:
+                        # shop.craft_item should print failure reasons (missing ingredients, wrong spec, etc.)
+                        self._print(f"  {self.shop.name} failed to craft {item_name_to_craft}.")
+
+            # Removed redundant 'craft' block that called _handle_player_craft_item directly.
+            # All crafting should ideally go through the shop instance now.
 
             elif action_name == "buy_from_own_shop":
                 item_name = action_details.get("item_name")
@@ -630,12 +702,13 @@ class GameManager:
                         self._print(f"  Traveling from {current_town_name} to {town_name}... (This will take {travel_time_hours} hours)")
                         self.current_town = self.towns_map[town_name]
                         if self.shop: # Ensure shop exists before updating its town
-                             self.shop.update_town(self.current_town) # Update shop's current town reference
-                             self._print(f"  Arrived in {self.current_town.name}. Shop is now operating here.")
-                        else: # Should not happen if is_game_setup is True
-                             self._print(f"  Arrived in {self.current_town.name}. (Shop not initialized - this is an issue!)")
-                        time_advanced_by_action_hours = travel_time_hours
-                        action_xp_reward = 15
+                        self.shop.update_town(self.current_town) # Update shop's current town reference
+                        # Shop's town is updated, no need to re-initialize specialization unless desired
+                        self._print(f"  Arrived in {self.current_town.name}. Shop '{self.shop.name}' (Specialization: {self.shop.specialization}) is now operating here.")
+                    else: # Should not happen if is_game_setup is True
+                        self._print(f"  Arrived in {self.current_town.name}. (Shop not initialized - this is an issue!)")
+                    time_advanced_by_action_hours = travel_time_hours
+                    action_xp_reward = 15
                 else:
                     self._print(f"  Invalid town name for travel: {town_name}. Available: {list(self.towns_map.keys())}")
 
@@ -766,10 +839,14 @@ class GameManager:
             # NPC Shop Sales Simulation
             # Check if shop exists, has inventory, and action wasn't a direct shop interaction by player
             if self.shop and self.shop.inventory and action_name not in ["buy_from_own_shop", "sell_to_own_shop", "buy_from_npc"]:
-                if random.random() < 0.1: # 10% chance for an NPC to buy something
+                base_npc_buy_chance = 0.1
+                # Adjust buy chance based on reputation, capped at 0.3 (e.g.)
+                npc_buy_chance = min(base_npc_buy_chance + (self.shop.reputation * 0.001), 0.3)
+
+                if random.random() < npc_buy_chance:
                     item_to_sell_to_npc = random.choice(self.shop.inventory) if self.shop.inventory else None # Defensive choice
                     if item_to_sell_to_npc: # Ensure an item was actually chosen
-                        npc_offer_mult = random.uniform(0.8, 1.0) # NPCs offer 80-100% of base sale price
+                        npc_offer_mult = random.uniform(0.8, 1.0) # NPCs offer 80-100% of base sale price (before shop reputation adjustment in complete_sale_to_npc)
                         sale_price = self.shop.complete_sale_to_npc(item_to_sell_to_npc.name, npc_offer_percentage=npc_offer_mult)
                         if sale_price is not None and sale_price > 0: # If sale was successful
                             self._print(f"  [NPC Sale] {self.shop.name} sold {item_to_sell_to_npc.name} to an NPC for {sale_price}g.")
