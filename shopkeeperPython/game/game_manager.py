@@ -702,13 +702,13 @@ class GameManager:
                         self._print(f"  Traveling from {current_town_name} to {town_name}... (This will take {travel_time_hours} hours)")
                         self.current_town = self.towns_map[town_name]
                         if self.shop: # Ensure shop exists before updating its town
-                        self.shop.update_town(self.current_town) # Update shop's current town reference
-                        # Shop's town is updated, no need to re-initialize specialization unless desired
-                        self._print(f"  Arrived in {self.current_town.name}. Shop '{self.shop.name}' (Specialization: {self.shop.specialization}) is now operating here.")
-                    else: # Should not happen if is_game_setup is True
-                        self._print(f"  Arrived in {self.current_town.name}. (Shop not initialized - this is an issue!)")
-                    time_advanced_by_action_hours = travel_time_hours
-                    action_xp_reward = 15
+                            self.shop.update_town(self.current_town) # Update shop's current town reference
+                            # Shop's town is updated, no need to re-initialize specialization unless desired
+                            self._print(f"  Arrived in {self.current_town.name}. Shop '{self.shop.name}' (Specialization: {self.shop.specialization}) is now operating here.")
+                        else: # Should not happen if is_game_setup is True
+                            self._print(f"  Arrived in {self.current_town.name}. (Shop not initialized - this is an issue!)")
+                        time_advanced_by_action_hours = travel_time_hours
+                        action_xp_reward = 15
                 else:
                     self._print(f"  Invalid town name for travel: {town_name}. Available: {list(self.towns_map.keys())}")
 
