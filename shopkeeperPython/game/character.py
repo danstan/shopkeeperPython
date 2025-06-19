@@ -438,32 +438,95 @@ class Character:
         print(f"CHARACTER: {self.name} successfully consumed items: {items_to_consume}")
         return True
 
-    def perform_skill_check(self, skill_name:str, dc:int, can_use_reroll_item:bool=True) -> bool:
-        if skill_name not in self.ATTRIBUTE_DEFINITIONS: print(f"Warning: Invalid attribute/skill '{skill_name}' for check."); return False # Check against ATTRIBUTE_DEFINITIONS
-        roll1=random.randint(1,20); d20=roll1; dis_str=""
-        if self.exhaustion_level>=1: # Disadvantage on ability checks
-            roll2=random.randint(1,20)
-            d20=min(roll1,roll2)
-            dis_str=f" (rolled {roll1},{roll2} dis, took {d20})"
+    def _perform_single_roll(self, skill_name: str, dc: int) -> dict:
+        """Helper function to perform a single d20 roll with disadvantage if applicable."""
+        if skill_name not in self.ATTRIBUTE_DEFINITIONS:
+            # This case should ideally be caught before calling this internal helper
+            print(f"Warning: Invalid attribute/skill '{skill_name}' for check.")
+            return {
+                "success": False, "d20_roll": 1, "modifier": 0, "total_value": 1, "dc": dc,
+                "is_critical_hit": False, "is_critical_failure": True,
+                "disadvantage_details": "Invalid skill", "reroll_details": None
+            }
 
-        mod = self.get_attribute_score(skill_name) # Use attribute score as the modifier
-        res=d20+mod
-        print(f"{self.name} {skill_name} check (DC {dc}). Roll: {d20}{dis_str} + {mod} (Attribute Score) = {res}.")
-        if res>=dc: print("  Skill check successful!"); return True
-        print("  Skill check failed.")
-        if can_use_reroll_item:
-            reroll_item=next((i for i in self.inventory if i.name=="Lucky Charm" and i.effects.get("allow_reroll")),None)
+        roll1 = random.randint(1, 20)
+        d20_final_roll = roll1
+        disadvantage_details_str = ""
+
+        if self.exhaustion_level >= 1:  # Disadvantage on ability checks
+            roll2 = random.randint(1, 20)
+            d20_final_roll = min(roll1, roll2)
+            disadvantage_details_str = f"(rolled {roll1},{roll2} dis, took {d20_final_roll})"
+
+        modifier_value = self.get_attribute_score(skill_name)
+        total_check_value = d20_final_roll + modifier_value
+
+        is_crit_hit = (d20_final_roll == 20)
+        is_crit_fail = (d20_final_roll == 1)
+        check_success = (total_check_value >= dc)
+
+        # Critical success/failure rules (5e context: nat 20 usually auto-success on checks, nat 1 auto-fail)
+        # For skill checks, this is often DM fiat, but we can implement it.
+        # If a nat 20 + mod still fails DC, it's not a success unless house rule.
+        # If a nat 1 + mod still meets DC, it's not a failure unless house rule.
+        # For now, we'll stick to total_value vs DC for success, but report crits.
+
+        print(f"  {self.name} {skill_name} check (DC {dc}). Roll: {d20_final_roll}{disadvantage_details_str} + {modifier_value} (Attribute Score) = {total_check_value}. {'Success' if check_success else 'Failure'}")
+
+        return {
+            "success": check_success,
+            "d20_roll": d20_final_roll,
+            "modifier": modifier_value,
+            "total_value": total_check_value,
+            "dc": dc,
+            "is_critical_hit": is_crit_hit,
+            "is_critical_failure": is_crit_fail,
+            "disadvantage_details": disadvantage_details_str
+        }
+
+    def perform_skill_check(self, skill_name:str, dc:int, can_use_reroll_item:bool=True) -> dict:
+        if skill_name not in self.ATTRIBUTE_DEFINITIONS:
+            print(f"Warning: Invalid attribute/skill '{skill_name}' for check.")
+            # Return a default failure structure
+            return {
+                "success": False, "d20_roll": 1, "modifier": 0, "total_value": 1, "dc": dc,
+                "is_critical_hit": False, "is_critical_failure": True,
+                "disadvantage_details": "Invalid skill", "reroll_details": None
+            }
+
+        initial_roll_result = self._perform_single_roll(skill_name, dc)
+
+        # Prepare the final result structure, initially based on the first roll
+        final_result = {**initial_roll_result, "reroll_details": None}
+
+        if not initial_roll_result["success"] and can_use_reroll_item:
+            # Check for reroll item, e.g., "Lucky Charm"
+            # This assumes "Lucky Charm" or similar item would be identified by name.
+            # A more robust system might use item tags or specific effect keys.
+            reroll_item = next((i for i in self.inventory if "Lucky Charm" in i.name and i.effects.get("allow_reroll")), None)
             if reroll_item:
-                print(f"  {self.name} has Lucky Charm! Using for reroll...");
+                print(f"  {self.name} has {reroll_item.name}! Using for reroll...")
                 if reroll_item.is_consumable:
-                    if self.remove_specific_item_from_inventory(reroll_item): print("  Lucky Charm consumed.")
-                    else: print("  Error consuming Lucky Charm.")
-                r1=random.randint(1,20); d20_r=r1; rdis_str=""
-                if self.exhaustion_level>=1: r2=random.randint(1,20); d20_r=min(r1,r2); rdis_str=f" (rolled {r1},{r2} dis, took {d20_r})"
-                new_res=d20_r+mod; print(f"  Rerolled {d20_r}{rdis_str} + {mod} = {new_res}.")
-                if new_res>=dc: print("  Reroll successful!"); return True
-                print("  Reroll failed."); return False
-        return False
+                    if self.remove_specific_item_from_inventory(reroll_item):
+                        print(f"  {reroll_item.name} consumed.")
+                    else:
+                        # This should not happen if item was found.
+                        print(f"  Error consuming {reroll_item.name}.")
+
+                reroll_attempt_result = self._perform_single_roll(skill_name, dc)
+                final_result["reroll_details"] = reroll_attempt_result
+
+                # Update top-level keys to reflect the reroll's outcome
+                final_result["success"] = reroll_attempt_result["success"]
+                final_result["d20_roll"] = reroll_attempt_result["d20_roll"]
+                final_result["modifier"] = reroll_attempt_result["modifier"] # Should be same
+                final_result["total_value"] = reroll_attempt_result["total_value"]
+                final_result["is_critical_hit"] = reroll_attempt_result["is_critical_hit"]
+                final_result["is_critical_failure"] = reroll_attempt_result["is_critical_failure"]
+                final_result["disadvantage_details"] = reroll_attempt_result["disadvantage_details"]
+                # DC remains the same
+
+        return final_result
 
     def to_dict(self, current_town_name: str = None) -> dict:
         # If current_town_name is None, default to "Starting Village"

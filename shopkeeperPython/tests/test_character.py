@@ -260,5 +260,117 @@ class TestCharacter(unittest.TestCase):
         self.assertEqual(loaded_char.get_attribute_score("Acrobatics"), 0) # DEX 10 -> mod 0
 
 
+class TestCharacterPerformSkillCheck(unittest.TestCase):
+    def setUp(self):
+        self.character = Character(name="Test Player")
+        # Initialize stats for consistent modifiers; e.g., a +1 modifier for relevant skills
+        # For skill 'Stealth' (DEX) and 'Insight' (WIS), let's set DEX and WIS to 12 (+1 mod)
+        self.character.stats = {"STR": 10, "DEX": 12, "CON": 10, "INT": 10, "WIS": 12, "CHA": 10}
+        self.character._recalculate_all_attributes() # Ensure attributes are based on these stats
+        self.character.inventory = []
+        self.character.exhaustion_level = 0
+
+    def test_perform_skill_check_returns_detailed_dict(self):
+        """Test that perform_skill_check returns the new detailed dictionary."""
+        # Mock random.randint to control the d20 roll
+        with patch('random.randint', return_value=10):
+            result = self.character.perform_skill_check(skill_name="Stealth", dc=10)
+
+        expected_keys = [
+            "success", "d20_roll", "modifier", "total_value", "dc",
+            "is_critical_hit", "is_critical_failure",
+            "disadvantage_details", "reroll_details"
+        ]
+        for key in expected_keys:
+            self.assertIn(key, result, f"Key '{key}' missing from result dictionary.")
+
+        self.assertEqual(result["d20_roll"], 10)
+        self.assertEqual(result["modifier"], self.character.get_attribute_score("Stealth")) # DEX mod (+1)
+        self.assertEqual(result["total_value"], 10 + self.character.get_attribute_score("Stealth"))
+        self.assertEqual(result["dc"], 10)
+        self.assertIsNone(result["reroll_details"]) # No reroll in this basic test
+
+    @patch('random.randint') # Patch at the class or method level
+    def test_perform_skill_check_disadvantage(self, mock_randint):
+        """Test skill check with disadvantage due to exhaustion."""
+        self.character.exhaustion_level = 1 # Apply disadvantage
+
+        # Configure mock_randint to return two different values for the disadvantage roll
+        mock_randint.side_effect = [5, 15] # Rolls 5 then 15, disadvantage takes 5
+
+        result = self.character.perform_skill_check(skill_name="Insight", dc=10)
+
+        self.assertEqual(result["d20_roll"], 5, "d20_roll should be the lower of the two rolls.")
+        self.assertIn("(rolled 5,15 dis, took 5)", result["disadvantage_details"], "Disadvantage details not correctly recorded.")
+        # Modifier for Insight (WIS 12) should be +1
+        self.assertEqual(result["total_value"], 5 + 1)
+        self.assertFalse(result["success"])
+
+    @patch('random.randint')
+    def test_perform_skill_check_lucky_charm_reroll_success(self, mock_randint):
+        """Test reroll with Lucky Charm leading to success."""
+        lucky_charm = Item(name="Lucky Charm of the Gods", effects={"allow_reroll": True}, is_consumable=True)
+        self.character.add_item_to_inventory(lucky_charm)
+
+        # Initial roll fails (e.g., 5), reroll succeeds (e.g., 15)
+        # random.randint will be called for: initial_roll1, reroll1
+        mock_randint.side_effect = [5, 15]
+
+        result = self.character.perform_skill_check(skill_name="Stealth", dc=15) # DC 15, Stealth mod is +1
+
+        self.assertTrue(result["success"], "Check should succeed after reroll.")
+        self.assertEqual(result["d20_roll"], 15, "d20_roll should reflect the reroll.")
+        self.assertEqual(result["total_value"], 15 + 1)
+        self.assertIsNotNone(result["reroll_details"], "reroll_details should be populated.")
+        self.assertTrue(result["reroll_details"]["success"])
+        self.assertEqual(result["reroll_details"]["d20_roll"], 15)
+        self.assertNotIn(lucky_charm, self.character.inventory, "Consumable Lucky Charm should be removed.")
+
+    @patch('random.randint')
+    def test_perform_skill_check_lucky_charm_reroll_still_fails(self, mock_randint):
+        lucky_charm = Item(name="Lucky Charm (Weak)", effects={"allow_reroll": True}, is_consumable=False) # Non-consumable
+        self.character.add_item_to_inventory(lucky_charm)
+
+        mock_randint.side_effect = [3, 7] # Initial roll 3, reroll 7. Stealth mod +1. DC 15.
+
+        result = self.character.perform_skill_check(skill_name="Stealth", dc=15)
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["d20_roll"], 7) # Reflects reroll
+        self.assertIsNotNone(result["reroll_details"])
+        self.assertFalse(result["reroll_details"]["success"])
+        self.assertEqual(result["reroll_details"]["d20_roll"], 7)
+        self.assertIn(lucky_charm, self.character.inventory, "Non-consumable Lucky Charm should remain.")
+
+    @patch('random.randint', return_value=8) # Always rolls 8
+    def test_perform_skill_check_no_lucky_charm_fail(self, mock_randint):
+        # Ensure no lucky charm
+        self.character.inventory = [item for item in self.character.inventory if "Lucky Charm" not in item.name]
+
+        result = self.character.perform_skill_check(skill_name="Stealth", dc=15) # DC 15, Mod +1, Roll 8 -> Total 9 (Fail)
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["d20_roll"], 8)
+        self.assertIsNone(result["reroll_details"], "No reroll should be attempted.")
+
+    @patch('random.randint', return_value=20)
+    def test_perform_skill_check_critical_hit(self, mock_randint):
+        result = self.character.perform_skill_check(skill_name="Stealth", dc=25) # DC very high
+        self.assertTrue(result["is_critical_hit"])
+        # Default 5e skill check rules: Nat 20 doesn't guarantee success if DC is too high, but it's a "crit".
+        # Current implementation: success is total_value >= dc.
+        # For Stealth +1, roll 20 -> total 21. So it fails against DC 25.
+        self.assertFalse(result["success"], "Nat 20 is a critical hit, but not auto-success if total < DC for skill checks.")
+
+    @patch('random.randint', return_value=1)
+    def test_perform_skill_check_critical_failure(self, mock_randint):
+        result = self.character.perform_skill_check(skill_name="Stealth", dc=5) # DC very low
+        self.assertTrue(result["is_critical_failure"])
+        # Default 5e skill check rules: Nat 1 doesn't guarantee failure if total >= DC, but it's a "crit fail".
+        # Current implementation: success is total_value >= dc.
+        # For Stealth +1, roll 1 -> total 2. So it fails against DC 5.
+        self.assertFalse(result["success"])
+
+
 if __name__ == '__main__':
     unittest.main()

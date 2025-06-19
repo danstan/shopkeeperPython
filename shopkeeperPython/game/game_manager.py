@@ -2,7 +2,7 @@ import random
 import json # Import json for save/load
 from .time_system import GameTime
 from .character import Character, JournalEntry # Import JournalEntry
-from .g_event import EventManager, SAMPLE_EVENTS, Event
+from .g_event import EventManager, Event, ALL_SKILL_CHECK_EVENTS # Import ALL_SKILL_CHECK_EVENTS, remove SAMPLE_EVENTS if not used
 from .shop import Shop
 from .item import Item
 from .town import Town
@@ -131,8 +131,10 @@ class GameManager:
 
         self.shop = None
         self.event_manager = None
-        self.base_event_chance = 0.05
-        self._print(f"Base event chance set to: {self.base_event_chance}")
+        self.base_event_chance = 0.05 # For simpler, non-skill-check events (if any remain)
+        self.skill_check_event_chance = 0.1 # Chance for new skill check events
+        self.skill_check_events = ALL_SKILL_CHECK_EVENTS.copy() # Populate with new events
+        self._print(f"Base event chance: {self.base_event_chance}, Skill check event chance: {self.skill_check_event_chance}. Loaded {len(self.skill_check_events)} skill check events.")
 
 
         self._reset_daily_trackers()
@@ -824,16 +826,29 @@ class GameManager:
 
 
             elif action_name == "debug_trigger_event":
-                if self.event_manager and SAMPLE_EVENTS: # Ensure event_manager and SAMPLE_EVENTS exist
-                    if SAMPLE_EVENTS : # Ensure not empty
-                        event_to_trigger = random.choice(SAMPLE_EVENTS)
-                        self._print(f"  DEBUG: Manually triggering event: {event_to_trigger.name}")
-                        self.event_manager.resolve_event(event_to_trigger) # Assumes this prints details
-                        self.daily_special_events.append(event_to_trigger.name)
+                if self.event_manager:
+                    event_to_trigger = None
+                    if self.skill_check_events:
+                        event_to_trigger = random.choice(self.skill_check_events)
+                        self._print(f"  DEBUG: Manually triggering skill check event: {event_to_trigger.name}")
+                        # For skill check events, we need to resolve then execute a choice
+                        choices = self.event_manager.resolve_event(event_to_trigger)
+                        if choices:
+                            # Auto-pick first choice for debug
+                            self.event_manager.execute_skill_choice(event_to_trigger, 0)
+                        else: # Event has no choices, try to run its default outcome
+                            self.event_manager.execute_skill_choice(event_to_trigger, -1)
+                        self.daily_special_events.append(f"{event_to_trigger.name} (Debug Skill Check)")
+                    # Fallback or alternative: if SAMPLE_EVENTS still exists and is used for very simple events
+                    # elif 'SAMPLE_EVENTS' in globals() and SAMPLE_EVENTS:
+                    #     event_to_trigger = random.choice(SAMPLE_EVENTS)
+                    #     self._print(f"  DEBUG: Manually triggering simple event: {event_to_trigger.name}")
+                    #     self.event_manager.resolve_event(event_to_trigger) # Old resolve logic for simple events
+                    #     self.daily_special_events.append(f"{event_to_trigger.name} (Debug Simple)")
                     else:
-                        self._print("  DEBUG: No sample events defined to trigger.")
+                        self._print("  DEBUG: No events available to trigger (skill_check_events is empty).")
                 else:
-                    self._print("  DEBUG: No sample events to trigger or event manager not ready.")
+                    self._print("  DEBUG: Event manager not ready.")
 
             elif action_name == "wait":
                 self._print(f"  {self.character.name} waits for an hour, observing the surroundings.")
@@ -975,14 +990,51 @@ class GameManager:
 
         # Further post-action events (random events, NPC sales) only if character is alive
         if hasattr(self.character, 'is_dead') and not self.character.is_dead:
-            # Random Event Chance
+            # New Skill Check Event Logic
+            if self.event_manager and action_name not in ["debug_trigger_event"] and random.random() < self.skill_check_event_chance:
+                eligible_events = [
+                    event for event in self.skill_check_events
+                    if self.character.level >= event.min_level and event.skill_check_options
+                ]
+                if eligible_events:
+                    selected_event = random.choice(eligible_events)
+                    self._print(f"--- Random Skill Check Event Triggered: {selected_event.name} ---")
+                    # resolve_event now returns choices and prints them
+                    choices_for_ui = self.event_manager.resolve_event(selected_event)
+
+                    if choices_for_ui:
+                        chosen_choice_index = 0 # Auto-select the first choice for now
+                        self._print(f"  (Auto-selecting choice 0: {choices_for_ui[chosen_choice_index]['text']})")
+                        # execute_skill_choice handles printing results and journal logging
+                        outcome_details = self.event_manager.execute_skill_choice(selected_event, chosen_choice_index)
+                        self.daily_special_events.append(f"{selected_event.name} (Skill Check)")
+                    else:
+                        # This case should ideally not be reached if events in skill_check_events are well-defined
+                        self._print(f"  Event {selected_event.name} offered no choices. Resolving with default outcome...")
+                        # execute_skill_choice with -1 or an out-of-bounds index should trigger its default/direct outcome logic
+                        self.event_manager.execute_skill_choice(selected_event, -1)
+                        self.daily_special_events.append(f"{selected_event.name} (Direct/NoChoice)")
+                else:
+                    self._print("  (No eligible skill check events for character level or no skill check events defined/loaded).")
+
+            # Old Random Event Logic - This section should be reviewed.
+            # If SAMPLE_EVENTS is fully deprecated for random triggering, this can be removed.
+            # If it's meant for truly simple, non-choice events, it needs clear separation.
+            # For now, keeping it but acknowledging its potential redundancy or need for refinement.
             if self.event_manager and action_name not in ["debug_trigger_event"] and random.random() < self.base_event_chance:
-                if SAMPLE_EVENTS: # Ensure SAMPLE_EVENTS is not empty
-                    triggered_event_name = self.event_manager.trigger_random_event(SAMPLE_EVENTS)
-                    if triggered_event_name: # If an event was actually triggered
-                        self.daily_special_events.append(triggered_event_name)
-                # else: # Optionally print if no sample events are available
-                #     self._print("  (No sample events to randomly trigger.)")
+                # Check if SAMPLE_EVENTS still exists and has content.
+                # It's safer to check if the variable exists in globals() if its definition might be removed from g_event.py
+                current_sample_events = globals().get("SAMPLE_EVENTS", [])
+                simple_events_from_sample = [
+                    e for e in current_sample_events
+                    if not hasattr(e, 'skill_check_options') or not e.skill_check_options
+                ]
+                if simple_events_from_sample:
+                    triggered_event_name = self.event_manager.trigger_random_event(simple_events_from_sample)
+                    if triggered_event_name:
+                        self.daily_special_events.append(f"{triggered_event_name} (Simple Legacy)")
+                # else:
+                #     self._print("  (No simple non-skill-check legacy events to trigger or SAMPLE_EVENTS is empty/undefined).")
 
             # NPC Shop Sales Simulation
             # Check if shop exists, has inventory, and action wasn't a direct shop interaction by player
