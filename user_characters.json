@@ -1,1 +1,76 @@
-{}
+{
+    "testuser": [
+        {
+            "name": "TakenName",
+            "stats": {
+                "STR": 10,
+                "DEX": 10,
+                "CON": 10,
+                "INT": 10,
+                "WIS": 10,
+                "CHA": 10
+            },
+            "stat_bonuses": {
+                "STR": 0,
+                "DEX": 0,
+                "CON": 0,
+                "INT": 0,
+                "WIS": 0,
+                "CHA": 0
+            },
+            "ac_bonus": 0,
+            "level": 1,
+            "xp": 0,
+            "pending_xp": 0,
+            "base_max_hp": 10,
+            "hp": 10,
+            "hit_dice": 1,
+            "max_hit_dice": 1,
+            "attunement_slots": 3,
+            "attuned_items": [],
+            "exhaustion_level": 0,
+            "inventory": [],
+            "gold": 100,
+            "skill_points_to_allocate": 0,
+            "speed": 30,
+            "is_dead": false,
+            "current_town_name": "Starting Village"
+        },
+        {
+            "name": "UniqueNewName",
+            "stats": {
+                "CHA": 16,
+                "CON": 15,
+                "DEX": 11,
+                "INT": 12,
+                "STR": 9,
+                "WIS": 11
+            },
+            "stat_bonuses": {
+                "STR": 0,
+                "DEX": 0,
+                "CON": 0,
+                "INT": 0,
+                "WIS": 0,
+                "CHA": 0
+            },
+            "ac_bonus": 0,
+            "level": 1,
+            "xp": 0,
+            "pending_xp": 0,
+            "base_max_hp": 12,
+            "hp": 12,
+            "hit_dice": 1,
+            "max_hit_dice": 1,
+            "attunement_slots": 3,
+            "attuned_.items": [],
+            "exhaustion_level": 0,
+            "inventory": [],
+            "gold": 50,
+            "skill_points_to_allocate": 0,
+            "speed": 30,
+            "is_dead": false,
+            "current_town_name": "Starting Village"
+        }
+    ]
+}

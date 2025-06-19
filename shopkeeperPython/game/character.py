@@ -82,6 +82,11 @@ class Character:
         """Calls roll_single_stat() for all stats and returns a dictionary."""
         return {stat: Character.roll_single_stat() for stat in Character.STAT_NAMES}
 
+    @staticmethod
+    def reroll_single_stat() -> int:
+        """Calls _roll_4d6_drop_lowest() to roll a single stat."""
+        return _roll_4d6_drop_lowest()
+
     def roll_stats(self):
 
         con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True)
