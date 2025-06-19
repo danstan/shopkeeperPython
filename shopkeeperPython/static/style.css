@@ -18,7 +18,6 @@ html, body {
     height: 100%; /* Full viewport height */
     margin: 0;
     padding: 0;
-    overflow: hidden;
     /* font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Replaced by new body styling */
     /* color: #333; /* Replaced by new body styling */
     line-height: 1.6;
@@ -45,7 +44,7 @@ body {
     position: relative;
     box-sizing: border-box;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 /* Child elements of .game-container */
