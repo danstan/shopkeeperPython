@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 from shopkeeperPython.game.character import Character
 from shopkeeperPython.game.item import Item
 
@@ -159,6 +160,104 @@ class TestCharacter(unittest.TestCase):
             stat_value = Character.reroll_single_stat()
             self.assertIsInstance(stat_value, int, "Stat value from reroll should be an integer.")
             self.assertTrue(3 <= stat_value <= 18, f"Stat value {stat_value} from reroll out of range (3-18).")
+
+    def test_attribute_calculation_no_bonuses(self):
+        self.character.stats = {"STR": 10, "DEX": 12, "CON": 14, "INT": 16, "WIS": 8, "CHA": 13}
+        # _recalculate_all_attributes is called in __init__ and when stats change via methods,
+        # but if we are manually setting stats like this, we should call it.
+        # However, for a fresh character from setUp, __init__ already called it.
+        # If we were to change self.character.stats mid-test AFTER setup, then a manual call is needed.
+        # For this test, assuming __init__ has set initial attributes based on default stats (all 0s or from roll_stats if setup did that),
+        # then changing self.character.stats requires a manual recalculation.
+        self.character._recalculate_all_attributes()
+
+        self.assertEqual(self.character.get_attribute_score("Athletics"), 0)  # STR 10
+        self.assertEqual(self.character.get_attribute_score("Acrobatics"), 1) # DEX 12
+        self.assertEqual(self.character.get_attribute_score("Stealth"), 1)    # DEX 12
+        self.assertEqual(self.character.get_attribute_score("Arcana"), 3)     # INT 16
+        self.assertEqual(self.character.get_attribute_score("History"), 3)    # INT 16
+        self.assertEqual(self.character.get_attribute_score("Insight"), -1)   # WIS 8
+        self.assertEqual(self.character.get_attribute_score("Medicine"), -1)  # WIS 8
+        self.assertEqual(self.character.get_attribute_score("Persuasion"), 1) # CHA 13
+        self.assertEqual(self.character.get_attribute_score("Deception"), 1)  # CHA 13
+        # Spot check a CON based attribute if one existed, for now CON doesn't have default attributes
+        # For example, if "Concentration" was CON based:
+        # self.assertEqual(self.character.get_attribute_score("Concentration"), 2) # CON 14
+
+    def test_attribute_calculation_with_item_bonuses(self):
+        self.character.stats = {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10}
+        self.character._recalculate_all_attributes() # Initial calculation with base stats
+
+        self.assertEqual(self.character.get_attribute_score("Acrobatics"), 0) # DEX 10 -> mod 0
+        self.assertEqual(self.character.get_attribute_score("Athletics"), 0)  # STR 10 -> mod 0
+
+        # Simulate item bonus
+        self.character.stat_bonuses["DEX"] += 2
+        self.character._recalculate_all_attributes() # Recalculate with bonus
+
+        self.assertEqual(self.character.get_attribute_score("Acrobatics"), 1) # DEX 10+2=12 -> mod +1
+        self.assertEqual(self.character.get_attribute_score("Athletics"), 0)  # STR 10 -> mod 0 (unchanged)
+
+        # Simulate removing item bonus
+        self.character.stat_bonuses["DEX"] -= 2
+        self.character._recalculate_all_attributes() # Recalculate again
+
+        self.assertEqual(self.character.get_attribute_score("Acrobatics"), 0) # DEX 10 -> mod 0
+
+    @patch('random.randint')
+    def test_perform_skill_check_with_attributes(self, mock_randint):
+        self.character.stats = {"STR": 10, "DEX": 16, "INT": 12} # DEX 16 -> Acrobatics +3, INT 12 -> Arcana +1
+        self.character._recalculate_all_attributes()
+
+        # Test case 1: Roll 5 + Acrobatics 3 = 8. DC 10. Should fail.
+        mock_randint.return_value = 5
+        self.assertFalse(self.character.perform_skill_check("Acrobatics", dc=10))
+
+        # Test case 2: Roll 10 + Acrobatics 3 = 13. DC 10. Should succeed.
+        mock_randint.return_value = 10
+        self.assertTrue(self.character.perform_skill_check("Acrobatics", dc=10))
+
+        # Test case 3: Roll 8 + Arcana 1 = 9. DC 10. Should fail.
+        mock_randint.return_value = 8
+        self.assertFalse(self.character.perform_skill_check("Arcana", dc=10))
+
+        # Test case 4: Roll 9 + Arcana 1 = 10. DC 10. Should succeed.
+        mock_randint.return_value = 9
+        self.assertTrue(self.character.perform_skill_check("Arcana", dc=10))
+
+        # Test disadvantage from exhaustion
+        self.character.exhaustion_level = 1
+        # Rolls will be 5 and (e.g.) 15, min is 5. 5 + Arcana 1 = 6. DC 10. Fail.
+        mock_randint.side_effect = [5, 15] # First roll, second roll for disadvantage
+        self.assertFalse(self.character.perform_skill_check("Arcana", dc=10))
+
+        # Rolls will be 15 and 5, min is 5. 5 + Arcana 1 = 6. DC 10. Fail.
+        mock_randint.side_effect = [15, 5]
+        self.assertFalse(self.character.perform_skill_check("Arcana", dc=10))
+
+        # Rolls will be 10 and 15, min is 10. 10 + Arcana 1 = 11. DC 10. Succeed.
+        mock_randint.side_effect = [10, 15]
+        self.assertTrue(self.character.perform_skill_check("Arcana", dc=10))
+        self.character.exhaustion_level = 0 # Reset exhaustion
+
+
+    def test_attributes_recalculated_on_load(self):
+        char_data = {
+            "name": "Loaded Character",
+            "stats": {"STR": 10, "DEX": 10, "CON": 10, "INT": 18, "WIS": 10, "CHA": 10}, # INT 18 -> Arcana +4
+            "stat_bonuses": {"INT": 1}, # Effective INT 19 -> Arcana +4
+            "ac_bonus": 0, "level": 1, "xp": 0, "pending_xp": 0,
+            "base_max_hp": 10, "hp": 10, "hit_dice": 1, "max_hit_dice": 1,
+            "attunement_slots": 3, "attuned_items": [], "exhaustion_level": 0,
+            "inventory": [], "gold": 100, "skill_points_to_allocate": 0,
+            "speed": 30, "is_dead": False, "current_town_name": "Test Town"
+        }
+        loaded_char = Character.from_dict(char_data)
+        # from_dict calls _recalculate_all_attributes at the end
+
+        self.assertEqual(loaded_char.get_attribute_score("Arcana"), 4) # INT 18 (base) + 1 (bonus) = 19 -> mod +4
+        self.assertEqual(loaded_char.get_attribute_score("Investigation"), 4) # INT 18 (base) + 1 (bonus) = 19 -> mod +4
+        self.assertEqual(loaded_char.get_attribute_score("Acrobatics"), 0) # DEX 10 -> mod 0
 
 
 if __name__ == '__main__':

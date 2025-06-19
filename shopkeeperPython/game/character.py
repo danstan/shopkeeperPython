@@ -27,9 +27,31 @@ class Character:
 
     STAT_NAMES = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
 
+    ATTRIBUTE_DEFINITIONS = {
+        "Acrobatics": "DEX",
+        "Animal Handling": "WIS",
+        "Arcana": "INT",
+        "Athletics": "STR",
+        "Deception": "CHA",
+        "History": "INT",
+        "Insight": "WIS",
+        "Intimidation": "CHA",
+        "Investigation": "INT",
+        "Medicine": "WIS",
+        "Nature": "INT",
+        "Perception": "WIS",
+        "Performance": "CHA",
+        "Persuasion": "CHA",
+        "Religion": "INT",
+        "Sleight of Hand": "DEX",
+        "Stealth": "DEX",
+        "Survival": "WIS",
+    }
+
     def __init__(self, name: str = None):
         self.name = name # Can be None initially if using interactive creation
         self.stats = {stat: 0 for stat in self.STAT_NAMES}
+        self.attributes = {} # Initialize attributes dictionary
         self.stat_bonuses = {stat: 0 for stat in self.STAT_NAMES}
         self.ac_bonus = 0
         self.level = 1
@@ -49,6 +71,7 @@ class Character:
         self.speed = 30
         self.is_dead = False # Added for perma-death
         self.current_town_name = "Starting Village" # Initialize current town name
+        self._recalculate_all_attributes()
 
     @property
     def max_hp(self):
@@ -94,6 +117,7 @@ class Character:
         current_level = self.level if self.level > 0 else 1
         self.base_max_hp = 10 + (con_modifier * current_level)
         self.hp = self.get_effective_max_hp()
+        self._recalculate_all_attributes()
 
     def award_xp(self, amount: int) -> int:
         if amount == 0: return 0
@@ -243,6 +267,7 @@ class Character:
         self.ac_bonus = 0
         print(f"Reapplying effects for {self.name}'s attuned items...")
         for item in self.attuned_items: self._apply_item_effects(item)
+        self._recalculate_all_attributes()
 
     def attune_item(self, item_name: str) -> bool:
         item_to_attune=next((i for i in self.inventory if i.name==item_name),None)
@@ -281,6 +306,10 @@ class Character:
         print(f"Base Stats: {self.stats}")
         print(f"Stat Bonuses: {self.stat_bonuses}")
         print(f"Effective Stats: {{'STR':{self.get_effective_stat('STR')}, 'DEX':{self.get_effective_stat('DEX')}, 'CON':{self.get_effective_stat('CON')}, 'INT':{self.get_effective_stat('INT')}, 'WIS':{self.get_effective_stat('WIS')}, 'CHA':{self.get_effective_stat('CHA')}}}")
+        print("Attributes:")
+        for attr_name in sorted(self.ATTRIBUTE_DEFINITIONS.keys()):
+            score = self.get_attribute_score(attr_name)
+            print(f"  {attr_name}: {score:+}") # {:+} ensures a sign (+ or -) is shown
         print(f"AC Bonus: {self.ac_bonus}")
         print(f"Attunement Slots Used: {len(self.attuned_items)}/{self.attunement_slots}")
         if self.attuned_items: print("Attuned Items:"); [print(f"  - {i.name} ({i.quality})") for i in self.attuned_items]
@@ -378,11 +407,16 @@ class Character:
         return True
 
     def perform_skill_check(self, skill_name:str, dc:int, can_use_reroll_item:bool=True) -> bool:
-        if skill_name not in self.stats: print(f"Warning: Invalid skill '{skill_name}'."); return False
+        if skill_name not in self.ATTRIBUTE_DEFINITIONS: print(f"Warning: Invalid attribute/skill '{skill_name}' for check."); return False # Check against ATTRIBUTE_DEFINITIONS
         roll1=random.randint(1,20); d20=roll1; dis_str=""
-        if self.exhaustion_level>=1: roll2=random.randint(1,20); d20=min(roll1,roll2); dis_str=f" (rolled {roll1},{roll2} dis, took {d20})"
-        mod=self._calculate_modifier(0,False,skill_name); res=d20+mod
-        print(f"{self.name} {skill_name} check (DC {dc}). Roll: {d20}{dis_str} + {mod} (eff {self.get_effective_stat(skill_name)}) = {res}.")
+        if self.exhaustion_level>=1: # Disadvantage on ability checks
+            roll2=random.randint(1,20)
+            d20=min(roll1,roll2)
+            dis_str=f" (rolled {roll1},{roll2} dis, took {d20})"
+
+        mod = self.get_attribute_score(skill_name) # Use attribute score as the modifier
+        res=d20+mod
+        print(f"{self.name} {skill_name} check (DC {dc}). Roll: {d20}{dis_str} + {mod} (Attribute Score) = {res}.")
         if res>=dc: print("  Skill check successful!"); return True
         print("  Skill check failed.")
         if can_use_reroll_item:
@@ -454,7 +488,44 @@ class Character:
             char.hp = 0
         else: # Ensure HP is capped by current effective max HP after loading exhaustion
             char.hp = min(char.hp, char.get_effective_max_hp())
+
+        char._recalculate_all_attributes() # Recalculate attributes after loading all data
         return char
+
+    # --- Attribute Calculation Methods ---
+    def _calculate_attribute_score(self, attribute_name: str) -> int:
+        """
+        Calculates the score for a single attribute based on its primary stat.
+        """
+        primary_stat_name = self.ATTRIBUTE_DEFINITIONS.get(attribute_name)
+        if not primary_stat_name:
+            print(f"Warning: Attribute '{attribute_name}' not found in ATTRIBUTE_DEFINITIONS.")
+            return 0 # Should not happen if called from _recalculate_all_attributes
+
+        effective_stat_score = self.get_effective_stat(primary_stat_name)
+        # Use is_base_stat_score=True because get_effective_stat already provides the raw score
+        # that _calculate_modifier expects when is_base_stat_score is True.
+        return self._calculate_modifier(effective_stat_score, is_base_stat_score=True)
+
+    def get_attribute_score(self, attribute_name: str) -> int:
+        """
+        Retrieves the pre-calculated score for an attribute.
+        """
+        score = self.attributes.get(attribute_name)
+        if score is None:
+            print(f"Warning: Attribute '{attribute_name}' not found or not calculated. Returning 0.")
+            return 0
+        return score
+
+    def _recalculate_all_attributes(self):
+        """
+        Recalculates all attribute scores and stores them in self.attributes.
+        """
+        # print(f"DEBUG: Recalculating all attributes for {self.name}...") # Optional debug line
+        for attr_name in self.ATTRIBUTE_DEFINITIONS.keys():
+            self.attributes[attr_name] = self._calculate_attribute_score(attr_name)
+        # print(f"DEBUG: Attributes for {self.name}: {self.attributes}") # Optional debug line
+
 
 if __name__ == "__main__":
     pass
