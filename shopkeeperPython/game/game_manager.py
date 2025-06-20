@@ -1,8 +1,9 @@
 import random
 import json # Import json for save/load
+import datetime # Added for timestamping journal entries
 from .time_system import GameTime
 from .character import Character, JournalEntry # Import JournalEntry
-from .g_event import EventManager, Event, ALL_SKILL_CHECK_EVENTS # Import ALL_SKILL_CHECK_EVENTS, remove SAMPLE_EVENTS if not used
+from .g_event import EventManager, Event, GAME_EVENTS # Import ALL_SKILL_CHECK_EVENTS, remove SAMPLE_EVENTS if not used
 from .shop import Shop
 from .item import Item
 from .town import Town
@@ -133,7 +134,7 @@ class GameManager:
         self.event_manager = None
         self.base_event_chance = 0.05 # For simpler, non-skill-check events (if any remain)
         self.skill_check_event_chance = 0.1 # Chance for new skill check events
-        self.skill_check_events = ALL_SKILL_CHECK_EVENTS.copy() # Populate with new events
+        self.skill_check_events = GAME_EVENTS.copy() # Populate with new events
         self._print(f"Base event chance: {self.base_event_chance}, Skill check event chance: {self.skill_check_event_chance}. Loaded {len(self.skill_check_events)} skill check events.")
 
 
@@ -156,14 +157,14 @@ class GameManager:
                     entry_timestamp_dt = datetime.datetime.fromisoformat(timestamp)
                 except ValueError:
                     self._print(f"  [Journal Error] Invalid timestamp format: {timestamp}. Using current time.")
-                    entry_timestamp_dt = self.time.get_current_datetime()
+                    entry_timestamp_dt = datetime.datetime.now()
             elif isinstance(timestamp, datetime.datetime): # Ensure datetime is imported
                  entry_timestamp_dt = timestamp
             else:
                 self._print(f"  [Journal Error] Unexpected timestamp type: {type(timestamp)}. Using current time.")
-                entry_timestamp_dt = self.time.get_current_datetime()
+                entry_timestamp_dt = datetime.datetime.now()
         else:
-            entry_timestamp_dt = self.time.get_current_datetime()
+            entry_timestamp_dt = datetime.datetime.now()
 
         try:
             entry = JournalEntry(
@@ -608,7 +609,7 @@ class GameManager:
                     action_type="Player Death",
                     summary=f"{char_name_for_log} has died.",
                     outcome="Unable to perform actions.",
-                    timestamp=self.time.get_time_string() # Use current time for this log
+                    timestamp=datetime.datetime.now().isoformat() # Use current time for this log
                 )
             time_advanced_by_action_hours = 1 # Dead characters still pass time
         else:

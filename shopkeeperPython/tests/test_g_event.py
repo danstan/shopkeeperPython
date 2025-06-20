@@ -1,11 +1,11 @@
 import unittest
-from shopkeeperPython.game.g_event import Event, ALL_SKILL_CHECK_EVENTS
+from shopkeeperPython.game.g_event import Event, GAME_EVENTS
 from shopkeeperPython.game.character import Character # Using actual Character for some Event tests if simple
 from shopkeeperPython.game.item import Item # Using actual Item for some Event tests
 
-# If ALL_SKILL_CHECK_EVENTS is empty, define a sample one for direct use in Event tests
+# If GAME_EVENTS is empty, define a sample one for direct use in Event tests
 # This helps if this test file is run before game_manager populates events or if used in isolation.
-if not ALL_SKILL_CHECK_EVENTS:
+if not GAME_EVENTS:
     # A fallback minimal event for testing Event class directly
     SAMPLE_EVENT_FOR_TESTING = Event.from_dict({
         "name": "Test Event For Class",
@@ -27,7 +27,7 @@ if not ALL_SKILL_CHECK_EVENTS:
         }
     })
 else:
-    SAMPLE_EVENT_FOR_TESTING = ALL_SKILL_CHECK_EVENTS[0]
+    SAMPLE_EVENT_FOR_TESTING = GAME_EVENTS[0]
 
 
 class TestEventClass(unittest.TestCase):
@@ -350,7 +350,7 @@ class TestEventManager(unittest.TestCase):
 
     def test_execute_skill_choice_item_auto_success(self):
         # Give character the "Scroll of Comprehension"
-        scroll = Item(name="Scroll of Comprehension", item_type="scroll", base_value=50)
+        scroll = Item(name="Scroll of Comprehension", description="A readable scroll.", base_value=50, item_type="scroll", quality="Common")
         self.mock_character.inventory = [scroll]
 
         # Choice 1 is Arcana check with Scroll of Comprehension for auto_success
@@ -366,7 +366,7 @@ class TestEventManager(unittest.TestCase):
         self.mock_game_manager.add_journal_entry.assert_called_once()
 
     def test_execute_skill_choice_item_dc_reduction(self):
-        crowbar = Item(name="Crowbar", item_type="tool", base_value=10)
+        crowbar = Item(name="Crowbar", description="A sturdy crowbar.", base_value=10, item_type="tool", quality="Common")
         self.mock_character.inventory = [crowbar]
         self.mock_character.level = 5 # Scaled DC for Athletics (choice 2) is 20 + (5-3)*1 = 22
                                       # With crowbar (-3 DC), effective DC is 19.
