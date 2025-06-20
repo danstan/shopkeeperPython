@@ -802,13 +802,15 @@ class GameManager:
                     elif found_what["type"] == "item":
                         item_effects = found_what.get("effects", {})
                         item_is_consumable = found_what.get("is_consumable", False)
+                        # Use .get for quantity, defaulting to 1 if not present
+                        item_quantity = found_what.get("quantity", 1)
                         found_item_obj = Item(
                             name=found_what["name"],
                             description=found_what["description"],
                             base_value=found_what["base_value"],
                             item_type=found_what["item_type"],
                             quality=found_what["quality"],
-                            quantity=found_what["quantity"],
+                            quantity=item_quantity, # Use the retrieved or default quantity
                             effects=item_effects,
                             is_consumable=item_is_consumable
                         )
