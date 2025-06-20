@@ -543,6 +543,7 @@ class Character:
                 final_result["disadvantage_details"] = reroll_attempt_result["disadvantage_details"]
                 # DC remains the same
 
+
         # Add skill_name and formatted_string to the final_result
         final_result["skill_name"] = skill_name
 
@@ -567,6 +568,7 @@ class Character:
             pass
 
         return final_result
+
 
     def to_dict(self, current_town_name: str = None) -> dict:
         # If current_town_name is None, default to "Starting Village"
