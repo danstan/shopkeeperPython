@@ -108,7 +108,7 @@
         <form id="characterCreationForm" action="{{ url_for('create_character_route') }}" method="post">
             <div>
                 <label for="character_name">Character Name:</label>
-                <input type="text" id="character_name" name="character_name" required>
+                <input type="text" id="character_name" name="character_name" value="{{ pending_char_name or '' }}" required>
             </div>
 
             <h3>Character Stats:</h3>
@@ -123,16 +123,30 @@
                     {% endif %}
                 </p>
                 <div id="stats_container">
-                    {% for stat_key, stat_value in character_creation_stats.stats.items() %}
-                    <div>
-                        <span>{{ stat_key }}: {{ stat_value }}</span>
-                        {% if not character_creation_stats.reroll_used %}
-                        <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" style="display: inline;">
-                            <button type="submit">Reroll {{ stat_key }}</button>
-                        </form>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
+                    {% if stat_names_ordered %}
+                        {% for stat_key in stat_names_ordered %}
+                        {% set stat_value = character_creation_stats.stats[stat_key] %}
+                        <div>
+                            <span>{{ stat_key }}: {{ stat_value }}</span>
+                            {% if not character_creation_stats.reroll_used %}
+                            <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" style="display: inline;">
+                                <button type="submit">Reroll {{ stat_key }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %} {# Fallback if stat_names_ordered is not available for some reason #}
+                        {% for stat_key, stat_value in character_creation_stats.stats.items() %}
+                        <div>
+                            <span>{{ stat_key }}: {{ stat_value }}</span>
+                            {% if not character_creation_stats.reroll_used %}
+                            <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" style="display: inline;">
+                                <button type="submit">Reroll {{ stat_key }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% endif %}
                 </div>
             {% else %}
                 <p>Stats not available. Please try starting character creation again.</p>
@@ -143,6 +157,31 @@
             </div>
         </form>
     </div>
+    <script>
+        // Script for character creation name persistence during reroll
+        document.addEventListener('DOMContentLoaded', function() {
+            const statsContainer = document.getElementById('stats_container');
+            if (statsContainer) {
+                statsContainer.addEventListener('click', function(event) {
+                    if (event.target.tagName === 'BUTTON' && event.target.type === 'submit' && event.target.closest('form[action*="/reroll_stat/"]')) {
+                        const rerollForm = event.target.closest('form');
+                        const characterNameInput = document.getElementById('character_name');
+                        if (rerollForm && characterNameInput) {
+                            // Check if hidden input already exists
+                            let hiddenInput = rerollForm.querySelector('input[name="character_name"]');
+                            if (!hiddenInput) {
+                                hiddenInput = document.createElement('input');
+                                hiddenInput.type = 'hidden';
+                                hiddenInput.name = 'character_name';
+                                rerollForm.appendChild(hiddenInput);
+                            }
+                            hiddenInput.value = characterNameInput.value;
+                        }
+                    }
+                });
+            }
+        });
+    </script>
     {# Removed the old JavaScript for client-side stat rolling and rerolling.
        The backend now handles this via session. #}
 
@@ -556,7 +595,11 @@
                         const townName = event.target.dataset.townName;
                         if (hiddenActionNameInput) hiddenActionNameInput.value = 'travel_to_town';
                         if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({ town_name: townName });
-                        if (actionForm) actionForm.submit();
+                        if (actionForm) {
+                            console.log('Submitting action. Name:', hiddenActionNameInput.value);
+                            console.log('Submitting action. Details:', hiddenDetailsInput.value);
+                            actionForm.submit();
+                        }
                     }
                 });
             }
@@ -644,7 +687,11 @@
                         } else if (!event.target.classList.contains('craft-recipe-button')) {
                             // For actions not needing details from the dynamic list
                             if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({});
-                            if (actionForm) actionForm.submit();
+                            if (actionForm) {
+                                console.log('Submitting action (no details). Name:', hiddenActionNameInput.value);
+                                console.log('Submitting action (no details). Details:', hiddenDetailsInput.value);
+                                actionForm.submit();
+                            }
                         }
                     }
             };
@@ -674,7 +721,11 @@
                         const itemName = event.target.dataset.itemName;
                         if (hiddenActionNameInput) hiddenActionNameInput.value = 'craft';
                         if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({ item_name: itemName });
-                        if (actionForm) actionForm.submit();
+                        if (actionForm) {
+                            console.log('Submitting action (craft recipe). Name:', hiddenActionNameInput.value);
+                            console.log('Submitting action (craft recipe). Details:', hiddenDetailsInput.value);
+                            actionForm.submit();
+                        }
                     }
                 });
             }
@@ -685,7 +736,11 @@
                 gatherResourcesButton.addEventListener('click', function() {
                     if (hiddenActionNameInput) hiddenActionNameInput.value = 'gather_resources';
                     if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({}); // Empty details
-                    if (actionForm) actionForm.submit();
+                    if (actionForm) {
+                        console.log('Submitting action (gather_resources). Name:', hiddenActionNameInput.value);
+                        console.log('Submitting action (gather_resources). Details:', hiddenDetailsInput.value);
+                        actionForm.submit();
+                    }
                 });
             }
 
@@ -728,7 +783,11 @@
                             return;
                         }
                         compileAndSetActionDetails();
-                        if (actionForm) actionForm.submit();
+                        if (actionForm) {
+                            console.log('Submitting action (details form). Name:', hiddenActionNameInput.value);
+                            console.log('Submitting action (details form). Details:', hiddenDetailsInput.value);
+                            actionForm.submit();
+                        }
                     }
                 });
             }
@@ -775,7 +834,8 @@
                         });
                     }
                     if (actionForm) {
-                        console.log("Submitting buy_from_npc action for Hemlock:", hiddenDetailsInput.value);
+                        console.log('Submitting action (buy_from_npc Hemlock). Name:', hiddenActionNameInput.value);
+                        console.log('Submitting action (buy_from_npc Hemlock). Details:', hiddenDetailsInput.value);
                         actionForm.submit();
                     }
                 });

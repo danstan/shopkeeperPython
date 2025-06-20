@@ -339,6 +339,7 @@ def logout_route():
     session.pop('username', None)
     session.pop('selected_character_slot', None) # Clear selected character on logout
     session.pop('character_creation_stats', None) # Clear pending creation stats
+    session.pop('character_creation_name', None) # Clear pending char name
     get_flashed_messages()
     flash('You have been logged out.', 'success')
     # Reset global player_char to avoid carrying over state
@@ -402,8 +403,9 @@ def select_character_route(slot_index: int):
 
     if 0 <= slot_index < len(characters_list):
         session['selected_character_slot'] = slot_index
-        # Clear pending character creation stats when selecting an existing character
+        # Clear pending character creation info when selecting an existing character
         session.pop('character_creation_stats', None)
+        session.pop('character_creation_name', None)
         flash(f"Character slot {slot_index + 1} selected.", "success")
     else:
         flash("Invalid character slot.", "error")
@@ -482,17 +484,20 @@ def create_character_route():
 
     # Confirmation message (optional, as setup_for_character is verbose)
     if game_manager_instance.is_game_setup:
-
         success_message = f"Character {new_character.name} (user: {username}) created and game world prepared."
         flash(success_message, "success")
         game_manager_instance._print(success_message) # Also print to game log if desired
-
-        # Clear character creation stats from session after successful creation
-        session.pop('character_creation_stats', None)
+        session.pop('character_creation_stats', None) # Clear stats on full success
+        session.pop('character_creation_name', None) # Clear name on full success
     else:
-        game_manager_instance._print(f"Attempted to create character {new_character.name}, but game world setup failed. Check logs.")
-        flash(f"Failed to initialize game for {new_character.name}. The character data might be incomplete or corrupted. Please try creating the character again or contact support if the issue persists.", "error")
-        # Do not clear creation_stats here, so the user can see the stats and try again or modify if needed.
+        # Character was saved, but game world setup (e.g., loading current town) failed.
+        game_manager_instance._print(f"Character {new_character.name} (user: {username}) created, but game world setup failed. is_game_setup is False.")
+        error_message = (f"Character {new_character.name} was saved, but there was an issue preparing the game world. "
+                         f"You can try selecting the character from the main menu. If issues persist, please note the character name and contact support.")
+        flash(error_message, "warning") # Warning, as character is saved.
+        # Clear character creation stats and name as the character is saved and these are used/finalized.
+        session.pop('character_creation_stats', None)
+        session.pop('character_creation_name', None)
 
     return redirect(url_for('display_game_output'))
 
@@ -527,6 +532,7 @@ def display_game_output():
     player_journal_display = [] # Initialize journal display
     dead_characters_info = []
     character_creation_stats_display = None # For passing to template
+    pending_char_name_display = None # For character creation name persistence
 
     available_towns = list(game_manager_instance.towns_map.keys())
     current_town_sub_locations = []
@@ -580,13 +586,19 @@ def display_game_output():
                 flash(f"You cannot create more than {MAX_CHARS_PER_USER} characters.", "warning")
                 # Clear pending creation stats if user hits limit and is sent away from creation screen
                 session.pop('character_creation_stats', None)
+                session.pop('character_creation_name', None) # Also clear name if at limit
                 # Let flow continue to potentially show selected character or selection screen
                 # show_character_creation_form remains False
+            else: # Slots available, and is_creating_new_char_action is true
+                 pending_char_name_display = session.get('character_creation_name')
+
 
         # This block runs if NOT (is_creating_new_char_action AND slots available)
         # It tries to load a character if one is selected,
         # OR determines if selection/creation should be shown if no character is active.
         if not show_character_creation_form: # Only proceed if not already decided to show creation form
+            # If not showing creation form, any pending creation name should be cleared
+            session.pop('character_creation_name', None)
             selected_slot = session.get('selected_character_slot')
 
             if selected_slot is not None:
@@ -663,6 +675,9 @@ def display_game_output():
                     show_character_creation_form = True # Show creation form
                     current_game_output = "Welcome! Please create your first character."
                     # player_gold_display is implicitly 50 as above
+                    # Check if a name was stored from a previous attempt (e.g. failed validation then redirected here)
+                    pending_char_name_display = session.get('character_creation_name')
+
 
     else: # User not logged in
         output_stream.truncate(0)
@@ -672,10 +687,14 @@ def display_game_output():
         player_char.gold = 50
         game_manager_instance.setup_for_character(unnamed_char)
         current_game_output = "Please log in to start your adventure."
+        session.pop('character_creation_name', None) # Clear if navigating to login page
 
     # Ensure player_gold_display reflects the state for creation/no selection
     if show_character_creation_form or (not player_char_loaded_or_selected and not user_logged_in) or (user_logged_in and not player_char_loaded_or_selected):
         player_gold_display = player_char.gold # Should be 50 from unnamed_char
+        if show_character_creation_form and not pending_char_name_display: # Ensure display name is fetched if form is shown
+            pending_char_name_display = session.get('character_creation_name')
+
 
     # If no character is loaded, journal should be empty
     if not player_char_loaded_or_selected:
@@ -706,7 +725,9 @@ def display_game_output():
                            player_journal=player_journal_display, # Pass journal to template
                            popup_action_result=popup_action_result, # Pass to template
                            hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Added Hemlock's herbs
-                           character_creation_stats=character_creation_stats_display # Pass to template
+                           character_creation_stats=character_creation_stats_display, # Pass to template
+                           stat_names_ordered=Character.STAT_NAMES, # Added for ordered stats display
+                           pending_char_name=pending_char_name_display # Added for name persistence
                            )
 
 # --- Reroll Stat Route ---
@@ -734,6 +755,11 @@ def reroll_stat_route(stat_name):
     creation_data['stats'][stat_name] = new_stat_value
     creation_data['reroll_used'] = True
     session['character_creation_stats'] = creation_data # Re-assign to session to ensure it's saved
+
+    # Preserve character name if provided by JS
+    char_name_from_form = request.form.get('character_name')
+    if char_name_from_form is not None: # Even empty string should be saved if input was touched
+        session['character_creation_name'] = char_name_from_form
 
     flash(f"{stat_name} rerolled to {new_stat_value}!", "success")
     return redirect(url_for('display_game_output', action='create_new_char'))
@@ -775,22 +801,55 @@ def perform_action():
     action_name = request.form.get('action_name')
     action_details_str = request.form.get('action_details', '{}') # Default to empty JSON object string
 
+    # --- Start of Diagnostic Logging ---
+    print(f"\n--- /action route hit ---")
+    print(f"Received action_name: {action_name}")
+    print(f"Received action_details_str: {action_details_str}")
+    print(f"Global player_char: {player_char.name if player_char else 'None'}")
+    if player_char:
+        print(f"Global player_char.is_dead: {player_char.is_dead}")
+    else:
+        print(f"Global player_char.is_dead: N/A")
+    print(f"Global game_manager_instance available: {bool(game_manager_instance)}")
+    if game_manager_instance:
+        print(f"GM.character: {game_manager_instance.character.name if game_manager_instance.character else 'None'}")
+        print(f"GM.is_game_setup: {game_manager_instance.is_game_setup if hasattr(game_manager_instance, 'is_game_setup') else 'Attribute Missing'}")
+        print(f"GM.shop available: {bool(game_manager_instance.shop)}")
+        print(f"GM.event_manager available: {bool(game_manager_instance.event_manager)}")
+    # --- End of Diagnostic Logging ---
+
     # Clear the stream before new action output
     output_stream.truncate(0)
     output_stream.seek(0)
 
     if not action_name:
+        print("Action aborted: No action_name provided.") # Diagnostic print
         game_manager_instance._print("Error: No action_name provided.")
         return redirect(url_for('display_game_output'))
 
     # Use the updated parse_action_details function
     details_dict = parse_action_details(action_details_str)
+    print(f"Parsed action_details_dict: {details_dict}") # Diagnostic print
 
     # Perform the game action
     try:
         # Ensure a living character is loaded before performing actions
         if player_char is None or player_char.name is None or player_char.is_dead:
+            print(f"Action '{action_name}' aborted: No active/living character in player_char for perform_action.") # Diagnostic print
             flash("No active character or character is dead. Cannot perform action.", "error")
+            return redirect(url_for('display_game_output'))
+
+        print(f"Action '{action_name}' proceeding with character: {player_char.name}") # Diagnostic print
+
+        # Explicitly check GameManager's setup status for the current player_char
+        # This is crucial because game_manager_instance.character should be the same as player_char
+        # and game_manager_instance.is_game_setup should be True if setup was successful.
+        if not game_manager_instance.is_game_setup or game_manager_instance.character != player_char:
+            print(f"Action '{action_name}' aborted: GameManager not properly set up for character '{player_char.name}'.")
+            print(f"  GM.is_game_setup: {game_manager_instance.is_game_setup}")
+            print(f"  GM.character: {game_manager_instance.character.name if game_manager_instance.character else 'None'}")
+            print(f"  app.player_char: {player_char.name}")
+            flash(f"Cannot perform action. Game world not fully initialized for {player_char.name}. Try re-selecting the character.", "error")
             return redirect(url_for('display_game_output'))
 
         if action_name == "buy_from_npc":
@@ -812,7 +871,14 @@ def perform_action():
                 game_manager_instance._print("Missing details for buying from NPC.")
         else:
             # Existing actions are handled by perform_hourly_action
-            game_manager_instance.perform_hourly_action(action_name, details_dict)
+            # Explicit check of player_char (already done above, but can be more specific here if needed)
+            if player_char is None or player_char.name is None or player_char.is_dead:
+                print(f"Action '{action_name}' aborted just before perform_hourly_action: No active/living character.")
+                flash("No active character or character is dead. Cannot perform action.", "error")
+                return redirect(url_for('display_game_output'))
+            else:
+                print(f"Proceeding to game_manager_instance.perform_hourly_action for action: {action_name}")
+                game_manager_instance.perform_hourly_action(action_name, details_dict)
 
         # ---- START NEW SAVE LOGIC ----
         # Save character state if alive and loaded

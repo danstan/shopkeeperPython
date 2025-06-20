@@ -568,13 +568,43 @@ class GameManager:
 
 
     def perform_hourly_action(self, action_name: str, action_details: dict = None):
+        # --- Start of GameManager.perform_hourly_action Diagnostic Logging ---
+        self._print("\n--- GameManager.perform_hourly_action called ---")
+        self._print(f"GM.is_game_setup: {self.is_game_setup}")
+        self._print(f"GM.character: {self.character.name if self.character else 'None'}")
+        if self.character:
+            self._print(f"GM.character.is_dead: {self.character.is_dead if hasattr(self.character, 'is_dead') else 'is_dead attr missing'}")
+            self._print(f"GM.character.name: {self.character.name if hasattr(self.character, 'name') else 'name attr missing'}")
+        self._print(f"GM.shop available: {bool(self.shop)}")
+        self._print(f"GM.event_manager available: {bool(self.event_manager)}")
+        self._print(f"Action Name Received by GM: {action_name}")
+        self._print(f"Action Details Received by GM: {action_details}")
+        # --- End of GameManager.perform_hourly_action Diagnostic Logging ---
+
         # Guard clause for essential game components
-        if not self.is_game_setup or            not self.character or not hasattr(self.character, 'name') or not self.character.name or            not self.shop or            not self.event_manager:
-            self._print("Game is not fully set up for a character, or essential components (character, shop, event_manager) are missing. Cannot perform hourly action.")
+        if not self.is_game_setup:
+            self._print(f"CRITICAL_GM_PERFORM_ACTION: Aborting action '{action_name}'. Reason: self.is_game_setup is False.")
+            return
+        if not self.character or not hasattr(self.character, 'name') or not self.character.name:
+            self._print(f"CRITICAL_GM_PERFORM_ACTION: Aborting action '{action_name}'. Reason: Invalid character (Name: {self.character.name if self.character else 'None'}).")
+            return
+        if not self.shop:
+            self._print(f"CRITICAL_GM_PERFORM_ACTION: Aborting action '{action_name}'. Reason: self.shop is not initialized.")
+            return
+        if not self.event_manager:
+            self._print(f"CRITICAL_GM_PERFORM_ACTION: Aborting action '{action_name}'. Reason: self.event_manager is not initialized.")
+            return
+
+        # Original combined check (now broken down above for clarity, but logic is similar)
+        # if not self.is_game_setup or \
+        #    not self.character or not hasattr(self.character, 'name') or not self.character.name or \
+        #    not self.shop or \
+        #    not self.event_manager:
+            # self._print("CRITICAL: Game not fully set up for a character, or essential components (character, shop, event_manager) are missing. Aborting perform_hourly_action.")
             # Provide info if character is dead
-            if self.character and hasattr(self.character, 'is_dead') and self.character.is_dead:
+            if self.character and hasattr(self.character, 'is_dead') and self.character.is_dead: # This check might be redundant if caught by invalid character above.
                  char_name = self.character.name if hasattr(self.character, 'name') else 'Character'
-                 self._print(f"{char_name} is resting. Not peacefully.")
+                 self._print(f"  INFO: {char_name} is resting. Not peacefully.")
                  # Logging player death here if not already logged by gain_exhaustion or similar
                  # This might lead to multiple "Player Death" logs if not careful.
                  # A flag self.character.death_logged_in_journal could prevent this.
@@ -748,6 +778,7 @@ class GameManager:
                 time_advanced_by_action_hours = 8 # Consumes 8 hours
 
             elif action_name == "explore_town":
+                self._print(f"Executing action: {action_name} logic...") # Diagnostic
                 town_name_display = self.current_town.name if self.current_town else "the area"
                 self._print(f"  {self.character.name} spends an hour exploring {town_name_display}.")
                 if self.current_town:
@@ -884,6 +915,7 @@ class GameManager:
 
             # --- New Placeholder Actions from Sub-locations ---
             elif action_name == "talk_to_villager":
+                self._print(f"Executing action: {action_name} logic...") # Diagnostic
                 dialogue_options = [
                     "Nice weather we're having, eh?", "Watch out for the goblins if you're heading east.",
                     "Welcome to our village!", "Hmm? Oh, just admiring the clouds.", "Need something?"
