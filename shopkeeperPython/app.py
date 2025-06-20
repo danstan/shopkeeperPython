@@ -167,8 +167,9 @@ def find_user_by_google_id(google_id_to_find):
         # print(f"DEBUG_FIND_USER: Iterating. username='{username}', type(user_data)='{type(user_data)}'") # Consider app.logger.debug()
         if not isinstance(user_data, dict):
             # print(f"DEBUG_FIND_USER: CRITICAL! user_data for '{username}' is {user_data}") # Consider app.logger.error() or warning
-        if user_data.get('google_id') == google_id_to_find:
-            return username
+            pass # Added pass to make this a valid block
+        if user_data.get('google_id') == google_id_to_find: # Unindented this line
+            return username # Unindented this line
     return None
 
 def find_user_by_email(email_to_find):
@@ -808,6 +809,14 @@ def parse_action_details(details_str: str) -> dict:
 
 @app.route('/action', methods=['POST'])
 def perform_action():
+    # Diagnostic prints for the /action route itself
+    print(f"DEBUG /action route: app.output_stream ID is {id(output_stream)}")
+    print(f"DEBUG /action route: id(game_manager_instance) is {id(game_manager_instance)}")
+    if game_manager_instance:
+        print(f"DEBUG /action route: game_manager_instance.output_stream ID is {id(game_manager_instance.output_stream) if game_manager_instance.output_stream else 'None'}")
+    else:
+        print("DEBUG /action route: game_manager_instance is None")
+
     action_name = request.form.get('action_name')
     action_details_str = request.form.get('action_details', '{}') # Default to empty JSON object string
 
@@ -829,8 +838,8 @@ def perform_action():
     # --- End of Diagnostic Logging ---
 
     # Clear the stream before new action output
-    output_stream.truncate(0)
-    output_stream.seek(0)
+    output_stream.truncate(0) # Restore this
+    output_stream.seek(0) # Restore this
 
     if not action_name:
         # print("Action aborted: No action_name provided.") # Diagnostic print, consider app.logger.warning()
@@ -909,6 +918,10 @@ def perform_action():
                 # This case implies an issue with session state or a scenario where character exists without full session setup
                  game_manager_instance._print("  Warning: User session data (username or slot_index) missing. Could not save character state after action.")
         # ---- END NEW SAVE LOGIC ----
+
+        # Print stream value before setting it to session for diagnostics
+        # action_route_stream_value = output_stream.getvalue() # Removed this older diagnostic
+        # print(f"DEBUG APP /action: output_stream.getvalue() before setting session is:\n'''{action_route_stream_value}'''")
 
         # After action, check for death
         if player_char.is_dead:
