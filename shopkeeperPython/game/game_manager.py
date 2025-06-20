@@ -75,7 +75,8 @@ EXPLORATION_FINDS = [
 ]
 
 class GameManager:
-    def __init__(self, player_character: Character = None, output_stream=None):
+    def __init__(self, player_character: Character = None, output_stream=None): # Parameter name is 'output_stream'
+        print(f"DEBUG GM.__init__: id(self) is {id(self)}, received output_stream param id is {id(output_stream) if output_stream else 'None'}")
         self.output_stream = output_stream
         self._print("Initializing GameManager (basic)...")
 
@@ -336,11 +337,14 @@ class GameManager:
         return 0
 
     def _print(self, message: str):
-        if self.output_stream:
+        if self.output_stream is None:
+            print(f"CRITICAL_DEBUG GM._print: self.output_stream is None! Message: {message[:60]}...")
+            # Fallback to stdout if stream is None, to at least see the message
+            print(f"FALLBACK_PRINT: {message}")
+        else:
+            # Normal operation
             self.output_stream.write(message + "\n")
             self.output_stream.flush()
-        else:
-            print(message)
 
     def _reset_daily_trackers(self):
         self.daily_gold_earned_from_sales = 0

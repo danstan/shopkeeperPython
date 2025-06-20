@@ -1,5 +1,6 @@
 import unittest
-from unittest.mock import patch # Removed MagicMock
+from unittest.mock import patch
+from io import StringIO # Import StringIO
 
 from shopkeeperPython.game.game_manager import GameManager
 from shopkeeperPython.game.character import Character
@@ -20,7 +21,8 @@ class TestGameManager(unittest.TestCase):
         self.player = Character(name="Test Player") # Start with plenty of gold
         self.player.gold = 20000
         # GameManager init can be basic, setup_for_character does the heavy lifting
-        self.gm = GameManager(player_character=self.player)
+        self.test_output_stream = StringIO() # Create a StringIO instance
+        self.gm = GameManager(player_character=self.player, output_stream=self.test_output_stream) # Pass it to GameManager
         self.gm.setup_for_character(self.player)
 
         # Ensure the shop has some basic ingredients for player/shop crafting tests

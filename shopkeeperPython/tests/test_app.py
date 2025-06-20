@@ -211,7 +211,9 @@ class TestApp(unittest.TestCase):
 
         response = self.client.post('/create_character', data={'character_name': 'TakenName'}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Character name 'TakenName' is already taken.", response.data.decode('utf-8'))
+        # Decode and unescape HTML entities from response data
+        response_data_str = html.unescape(response.data.decode('utf-8'))
+        self.assertIn("Character name 'TakenName' is already taken.", response_data_str)
 
     def test_char_creation_max_chars_flash(self):
         """Test flash message when maximum characters are reached."""
@@ -232,10 +234,12 @@ class TestApp(unittest.TestCase):
 
         # Find the stats container (rough check, ideally use a parser)
         stats_section_start = response_data_str.find('<div id="stats_container">')
-        stats_section_end = response_data_str.find('</div>', stats_section_start)
+        # Find the start of the next major element after the stats container
+        stats_section_end = response_data_str.find('<div style="text-align: center; margin-top: 20px;">', stats_section_start)
         stats_html = response_data_str[stats_section_start:stats_section_end]
 
-        self.assertTrue(stats_section_start != -1 and stats_section_end != -1, "Stats container not found in HTML")
+        self.assertTrue(stats_section_start != -1, "Stats container start not found in HTML")
+        self.assertTrue(stats_section_end != -1, "End marker for stats section not found in HTML")
 
         last_pos = -1
         for stat_name in Character.STAT_NAMES:
@@ -302,6 +306,12 @@ class TestApp(unittest.TestCase):
         """Test the 'talk_to_self' action."""
         char_name = self._setup_user_and_character_for_actions()
 
+        # Diagnostic prints
+        from shopkeeperPython.app import game_manager_instance as gm_app_level
+        from shopkeeperPython.app import output_stream as os_app_level
+        print(f"DEBUG TEST (talk_to_self): gm_app_level.output_stream is {gm_app_level.output_stream}")
+        print(f"DEBUG TEST (talk_to_self): os_app_level is {os_app_level}")
+
         response = self.client.post('/action', data={'action_name': 'talk_to_self'}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
 
@@ -314,6 +324,12 @@ class TestApp(unittest.TestCase):
     def test_action_explore_town(self):
         """Test the 'explore_town' action."""
         char_name = self._setup_user_and_character_for_actions()
+
+        # Diagnostic prints
+        from shopkeeperPython.app import game_manager_instance as gm_app_level_explore
+        from shopkeeperPython.app import output_stream as os_app_level_explore
+        print(f"DEBUG TEST (explore_town): gm_app_level.output_stream is {gm_app_level_explore.output_stream}")
+        print(f"DEBUG TEST (explore_town): os_app_level is {os_app_level_explore}")
 
         response = self.client.post('/action', data={'action_name': 'explore_town'}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
@@ -328,6 +344,12 @@ class TestApp(unittest.TestCase):
     def test_action_wait(self):
         """Test the 'wait' action."""
         char_name = self._setup_user_and_character_for_actions()
+
+        # Diagnostic prints
+        from shopkeeperPython.app import game_manager_instance as gm_app_level_wait
+        from shopkeeperPython.app import output_stream as os_app_level_wait
+        print(f"DEBUG TEST (wait): gm_app_level.output_stream is {gm_app_level_wait.output_stream}")
+        print(f"DEBUG TEST (wait): os_app_level is {os_app_level_wait}")
 
         response = self.client.post('/action', data={'action_name': 'wait'}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
