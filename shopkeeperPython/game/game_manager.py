@@ -1038,21 +1038,23 @@ class GameManager:
                 if eligible_events:
                     selected_event = random.choice(eligible_events)
                     self._print(f"--- Random Skill Check Event Triggered: {selected_event.name} ---")
-                    # resolve_event now returns choices and prints them
                     choices_for_ui = self.event_manager.resolve_event(selected_event)
 
                     if choices_for_ui:
-                        chosen_choice_index = 0 # Auto-select the first choice for now
-                        self._print(f"  (Auto-selecting choice 0: {choices_for_ui[chosen_choice_index]['text']})")
-                        # execute_skill_choice handles printing results and journal logging
-                        outcome_details = self.event_manager.execute_skill_choice(selected_event, chosen_choice_index)
-                        self.daily_special_events.append(f"{selected_event.name} (Skill Check)")
+                        # Event is pending player choice. Return data for app.py to handle.
+                        self._print(f"Event '{selected_event.name}' is pending player choice.")
+                        return {
+                            "type": "event_pending",
+                            "event_name": selected_event.name,
+                            "event_description": selected_event.description,
+                            "choices": choices_for_ui
+                        }
                     else:
-                        # This case should ideally not be reached if events in skill_check_events are well-defined
-                        self._print(f"  Event {selected_event.name} offered no choices. Resolving with default outcome...")
-                        # execute_skill_choice with -1 or an out-of-bounds index should trigger its default/direct outcome logic
+                        # Event has no choices (e.g., direct outcome or misconfigured)
+                        self._print(f"  Event {selected_event.name} offered no choices directly. Resolving with default outcome...")
                         self.event_manager.execute_skill_choice(selected_event, -1)
                         self.daily_special_events.append(f"{selected_event.name} (Direct/NoChoice)")
+                        # Continue to other post-action processing after this
                 else:
                     self._print("  (No eligible skill check events for character level or no skill check events defined/loaded).")
 
@@ -1095,3 +1097,5 @@ class GameManager:
             else: # Generic customer interaction if no NPC sale and shop exists
                 if self.shop and action_name not in ["buy_from_own_shop", "sell_to_own_shop", "buy_from_npc"]: # Check if shop is initialized and not a shop action
                     self._handle_customer_interaction()
+
+        return {"type": "action_complete"}
