@@ -543,6 +543,29 @@ class Character:
                 final_result["disadvantage_details"] = reroll_attempt_result["disadvantage_details"]
                 # DC remains the same
 
+    # Add skill_name and formatted_string to the final_result
+    final_result["skill_name"] = skill_name
+
+    # Construct the result string based on the final state of final_result
+    # This ensures it reflects any rerolls.
+    result_string_prefix = "SKILL CHECK"
+    if final_result.get("reroll_details"):
+        result_string_prefix = "SKILL CHECK (Rerolled)"
+
+    final_formatted_string = (
+        f"{result_string_prefix}: {skill_name} DC {final_result['dc']}. "
+        f"Rolled {final_result['d20_roll']}{final_result['disadvantage_details']} + {final_result['modifier']} = {final_result['total_value']}. "
+        f"{'Success' if final_result['success'] else 'Failure'}"
+    )
+    final_result["formatted_string"] = final_formatted_string
+
+    # The existing print statement inside _perform_single_roll handles the initial roll's print.
+    # If a reroll happened, and we want to print the final outcome string here as well:
+    if final_result.get("reroll_details"):
+        # This print is optional, as the formatted string is returned for display elsewhere.
+        # print(f"  {final_formatted_string}") # Or self._print if available
+        pass
+
         return final_result
 
     def to_dict(self, current_town_name: str = None) -> dict:

@@ -5,8 +5,62 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shopkeeper Adventure UI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Basic Modal Styling */
+        .modal {
+            display: none; /* Hidden by default, shown by JS or inline style if data present */
+            position: fixed; z-index: 1001; /* Higher than flashes */
+            left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe; margin: 15% auto; padding: 20px;
+            border: 1px solid #888; width: 80%; max-width: 500px;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+            text-align: left; /* Ensure text is aligned left by default */
+        }
+        .modal-content h3, .modal-content p {
+            text-align: center; /* Center title and description if desired */
+        }
+        #event-popup-choices {
+            text-align: center; /* Center buttons if they are inline-block */
+        }
+        #event-popup-choices button {
+            margin: 5px;
+            padding: 10px 15px; /* Make buttons a bit larger */
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+        #event-popup-choices button:hover {
+            background-color: #e0e0e0;
+        }
+        /* Ensure .action-buttons-container provides some spacing if needed, though #event-popup-choices can handle it */
+        .action-buttons-container {
+            margin-top: 15px;
+        }
+
+        #skill-roll-result-display-container {
+            /* Styles can be defined here or inline in HTML */
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+            /* Example:
+            position: fixed; top: 10px; left: 50%;
+            transform: translateX(-50%); z-index: 1005;
+            background-color: #fff; border: 1px solid #777;
+            padding: 10px; border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            display: none;
+            */
+        }
+    </style>
 </head>
 <body>
+    <div id="skill-roll-result-display-container" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1005; background-color: #fff; border: 1px solid #777; padding: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: none;">
+        <!-- Content will be set by JavaScript -->
+    </div>
+
     {% if not user_logged_in %}
     <div class="login-container">
         <h2>Login</h2>
@@ -779,14 +833,36 @@
                 actionDetailsContainer.addEventListener('click', function(event) {
                     if (event.target.classList.contains('submit-details-button')) { // Generic submit buttons
                         if (!currentActionRequiringDetails) {
-                            console.error("Submit details button clicked but no currentActionRequiringDetails is set.");
+                            console.error("[SubtaskDebug] Submit details button clicked but no currentActionRequiringDetails is set. This may indicate an issue with how currentActionRequiringDetails is managed or that the click event is firing unexpectedly.");
                             return;
                         }
-                        compileAndSetActionDetails();
+
+                        // Defensive assignment of action_name right before compiling details and submitting
+                        if (hiddenActionNameInput) {
+                             if (currentActionRequiringDetails === 'buy_from_own_shop' ||
+                                 currentActionRequiringDetails === 'sell_to_own_shop' ||
+                                 currentActionRequiringDetails === 'craft') { // 'craft' is for the generic craft form button
+                                hiddenActionNameInput.value = currentActionRequiringDetails;
+                                console.log('[SubtaskDebug] Defensively set hiddenActionNameInput.value to:', currentActionRequiringDetails);
+                             } else {
+                                // If currentActionRequiringDetails is something else, this specific defensive assignment isn't for it.
+                                // This is not an error, just means this button click wasn't for buy/sell/generic craft.
+                                // console.warn('[SubtaskDebug] currentActionRequiringDetails is set to "' + currentActionRequiringDetails + '", not buy/sell/craft. No defensive assignment made by this block.');
+                             }
+                        } else {
+                            console.error('[SubtaskDebug] hiddenActionNameInput is null. Cannot set action name.');
+                        }
+
+                        compileAndSetActionDetails(); // This uses currentActionRequiringDetails to populate the details
+
                         if (actionForm) {
-                            console.log('Submitting action (details form). Name:', hiddenActionNameInput.value);
-                            console.log('Submitting action (details form). Details:', hiddenDetailsInput.value);
+                            console.log('[SubtaskDebug] Attempting to submit form. Action Name:',
+                                        (hiddenActionNameInput ? hiddenActionNameInput.value : "ERROR: hiddenActionNameInput is null"),
+                                        '. Details JSON:',
+                                        (hiddenDetailsInput ? hiddenDetailsInput.value : "ERROR: hiddenDetailsInput is null"));
                             actionForm.submit();
+                        } else {
+                            console.error('[SubtaskDebug] actionForm not found for submission. Form cannot be submitted.');
                         }
                     }
                 });
@@ -988,6 +1064,116 @@
                 actionResultPopup.style.display = 'none';
             });
         }
+
+        // Event Choice Popup Handling
+        const awaitingEventChoice = {{ awaiting_event_choice | default('false') | tojson }};
+        const pendingEventDataJson = {{ pending_event_data_json | default('null') | safe }}; // Already JSON parsed from app.py if not null
+        const eventPopup = document.getElementById('event-choice-popup');
+
+        if (awaitingEventChoice && pendingEventDataJson && eventPopup) {
+            try {
+                const eventData = pendingEventDataJson; // Is an object if not null
+                const eventPopupNameEl = document.getElementById('event-popup-name');
+                const eventPopupDescriptionEl = document.getElementById('event-popup-description');
+                const choicesContainer = document.getElementById('event-popup-choices');
+
+                if (eventPopupNameEl) eventPopupNameEl.textContent = eventData.name || "An Event Occurs!";
+                if (eventPopupDescriptionEl) eventPopupDescriptionEl.textContent = eventData.description || "You must make a choice.";
+
+                if (choicesContainer) {
+                    choicesContainer.innerHTML = ''; // Clear previous choices
+
+                    if (eventData.choices && eventData.choices.length > 0) {
+                        eventData.choices.forEach(function(choice, index) {
+                            const button = document.createElement('button');
+                            button.className = 'event-choice-button button'; // Add generic button class for styling
+                            button.dataset.choiceIndex = index;
+                            // Display skill and DC if available
+                            let buttonText = choice.text;
+                            if (choice.skill && choice.dc) {
+                                buttonText += ` [${choice.skill} DC ${choice.dc}]`;
+                            }
+                            if (choice.item_requirement_desc) { // Display item requirement description if present
+                                buttonText += ` (${choice.item_requirement_desc})`;
+                            }
+                            button.textContent = buttonText;
+                            choicesContainer.appendChild(button);
+                        });
+                    } else {
+                        choicesContainer.innerHTML = '<p>No choices available for this event.</p>';
+                        // Optionally, add a button to just close/acknowledge if there are no choices but popup is shown
+                        // For example:
+                        // const closeEventButton = document.createElement('button');
+                        // closeEventButton.textContent = 'Acknowledge';
+                        // closeEventButton.onclick = function() { eventPopup.style.display = 'none'; };
+                        // choicesContainer.appendChild(closeEventButton);
+                    }
+
+                    // Event listener for choice buttons
+                    choicesContainer.addEventListener('click', function(event) {
+                        if (event.target.classList.contains('event-choice-button')) {
+                            const choiceIndex = event.target.dataset.choiceIndex;
+                            const currentEventName = eventData.name; // eventData is from pendingEventDataJson
+
+                            if (choiceIndex === undefined || !currentEventName) {
+                                console.error("Error: Missing choice index or event name for submission.");
+                                alert("Error processing your choice. Please try again.");
+                                return;
+                            }
+
+                            // Create a form dynamically to POST the data
+                            const form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = "{{ url_for('submit_event_choice_route') }}"; // Target new route
+
+                            const eventNameInput = document.createElement('input');
+                            eventNameInput.type = 'hidden';
+                            eventNameInput.name = 'event_name';
+                            eventNameInput.value = currentEventName;
+                            form.appendChild(eventNameInput);
+
+                            const choiceIndexInput = document.createElement('input');
+                            choiceIndexInput.type = 'hidden';
+                            choiceIndexInput.name = 'choice_index';
+                            choiceIndexInput.value = choiceIndex;
+                            form.appendChild(choiceIndexInput);
+
+                            document.body.appendChild(form);
+                            form.submit();
+
+                            // Hide the popup immediately after submitting
+                            if (eventPopup) {
+                                eventPopup.style.display = 'none';
+                            }
+                        }
+                    });
+                }
+                eventPopup.style.display = 'block'; // Ensure it's visible
+            } catch (e) {
+                console.error("Error processing event data for popup:", e);
+                if (eventPopup) eventPopup.style.display = 'none'; // Hide if error
+            }
+        } else if (eventPopup && eventPopup.style.display !== 'none' && (!awaitingEventChoice || !pendingEventDataJson)) {
+            // If the popup exists and is visible, but there's no event data (e.g., after a choice is made and page reloads without new event)
+            // ensure it's hidden. The Jinja template already prevents rendering if no data initially.
+            // This JS part is more for dynamic hiding if somehow it was left open or state changes.
+            // eventPopup.style.display = 'none'; // Commented out as Jinja handles initial display state
+        }
+
+        // Skill Roll Result Display
+        const lastSkillRollStr = {{ last_skill_roll_str | tojson | safe }};
+        const skillRollDisplayContainer = document.getElementById('skill-roll-result-display-container');
+
+        if (lastSkillRollStr && skillRollDisplayContainer) {
+            skillRollDisplayContainer.textContent = lastSkillRollStr;
+            skillRollDisplayContainer.style.display = 'block';
+
+            // Optional: Hide after a few seconds
+            setTimeout(function() {
+                skillRollDisplayContainer.style.display = 'none';
+            }, 7000); // Hide after 7 seconds
+        }
+
     });
     </script>
     {% endif %}
@@ -1006,5 +1192,17 @@
             </div>
         </div>
     </div>
+
+    {% if awaiting_event_choice and pending_event_data_json %}
+    <div id="event-choice-popup" class="modal" style="display: block;"> <!-- Start visible if data present -->
+        <div class="modal-content">
+            <h3 id="event-popup-name"></h3>
+            <p id="event-popup-description"></p>
+            <div id="event-popup-choices" class="action-buttons-container">
+                <!-- Choices will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </body>
 </html>

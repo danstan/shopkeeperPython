@@ -12,6 +12,7 @@ from shopkeeperPython.game.character import Character
 # For now, let's trust Pylint's static analysis; if runtime errors occur, it can be re-added.
 # from shopkeeperPython.game.item import Item
 from shopkeeperPython.game.game_manager import HEMLOCK_HERBS # Added import
+from shopkeeperPython.game.g_event import GAME_EVENTS
 
 from flask_dance.contrib.google import make_google_blueprint # Removed google
 from flask_dance.consumer import oauth_authorized, oauth_error # Added for signals
@@ -711,6 +712,11 @@ def display_game_output():
     if not player_char_loaded_or_selected:
         player_journal_display = []
 
+    # Retrieve event data from session for template
+    awaiting_event_choice = session.get('awaiting_event_choice', False)
+    pending_event_data_for_template = session.get('pending_event_data', None) if awaiting_event_choice else None
+    last_skill_roll_str = session.pop('last_skill_roll_display_str', None) # Pop to clear after use
+
     return render_template('index.html',
                            user_logged_in=user_logged_in,
                            show_character_selection=show_character_selection,
@@ -738,7 +744,10 @@ def display_game_output():
                            hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Added Hemlock's herbs
                            character_creation_stats=character_creation_stats_display, # Pass to template
                            stat_names_ordered=Character.STAT_NAMES, # Added for ordered stats display
-                           pending_char_name=pending_char_name_display # Added for name persistence
+                           pending_char_name=pending_char_name_display, # Added for name persistence
+                           awaiting_event_choice=awaiting_event_choice,
+                           pending_event_data_json=json.dumps(pending_event_data_for_template) if pending_event_data_for_template else None,
+                           last_skill_roll_str=last_skill_roll_str
                            )
 
 # --- Reroll Stat Route ---
@@ -897,7 +906,21 @@ def perform_action():
                 return redirect(url_for('display_game_output'))
             else:
                 # print(f"Proceeding to game_manager_instance.perform_hourly_action for action: {action_name}") # Consider app.logger.info()
-                game_manager_instance.perform_hourly_action(action_name, details_dict)
+                action_result_data = game_manager_instance.perform_hourly_action(action_name, details_dict)
+
+                if isinstance(action_result_data, dict) and action_result_data.get('type') == 'event_pending':
+                    session['awaiting_event_choice'] = True
+                    session['pending_event_data'] = {
+                        'name': action_result_data.get('event_name'),
+                        'description': action_result_data.get('event_description'),
+                        'choices': action_result_data.get('choices')
+                    }
+                    # Optional: Add a message to the main output stream
+                    game_manager_instance._print(f"EVENT: {action_result_data.get('event_name')} requires your attention!")
+                else:
+                    # Action completed or no event, clear any previous event data
+                    session.pop('awaiting_event_choice', None)
+                    session.pop('pending_event_data', None)
 
         # ---- START NEW SAVE LOGIC ----
         # Save character state if alive and loaded
@@ -999,6 +1022,100 @@ def perform_action():
     # then output_stream must be cleared here.
     # output_stream.truncate(0) # Removed as per new requirement
     # output_stream.seek(0) # Removed as per new requirement
+
+    return redirect(url_for('display_game_output'))
+
+@app.route('/submit_event_choice', methods=['POST'])
+def submit_event_choice_route():
+    global player_char # To access current character
+    global game_manager_instance # To call execute_skill_choice
+
+    if 'username' not in session or not session.get('awaiting_event_choice'):
+        flash("Invalid session or no event choice pending.", "error")
+        return redirect(url_for('display_game_output'))
+
+    event_name_from_form = request.form.get('event_name')
+    choice_index_str = request.form.get('choice_index')
+
+    # Clear the stream before new action output from execute_skill_choice
+    output_stream.truncate(0)
+    output_stream.seek(0)
+
+    stored_event_data = session.get('pending_event_data')
+
+    if not event_name_from_form or choice_index_str is None or not stored_event_data:
+        flash("Missing event data or choice index.", "error")
+        session.pop('awaiting_event_choice', None) # Clear flags anyway
+        session.pop('pending_event_data', None)
+        return redirect(url_for('display_game_output'))
+
+    if stored_event_data.get('name') != event_name_from_form:
+        flash("Mismatch between submitted event and pending event. Please try again.", "error")
+        session.pop('awaiting_event_choice', None)
+        session.pop('pending_event_data', None)
+        return redirect(url_for('display_game_output'))
+
+    try:
+        choice_index = int(choice_index_str)
+    except ValueError:
+        flash("Invalid choice index format.", "error")
+        session.pop('awaiting_event_choice', None)
+        session.pop('pending_event_data', None)
+        return redirect(url_for('display_game_output'))
+
+    # Find the event object from GAME_EVENTS
+    selected_event_obj = next((event for event in GAME_EVENTS if event.name == event_name_from_form), None)
+
+    if not selected_event_obj:
+        flash(f"Event '{event_name_from_form}' not found in game data.", "error")
+        session.pop('awaiting_event_choice', None)
+        session.pop('pending_event_data', None)
+        return redirect(url_for('display_game_output'))
+
+    # Execute the choice
+    # The execute_skill_choice method will print to output_stream and log to journal
+    execution_outcome = game_manager_instance.event_manager.execute_skill_choice(selected_event_obj, choice_index)
+
+    # Store roll data for display (for the next plan step)
+    if isinstance(execution_outcome, dict) and 'roll_data' in execution_outcome and \
+       isinstance(execution_outcome['roll_data'], dict) and 'formatted_string' in execution_outcome['roll_data']:
+        session['last_skill_roll_display_str'] = execution_outcome['roll_data']['formatted_string']
+    else: # Fallback if roll_data or formatted_string isn't there as expected
+        session.pop('last_skill_roll_display_str', None)
+
+
+    # Clear event state from session
+    session.pop('awaiting_event_choice', None)
+    session.pop('pending_event_data', None)
+
+    # Save character state after event resolution
+    if player_char and player_char.name and not player_char.is_dead:
+        username = session.get('username')
+        slot_idx = session.get('selected_character_slot')
+        if username and slot_idx is not None and username in user_characters and 0 <= slot_idx < len(user_characters[username]):
+            user_characters[username][slot_idx] = player_char.to_dict(current_town_name=game_manager_instance.current_town.name)
+            save_user_characters()
+        else:
+            game_manager_instance._print("  Warning: Could not save character state after event due to session/slot mismatch.")
+
+    # Check for death after event resolution
+    if player_char and player_char.is_dead:
+        # Handle character death (similar to how it's done in /action route)
+        username = session.get('username')
+        slot_idx = session.get('selected_character_slot')
+        # char_name_for_log = player_char.name if player_char and player_char.name else "Character" # Already logged by execute_skill_choice
+        if username and slot_idx is not None and user_characters.get(username) and 0 <= slot_idx < len(user_characters[username]):
+            dead_char_data = user_characters[username].pop(slot_idx)
+            dead_char_data['is_dead'] = True
+            graveyard.setdefault(username, []).append(dead_char_data)
+            save_user_characters()
+            save_graveyard()
+            flash(f"{dead_char_data.get('name', 'The character')} has died (due to event) and been moved to the graveyard.", "error")
+            session.pop('selected_character_slot', None)
+            return redirect(url_for('display_game_output')) # Redirect to char selection
+
+    # Capture the output from execute_skill_choice for the popup/main log
+    session['action_result'] = output_stream.getvalue()
 
     return redirect(url_for('display_game_output'))
 
