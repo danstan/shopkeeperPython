@@ -5,11 +5,13 @@ import os # Added for environment variables
 
 from shopkeeperPython.game.game_manager import GameManager
 from shopkeeperPython.game.character import Character
-# Assuming Item class is available for from_dict as it's used in Character.from_dict
-from shopkeeperPython.game.item import Item
+# Item is implicitly used by Character.to_dict/from_dict if inventory has items.
+# Pylint might not see this if no direct instantiation of Item happens in app.py.
+# For now, let's trust Pylint's static analysis; if runtime errors occur, it can be re-added.
+# from shopkeeperPython.game.item import Item
 from shopkeeperPython.game.game_manager import HEMLOCK_HERBS # Added import
 
-from flask_dance.contrib.google import make_google_blueprint, google
+from flask_dance.contrib.google import make_google_blueprint # Removed google
 from flask_dance.consumer import oauth_authorized, oauth_error # Added for signals
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -169,7 +171,7 @@ def load_data():
 
     users_migrated = False # Flag to track if migration occurred
     try:
-        with open(USERS_FILE, 'r') as f:
+        with open(USERS_FILE, 'r', encoding='utf-8') as f:
             loaded_users_data = json.load(f)
 
         # Data migration check
@@ -229,7 +231,7 @@ def load_data():
 
 
     try:
-        with open(CHARACTERS_FILE, 'r') as f:
+        with open(CHARACTERS_FILE, 'r', encoding='utf-8') as f:
             user_characters = json.load(f)
     except FileNotFoundError:
         user_characters = {} # Start empty if file not found
@@ -241,33 +243,33 @@ def load_data():
 
     # Load graveyard data
     try:
-        with open(GRAVEYARD_FILE, 'r') as f:
+        with open(GRAVEYARD_FILE, 'r', encoding='utf-8') as f:
             graveyard = json.load(f)
     except FileNotFoundError:
         graveyard = {}
         # Create an empty graveyard file if it doesn't exist
-        with open(GRAVEYARD_FILE, 'w') as f:
+        with open(GRAVEYARD_FILE, 'w', encoding='utf-8') as f:
             json.dump(graveyard, f, indent=4)
         print(f"'{GRAVEYARD_FILE}' not found, created a new one.")
     except json.JSONDecodeError:
         graveyard = {}
         print(f"Error decoding '{GRAVEYARD_FILE}'. Initializing empty graveyard and overwriting.")
         # Overwrite corrupted file with empty data
-        with open(GRAVEYARD_FILE, 'w') as f:
+        with open(GRAVEYARD_FILE, 'w', encoding='utf-8') as f:
             json.dump(graveyard, f, indent=4)
 
 
 def save_users():
     print(f"DEBUG_SAVE_USERS: Attempting to save users. Current users dict to be saved: {users}")
-    with open(USERS_FILE, 'w') as f:
+    with open(USERS_FILE, 'w', encoding='utf-8') as f:
         json.dump(users, f, indent=4)
 
 def save_user_characters():
-    with open(CHARACTERS_FILE, 'w') as f:
+    with open(CHARACTERS_FILE, 'w', encoding='utf-8') as f:
         json.dump(user_characters, f, indent=4)
 
 def save_graveyard(): # New function to save graveyard data
-    with open(GRAVEYARD_FILE, 'w') as f:
+    with open(GRAVEYARD_FILE, 'w', encoding='utf-8') as f:
         json.dump(graveyard, f, indent=4)
 
 # Load data at application startup
@@ -480,7 +482,11 @@ def create_character_route():
 
     # Confirmation message (optional, as setup_for_character is verbose)
     if game_manager_instance.is_game_setup:
-        game_manager_instance._print(f"Character {new_character.name} (user: {username}) created")
+
+        success_message = f"Character {new_character.name} (user: {username}) created and game world prepared."
+        flash(success_message, "success")
+        game_manager_instance._print(success_message) # Also print to game log if desired
+
         # Clear character creation stats from session after successful creation
         session.pop('character_creation_stats', None)
     else:

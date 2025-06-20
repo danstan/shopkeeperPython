@@ -187,7 +187,7 @@ if __name__ == '__main__':
 
 # TestEventManager will be added below in subsequent steps.
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock # Removed patch
 
 # Using actual EventManager, but Character and GameManager will be mocked for EventManager tests
 from shopkeeperPython.game.g_event import EventManager

@@ -1,11 +1,11 @@
 import unittest
-from unittest.mock import patch, MagicMock
-import random
+from unittest.mock import patch # Removed MagicMock
+# import random # Removed random
 
 # Ensure correct import paths for Shop, Item, Town, Character based on project structure
 # Assuming shopkeeperPython is the root package for these modules
 from shopkeeperPython.game.shop import Shop
-from shopkeeperPython.game.item import Item, QUALITY_TIERS
+from shopkeeperPython.game.item import Item # Removed QUALITY_TIERS
 from shopkeeperPython.game.town import Town
 # from shopkeeperPython.game.character import Character # Using MockCharacter instead for shop tests
 
