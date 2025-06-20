@@ -177,6 +177,166 @@ class TestApp(unittest.TestCase):
         # Ensure session stats for creation are cleared after successful creation
         with self.client.session_transaction() as sess:
             self.assertNotIn('character_creation_stats', sess)
+            self.assertNotIn('character_creation_name', sess) # Also check name is cleared
+
+    # --- Helper function for character creation setup ---
+    def _login_and_go_to_char_creation(self, username='testuser'):
+        with self.client.session_transaction() as sess:
+            sess['username'] = username
+        return self.client.get('/?action=create_new_char', follow_redirects=True)
+
+    # --- Tests for Character Creation Flash Messages ---
+    def test_char_creation_initial_flash(self):
+        """Test initial flash messages on character creation page."""
+        response = self._login_and_go_to_char_creation()
+        self.assertEqual(response.status_code, 200)
+        response_data_str = response.data.decode('utf-8')
+
+        # Check for the informational "Stats rolled..." message
+        self.assertIn("Stats rolled for new character! You can reroll one stat if you wish.", response_data_str)
+        # Check that no common error messages are present
+        self.assertNotIn("issue with character creator", response_data_str.lower()) # Generic check
+        self.assertNotIn("Failed to initialize game", response_data_str)
+        self.assertNotIn("name already taken", response_data_str)
+        self.assertNotIn("maximum", response_data_str.lower()) # For max characters
+
+    def test_char_creation_name_taken_flash(self):
+        """Test flash message when character name is already taken."""
+        user_characters['testuser'] = [create_default_char_dict(name="TakenName")]
+        self._login_and_go_to_char_creation() # To set up session stats
+
+        with self.client.session_transaction() as sess: # Ensure creation stats are in session
+            if 'character_creation_stats' not in sess:
+                 sess['character_creation_stats'] = {'stats': Character.roll_all_stats(), 'reroll_used': False}
+
+        response = self.client.post('/create_character', data={'character_name': 'TakenName'}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Character name 'TakenName' is already taken.", response.data.decode('utf-8'))
+
+    def test_char_creation_max_chars_flash(self):
+        """Test flash message when maximum characters are reached."""
+        # Fill up character slots for 'testuser' (assuming MAX_CHARS_PER_USER is 2 from app.py)
+        from shopkeeperPython.app import MAX_CHARS_PER_USER # Import for clarity
+        user_characters['testuser'] = [create_default_char_dict(name=f"Char{i}") for i in range(MAX_CHARS_PER_USER)]
+
+        response = self._login_and_go_to_char_creation() # This attempts to go to creation page
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(f"You cannot create more than {MAX_CHARS_PER_USER} characters.", response.data.decode('utf-8'))
+
+    # --- Test for Stat Display Order (Character Creation) ---
+    def test_char_creation_stat_order(self):
+        """Verify stats are displayed in the correct order on character creation."""
+        response = self._login_and_go_to_char_creation()
+        self.assertEqual(response.status_code, 200)
+        response_data_str = response.data.decode('utf-8')
+
+        # Find the stats container (rough check, ideally use a parser)
+        stats_section_start = response_data_str.find('<div id="stats_container">')
+        stats_section_end = response_data_str.find('</div>', stats_section_start)
+        stats_html = response_data_str[stats_section_start:stats_section_end]
+
+        self.assertTrue(stats_section_start != -1 and stats_section_end != -1, "Stats container not found in HTML")
+
+        last_pos = -1
+        for stat_name in Character.STAT_NAMES:
+            current_pos = stats_html.find(f"<span>{stat_name}:")
+            self.assertTrue(current_pos != -1, f"Stat {stat_name} not found in displayed stats.")
+            self.assertGreater(current_pos, last_pos, f"Stat {stat_name} is out of order.")
+            last_pos = current_pos
+
+    # --- Test for Character Name Persistence (Character Creation) ---
+    def test_char_creation_name_persistence_on_reroll(self):
+        """Test that character name persists after a stat reroll."""
+        self._login_and_go_to_char_creation() # Initial visit to setup session stats
+
+        test_char_name = "MyPersistentHero"
+        # Simulate rerolling STR, passing the character_name as the JS would
+        response = self.client.post('/reroll_stat/STR',
+                                     data={'character_name': test_char_name},
+                                     follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        response_data_str = response.data.decode('utf-8')
+
+        # Check if the input field has the correct value
+        # Example: <input type="text" id="character_name" name="character_name" value="MyPersistentHero" required>
+        self.assertIn(f'id="character_name"', response_data_str)
+        self.assertIn(f'name="character_name"', response_data_str)
+        self.assertIn(f'value="{test_char_name}"', response_data_str)
+
+    # --- Helper for Action Tests ---
+    def _setup_user_and_character_for_actions(self, char_name="ActionHero", username="testuser"):
+        # Ensure user is logged in
+        with self.client.session_transaction() as sess:
+            sess['username'] = username
+            # Clear any potential leftover creation session data
+            sess.pop('character_creation_stats', None)
+            sess.pop('character_creation_name', None)
+
+        # Create and select a character for the user
+        char_dict = create_default_char_dict(name=char_name)
+        user_characters[username] = [char_dict]
+
+        with self.client.session_transaction() as sess:
+            sess['selected_character_slot'] = 0
+
+        # Crucially, ensure the GameManager is set up for this character.
+        # This simulates what happens when display_game_output successfully loads a character.
+        # We need to access the global game_manager_instance from the app context.
+        from shopkeeperPython.app import game_manager_instance, player_char as app_player_char
+
+        loaded_char_for_gm = Character.from_dict(char_dict)
+
+        # Manually sync app's global player_char and GM's state for testing
+        # This is a bit of a hack but necessary because test client doesn't fully replicate browser navigation flow for GM setup
+        with app.app_context(): # Ensure we are in app context for modifying globals if needed
+            app.player_char = loaded_char_for_gm # Update the global player_char in app.py
+            game_manager_instance.setup_for_character(loaded_char_for_gm)
+            self.assertTrue(game_manager_instance.is_game_setup, "GameManager failed to setup for action test helper.")
+            self.assertEqual(game_manager_instance.character.name, char_name)
+
+        return char_name
+
+
+    # --- Basic Action Tests ---
+    def test_action_talk_to_self(self):
+        """Test the 'talk_to_self' action."""
+        char_name = self._setup_user_and_character_for_actions()
+
+        response = self.client.post('/action', data={'action_name': 'talk_to_self'}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+
+        # Check the session for 'action_result' which holds the popup content
+        with self.client.session_transaction() as sess:
+            action_result = sess.get('action_result', '')
+
+        self.assertIn(f"{char_name} mutters something unintelligible.", action_result)
+
+    def test_action_explore_town(self):
+        """Test the 'explore_town' action."""
+        char_name = self._setup_user_and_character_for_actions()
+
+        response = self.client.post('/action', data={'action_name': 'explore_town'}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+
+        with self.client.session_transaction() as sess:
+            action_result = sess.get('action_result', '')
+
+        self.assertIn(f"{char_name} spends an hour exploring", action_result)
+        # Further checks could be for "Found ...g!" or "Found a ..." or "Found nothing...",
+        # but exact outcome is random. Presence of exploration text is key.
+
+    def test_action_wait(self):
+        """Test the 'wait' action."""
+        char_name = self._setup_user_and_character_for_actions()
+
+        response = self.client.post('/action', data={'action_name': 'wait'}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+
+        with self.client.session_transaction() as sess:
+            action_result = sess.get('action_result', '')
+
+        self.assertIn(f"{char_name} waits for an hour", action_result)
+
 
 if __name__ == '__main__':
     unittest.main()
