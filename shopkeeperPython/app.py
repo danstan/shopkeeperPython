@@ -482,9 +482,11 @@ def create_character_route():
 
     # Confirmation message (optional, as setup_for_character is verbose)
     if game_manager_instance.is_game_setup:
+
         success_message = f"Character {new_character.name} (user: {username}) created and game world prepared."
         flash(success_message, "success")
         game_manager_instance._print(success_message) # Also print to game log if desired
+
         # Clear character creation stats from session after successful creation
         session.pop('character_creation_stats', None)
     else:

@@ -106,15 +106,19 @@ class TestGameManager(unittest.TestCase):
 
     @patch('random.random') # To control the NPC buy chance roll
     @patch('random.uniform') # To control the NPC offer percentage roll
+
     def test_npc_purchase_chance_with_reputation(self, mock_uniform, mock_random_roll): # Removed mock_choice
+
         # This test focuses on the chance calculation and if a sale is attempted.
         # It doesn't deeply verify the sale itself, which is Shop's responsibility.
         mock_uniform.return_value = 0.9 # Ensure NPC offers a decent percentage (e.g., 90%)
 
         # Add an item to shop inventory for NPC to buy
         item_for_npc = Item(name="NPC Bait", description="Bait for NPCs", base_value=10, item_type="misc", quality="Common")
+
         # Ensure shop inventory is clear before adding the specific item for this test case
         self.gm.shop.inventory = []
+
         self.gm.shop.add_item_to_inventory(item_for_npc)
         # random.choice will now pick item_for_npc if the shop inventory only has this item for relevant cases.
 
@@ -141,9 +145,11 @@ class TestGameManager(unittest.TestCase):
 
 
         # Re-add item for next test
+
         self.gm.shop.inventory = [] # Clear for next case
         item_for_npc_2 = Item(name="NPC Bait", description="Bait for NPCs", base_value=10, item_type="misc", quality="Common"); self.gm.shop.add_item_to_inventory(item_for_npc_2)
         # mock_choice.return_value = item_for_npc_2 # Ensure "NPC Bait" is chosen for this part too
+
 
         # Case 3: High reputation (100), roll that would fail for low rep but pass for high rep
         self.gm.shop.reputation = 100 # npc_buy_chance = min(0.1 + (100 * 0.001), 0.3) = min(0.1 + 0.1, 0.3) = 0.2
@@ -157,9 +163,11 @@ class TestGameManager(unittest.TestCase):
         self.assertEqual(len(self.gm.shop.inventory), initial_shop_inventory_count -1)
 
         # Case 4: High reputation (100), roll that would fail even for high rep (above cap or calculated chance)
+
         self.gm.shop.inventory = [] # Clear for next case
         item_for_npc_3 = Item(name="NPC Bait", description="Bait for NPCs", base_value=10, item_type="misc", quality="Common"); self.gm.shop.add_item_to_inventory(item_for_npc_3)
         # mock_choice.return_value = item_for_npc_3 # Ensure "NPC Bait" is chosen
+
         self.gm.shop.reputation = 100
         mock_random_roll.return_value = 0.28 # Higher than 0.2
         initial_shop_gold = self.gm.shop.gold
