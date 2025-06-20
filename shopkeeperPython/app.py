@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import io
 import json
 import os # Added for environment variables
+import datetime
+import shutil
 
 from shopkeeperPython.game.game_manager import GameManager
 from shopkeeperPython.game.character import Character
@@ -17,7 +19,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
-app.secret_key = 'dev_secret_key_!@#$%' # Replace with a strong, random key in production
+
+# Attempt to load secret key from environment variable
+SECRET_KEY = os.environ.get('FLASK_SECRET_KEY')
+if SECRET_KEY:
+    app.secret_key = SECRET_KEY
+    print("INFO: Flask secret key loaded from FLASK_SECRET_KEY environment variable.")
+else:
+    app.secret_key = 'dev_secret_key_!@#$%' # Default for development
+    print("WARNING: FLASK_SECRET_KEY environment variable not set. Using default development secret key.")
+    print("WARNING: For production, set a strong, random FLASK_SECRET_KEY environment variable.")
 
 # --- Google OAuth Configuration ---
 # IMPORTANT: Set these environment variables in your shell before running the app.
@@ -34,8 +45,9 @@ app.secret_key = 'dev_secret_key_!@#$%' # Replace with a strong, random key in p
 GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
 GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
 
-print(f"DEBUG: GOOGLE_OAUTH_CLIENT_ID: {GOOGLE_OAUTH_CLIENT_ID}")
-print(f"DEBUG: GOOGLE_OAUTH_CLIENT_SECRET: {'SET' if GOOGLE_OAUTH_CLIENT_SECRET else 'NOT SET'}")
+# print(f"DEBUG: GOOGLE_OAUTH_CLIENT_ID: {GOOGLE_OAUTH_CLIENT_ID}")
+# print(f"DEBUG: GOOGLE_OAUTH_CLIENT_SECRET: {'SET' if GOOGLE_OAUTH_CLIENT_SECRET else 'NOT SET'}")
+# For OAuth debugging, consider using app.logger.debug(...) or app.logger.info(...)
 
 if not GOOGLE_OAUTH_CLIENT_ID or not GOOGLE_OAUTH_CLIENT_SECRET:
     print("WARNING: Google OAuth Client ID or Secret is not set in environment variables.")
@@ -76,7 +88,7 @@ else:
         # picture = google_user_info.get("picture") # Optional, not used currently
 
         # 1. Check if user exists by google_id
-        print(f"DEBUG_GOOGLE_LOGIN: Before calling find_user_by_google_id. Full users dict: {users}")
+        # print(f"DEBUG_GOOGLE_LOGIN: Before calling find_user_by_google_id. Full users dict: {users}") # Consider app.logger.debug()
         username = find_user_by_google_id(google_id)
 
         if username: # Existing Google-linked user
@@ -150,11 +162,11 @@ graveyard = {}
 
 # --- Helper Functions for User Lookup ---
 def find_user_by_google_id(google_id_to_find):
-    print(f"DEBUG_FIND_USER: Entered function. Full users dict: {users}")
+    # print(f"DEBUG_FIND_USER: Entered function. Full users dict: {users}") # Consider app.logger.debug()
     for username, user_data in users.items():
-        print(f"DEBUG_FIND_USER: Iterating. username='{username}', type(user_data)='{type(user_data)}'")
+        # print(f"DEBUG_FIND_USER: Iterating. username='{username}', type(user_data)='{type(user_data)}'") # Consider app.logger.debug()
         if not isinstance(user_data, dict):
-            print(f"DEBUG_FIND_USER: CRITICAL! user_data for '{username}' is {user_data}")
+            # print(f"DEBUG_FIND_USER: CRITICAL! user_data for '{username}' is {user_data}") # Consider app.logger.error() or warning
         if user_data.get('google_id') == google_id_to_find:
             return username
     return None
@@ -197,37 +209,25 @@ def load_data():
 
 
     except FileNotFoundError:
-        # Default user with a hashed password
-        default_user_data = {"testuser": {
-            "password": generate_password_hash("password123"),
-            "google_id": None,
-            "email_google": None,
-            "display_name_google": None
-            }
-        }
-
-        users.clear()
-        users.update(default_user_data)
-        # No need to call save_users() here if FileNotFoundError, as it will be created with default user
-        # and then immediately saved by the users_migrated block if it was the first run.
-        # However, to ensure it's saved if the file truly didn't exist and no migration happened (e.g. empty users dict from json.load on empty file that somehow passed FileNotFoundError)
-        # it's safer to keep the original save_users() or rely on the migration save.
-        # For this refactor, we'll ensure the default user is saved if created.
-
-        save_users()
+        print(f"INFO: {USERS_FILE} not found. Starting with an empty user list.")
+        print(f"INFO: Please use the registration page to create the first user.")
+        users.clear() # Ensure users is empty
+        # user_characters.setdefault(username, []) # This line is not needed here as no user is created
+        save_users() # Save the empty users list to create the file
     except json.JSONDecodeError:
-        print(f"Warning: Could not decode {USERS_FILE}. Starting with default user.")
-        default_user_data = {"testuser": {
-            "password": generate_password_hash("password123"),
-            "google_id": None,
-            "email_google": None,
-            "display_name_google": None
-            }
-        }
-
-        users.clear()
-        users.update(default_user_data)
-        save_users() # Save the default user if JSON was corrupted
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        backup_filename = f"{USERS_FILE}.corrupted.{timestamp}"
+        try:
+            shutil.copy2(USERS_FILE, backup_filename) # Use copy2 to preserve metadata
+            print(f"Warning: Could not decode {USERS_FILE}. It has been backed up to {backup_filename}.")
+        except Exception as backup_e:
+            print(f"Warning: Could not decode {USERS_FILE}. Failed to create backup: {backup_e}")
+        # print("Starting with default user data.") # Old message
+        print(f"INFO: {USERS_FILE} was corrupted. Starting with an empty user list after backing up the corrupted file.")
+        print(f"INFO: Please use the registration page to create users.")
+        users.clear() # Ensure users is empty
+        # No default user data should be added here.
+        save_users() # Save the empty users list
 
 
     try:
@@ -237,9 +237,16 @@ def load_data():
         user_characters = {} # Start empty if file not found
         save_user_characters() # Create the file
     except json.JSONDecodeError:
-        print(f"Warning: Could not decode {CHARACTERS_FILE}. Starting with empty characters.")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        backup_filename = f"{CHARACTERS_FILE}.corrupted.{timestamp}"
+        try:
+            shutil.copy2(CHARACTERS_FILE, backup_filename)
+            print(f"Warning: Could not decode {CHARACTERS_FILE}. It has been backed up to {backup_filename}.")
+        except Exception as backup_e:
+            print(f"Warning: Could not decode {CHARACTERS_FILE}. Failed to create backup: {backup_e}")
+        print("Starting with empty characters data.")
         user_characters = {}
-        save_user_characters() # Ensure file is created if decode error occurred after file existence check
+        save_user_characters() # This will overwrite the original corrupted file
 
     # Load graveyard data
     try:
@@ -252,15 +259,21 @@ def load_data():
             json.dump(graveyard, f, indent=4)
         print(f"'{GRAVEYARD_FILE}' not found, created a new one.")
     except json.JSONDecodeError:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        backup_filename = f"{GRAVEYARD_FILE}.corrupted.{timestamp}"
+        try:
+            shutil.copy2(GRAVEYARD_FILE, backup_filename)
+            print(f"Error decoding '{GRAVEYARD_FILE}'. It has been backed up to {backup_filename}.")
+        except Exception as backup_e:
+            print(f"Error decoding '{GRAVEYARD_FILE}'. Failed to create backup: {backup_e}")
+        print("Initializing empty graveyard data and overwriting original.")
         graveyard = {}
-        print(f"Error decoding '{GRAVEYARD_FILE}'. Initializing empty graveyard and overwriting.")
-        # Overwrite corrupted file with empty data
-        with open(GRAVEYARD_FILE, 'w', encoding='utf-8') as f:
+        with open(GRAVEYARD_FILE, 'w', encoding='utf-8') as f: # This overwrites the original
             json.dump(graveyard, f, indent=4)
 
 
 def save_users():
-    print(f"DEBUG_SAVE_USERS: Attempting to save users. Current users dict to be saved: {users}")
+    # print(f"DEBUG_SAVE_USERS: Attempting to save users. Current users dict to be saved: {users}") # Consider app.logger.debug()
     with open(USERS_FILE, 'w', encoding='utf-8') as f:
         json.dump(users, f, indent=4)
 
@@ -473,8 +486,6 @@ def create_character_route():
 
     # Update global player_char (still useful for immediate context if needed before full setup)
     player_char = new_character
-    # game_manager_instance.character = player_char # Redundant
-    # game_manager_instance.is_game_setup = True # Redundant
 
     output_stream.truncate(0)
     output_stream.seek(0)
@@ -576,6 +587,7 @@ def display_game_output():
                     flash("Stats rolled for new character! You can reroll one stat if you wish.", "info")
 
                 character_creation_stats_display = session['character_creation_stats']
+                pending_char_name_display = session.get('character_creation_name')
 
 
                 if not characters_list:
@@ -589,8 +601,6 @@ def display_game_output():
                 session.pop('character_creation_name', None) # Also clear name if at limit
                 # Let flow continue to potentially show selected character or selection screen
                 # show_character_creation_form remains False
-            else: # Slots available, and is_creating_new_char_action is true
-                 pending_char_name_display = session.get('character_creation_name')
 
 
         # This block runs if NOT (is_creating_new_char_action AND slots available)
@@ -802,20 +812,20 @@ def perform_action():
     action_details_str = request.form.get('action_details', '{}') # Default to empty JSON object string
 
     # --- Start of Diagnostic Logging ---
-    print(f"\n--- /action route hit ---")
-    print(f"Received action_name: {action_name}")
-    print(f"Received action_details_str: {action_details_str}")
-    print(f"Global player_char: {player_char.name if player_char else 'None'}")
-    if player_char:
-        print(f"Global player_char.is_dead: {player_char.is_dead}")
-    else:
-        print(f"Global player_char.is_dead: N/A")
-    print(f"Global game_manager_instance available: {bool(game_manager_instance)}")
-    if game_manager_instance:
-        print(f"GM.character: {game_manager_instance.character.name if game_manager_instance.character else 'None'}")
-        print(f"GM.is_game_setup: {game_manager_instance.is_game_setup if hasattr(game_manager_instance, 'is_game_setup') else 'Attribute Missing'}")
-        print(f"GM.shop available: {bool(game_manager_instance.shop)}")
-        print(f"GM.event_manager available: {bool(game_manager_instance.event_manager)}")
+    # print(f"\n--- /action route hit ---") # Consider app.logger.debug()
+    # print(f"Received action_name: {action_name}") # Consider app.logger.debug()
+    # print(f"Received action_details_str: {action_details_str}") # Consider app.logger.debug()
+    # print(f"Global player_char: {player_char.name if player_char else 'None'}") # Consider app.logger.debug()
+    # if player_char:
+        # print(f"Global player_char.is_dead: {player_char.is_dead}") # Consider app.logger.debug()
+    # else:
+        # print(f"Global player_char.is_dead: N/A") # Consider app.logger.debug()
+    # print(f"Global game_manager_instance available: {bool(game_manager_instance)}") # Consider app.logger.debug()
+    # if game_manager_instance:
+        # print(f"GM.character: {game_manager_instance.character.name if game_manager_instance.character else 'None'}") # Consider app.logger.debug()
+        # print(f"GM.is_game_setup: {game_manager_instance.is_game_setup if hasattr(game_manager_instance, 'is_game_setup') else 'Attribute Missing'}") # Consider app.logger.debug()
+        # print(f"GM.shop available: {bool(game_manager_instance.shop)}") # Consider app.logger.debug()
+        # print(f"GM.event_manager available: {bool(game_manager_instance.event_manager)}") # Consider app.logger.debug()
     # --- End of Diagnostic Logging ---
 
     # Clear the stream before new action output
@@ -823,32 +833,32 @@ def perform_action():
     output_stream.seek(0)
 
     if not action_name:
-        print("Action aborted: No action_name provided.") # Diagnostic print
+        # print("Action aborted: No action_name provided.") # Diagnostic print, consider app.logger.warning()
         game_manager_instance._print("Error: No action_name provided.")
         return redirect(url_for('display_game_output'))
 
     # Use the updated parse_action_details function
     details_dict = parse_action_details(action_details_str)
-    print(f"Parsed action_details_dict: {details_dict}") # Diagnostic print
+    # print(f"Parsed action_details_dict: {details_dict}") # Diagnostic print, consider app.logger.debug()
 
     # Perform the game action
     try:
         # Ensure a living character is loaded before performing actions
         if player_char is None or player_char.name is None or player_char.is_dead:
-            print(f"Action '{action_name}' aborted: No active/living character in player_char for perform_action.") # Diagnostic print
+            # print(f"Action '{action_name}' aborted: No active/living character in player_char for perform_action.") # Diagnostic print, consider app.logger.warning()
             flash("No active character or character is dead. Cannot perform action.", "error")
             return redirect(url_for('display_game_output'))
 
-        print(f"Action '{action_name}' proceeding with character: {player_char.name}") # Diagnostic print
+        # print(f"Action '{action_name}' proceeding with character: {player_char.name}") # Diagnostic print, consider app.logger.info()
 
         # Explicitly check GameManager's setup status for the current player_char
         # This is crucial because game_manager_instance.character should be the same as player_char
         # and game_manager_instance.is_game_setup should be True if setup was successful.
         if not game_manager_instance.is_game_setup or game_manager_instance.character != player_char:
-            print(f"Action '{action_name}' aborted: GameManager not properly set up for character '{player_char.name}'.")
-            print(f"  GM.is_game_setup: {game_manager_instance.is_game_setup}")
-            print(f"  GM.character: {game_manager_instance.character.name if game_manager_instance.character else 'None'}")
-            print(f"  app.player_char: {player_char.name}")
+            # print(f"Action '{action_name}' aborted: GameManager not properly set up for character '{player_char.name}'.") # Consider app.logger.warning()
+            # print(f"  GM.is_game_setup: {game_manager_instance.is_game_setup}") # Consider app.logger.debug()
+            # print(f"  GM.character: {game_manager_instance.character.name if game_manager_instance.character else 'None'}") # Consider app.logger.debug()
+            # print(f"  app.player_char: {player_char.name}") # Consider app.logger.debug()
             flash(f"Cannot perform action. Game world not fully initialized for {player_char.name}. Try re-selecting the character.", "error")
             return redirect(url_for('display_game_output'))
 
@@ -873,11 +883,11 @@ def perform_action():
             # Existing actions are handled by perform_hourly_action
             # Explicit check of player_char (already done above, but can be more specific here if needed)
             if player_char is None or player_char.name is None or player_char.is_dead:
-                print(f"Action '{action_name}' aborted just before perform_hourly_action: No active/living character.")
+                # print(f"Action '{action_name}' aborted just before perform_hourly_action: No active/living character.") # Consider app.logger.warning()
                 flash("No active character or character is dead. Cannot perform action.", "error")
                 return redirect(url_for('display_game_output'))
             else:
-                print(f"Proceeding to game_manager_instance.perform_hourly_action for action: {action_name}")
+                # print(f"Proceeding to game_manager_instance.perform_hourly_action for action: {action_name}") # Consider app.logger.info()
                 game_manager_instance.perform_hourly_action(action_name, details_dict)
 
         # ---- START NEW SAVE LOGIC ----
