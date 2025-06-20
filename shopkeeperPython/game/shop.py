@@ -224,13 +224,9 @@ class Shop:
             effects=recipe.get("effects", {}),
             is_magical=recipe.get("is_magical", recipe["type"] in ["potion", "scroll", "weapon", "armor", "ring", "amulet"]),
             is_attunement=recipe.get("is_attunement", False),
-            is_consumable=recipe.get("is_consumable", recipe["type"] in ["potion", "food", "scroll"])
+            is_consumable=recipe.get("is_consumable", recipe["type"] in ["potion", "food", "scroll"]),
+            quantity=recipe.get("quantity_produced", 1) # Pass quantity directly
         )
-        # Set quantity after item creation
-        # Ensure the item object has a quantity attribute, even if it's 1.
-        # The add_item_to_inventory method might also handle this, but setting it here is safer for the instance.
-        setattr(crafted_item, 'quantity', recipe.get("quantity_produced", 1))
-
         # If quantity_produced is > 1, the Item object itself handles this via its quantity field.
         # The shop inventory will store one Item stack.
         self.add_item_to_inventory(crafted_item)
