@@ -4,7 +4,7 @@ if TYPE_CHECKING:
     from .character import Character
     # from .town import Town # Town for type hinting - already imported below
 
-from .item import Item, QUALITY_TIERS, QUALITY_VALUE_MULTIPLIERS
+from .item import Item # Removed QUALITY_TIERS, QUALITY_VALUE_MULTIPLIERS
 from .town import Town
 
 
@@ -18,6 +18,8 @@ class Shop:
         3: {"cost_to_upgrade": 3000, "max_inventory_slots": 40, "crafting_quality_bonus": 2},
     }
     MAX_SHOP_LEVEL = 3
+    MAX_REPUTATION = 100
+    MIN_REPUTATION = -20
 
     CRITICAL_SUCCESS_CHANCE = 0.05
     CRITICAL_FAILURE_CHANCE = 0.05
@@ -67,8 +69,8 @@ class Shop:
         self.shop_level = 1
         self.max_inventory_slots = self.SHOP_LEVEL_CONFIG[self.shop_level]["max_inventory_slots"]
         self.reputation = 0
-        self.MAX_REPUTATION = 100
-        self.MIN_REPUTATION = -20
+        # self.MAX_REPUTATION = 100 # Moved to class level
+        # self.MIN_REPUTATION = -20 # Moved to class level
         self.markup_percentage = 1.2 # Default markup (e.g., 20% over value for player)
         self.buyback_percentage = 0.5 # Default buyback (e.g., 50% of value for player)
 
@@ -94,8 +96,13 @@ class Shop:
             print(f"SHOP: Cannot add {item.name}. Inventory is full ({len(self.inventory)}/{self.max_inventory_slots} slots).")
             return
 
+        # Ensure item has quantity BEFORE accessing it in print or other logic
+        if not hasattr(item, 'quantity'):
+            item.quantity = 1
+
         self.inventory.append(item)
-        print(f"SHOP: Added {item.name} to inventory. Inventory slots: {len(self.inventory)}/{self.max_inventory_slots}.")
+        # Now it's safe to access item.quantity
+        print(f"SHOP: Added {item.name} (Qty: {item.quantity}) to inventory. Inventory slots: {len(self.inventory)}/{self.max_inventory_slots}.")
 
 
     def remove_item_from_inventory(self, item_name: str, specific_item_to_remove: Item = None) -> Item | None:
@@ -217,9 +224,12 @@ class Shop:
             effects=recipe.get("effects", {}),
             is_magical=recipe.get("is_magical", recipe["type"] in ["potion", "scroll", "weapon", "armor", "ring", "amulet"]),
             is_attunement=recipe.get("is_attunement", False),
-            is_consumable=recipe.get("is_consumable", recipe["type"] in ["potion", "food", "scroll"]),
-            quantity=recipe.get("quantity_produced", 1) # Handle quantity_produced
+            is_consumable=recipe.get("is_consumable", recipe["type"] in ["potion", "food", "scroll"])
         )
+        # Set quantity after item creation
+        # Ensure the item object has a quantity attribute, even if it's 1.
+        # The add_item_to_inventory method might also handle this, but setting it here is safer for the instance.
+        setattr(crafted_item, 'quantity', recipe.get("quantity_produced", 1))
 
         # If quantity_produced is > 1, the Item object itself handles this via its quantity field.
         # The shop inventory will store one Item stack.
@@ -498,19 +508,19 @@ if __name__ == "__main__":
     # Create a mock character (the shop owner or a player)
     test_crafter = MockCharacter(name="Test Crafter", gold=100)
     # Add some ingredients to the crafter's inventory for testing
-    test_crafter.add_item_to_inventory(Item(name="Herb Bundle", base_value=5, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Clean Water", base_value=1, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Clean Water", base_value=1, item_type="component")) # more water
-    test_crafter.add_item_to_inventory(Item(name="Scrap Metal", base_value=2, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Scrap Metal", base_value=2, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Herb Bundle", description="Desc", base_value=5, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Clean Water", description="Desc", base_value=1, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Clean Water", description="Desc", base_value=1, item_type="component", quality="Common")) # more water
+    test_crafter.add_item_to_inventory(Item(name="Scrap Metal", description="Desc", base_value=2, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Scrap Metal", description="Desc", base_value=2, item_type="component", quality="Common"))
     # Ingredients for advanced recipes
-    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Leather Straps", base_value=5, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Leather Straps", base_value=5, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", description="Desc", base_value=10, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", description="Desc", base_value=10, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", description="Desc", base_value=10, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", description="Desc", base_value=10, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Iron Ingot", description="Desc", base_value=10, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Leather Straps", description="Desc", base_value=5, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Leather Straps", description="Desc", base_value=5, item_type="component", quality="Common"))
 
 
     print("\n--- Crafting Test (Minor Healing Potion) ---")
@@ -550,11 +560,11 @@ if __name__ == "__main__":
     print("\n--- Inventory Slot Limit Test ---")
     # Fill up inventory to test slot limit
     for i in range(shop_in_whiterun.max_inventory_slots - len(shop_in_whiterun.inventory) + 2): # Try to add 2 more than limit
-        item_to_add = Item(name=f"Filler Item {i+1}", base_value=1, item_type="misc")
+        item_to_add = Item(name=f"Filler Item {i+1}", description="Desc", base_value=1, item_type="misc", quality="Common")
         shop_in_whiterun.add_item_to_inventory(item_to_add) # add_item_to_inventory now prints messages
 
     # Test stacking
-    stackable_item = Item(name="Iron Ingot", base_value=10, item_type="component", quantity=1)
+    stackable_item = Item(name="Iron Ingot", description="Desc", base_value=10, item_type="component", quality="Common"); stackable_item.quantity = 1
     shop_in_whiterun.add_item_to_inventory(stackable_item) # Should stack with existing Iron Ingots if any, or add new
     shop_in_whiterun.add_item_to_inventory(stackable_item) # Should stack
 
@@ -576,8 +586,8 @@ if __name__ == "__main__":
     print(f"Crafting {test_crafter.name} inventory before crit test: {[i.name for i in test_crafter.inventory]}")
     # Ensure crafter has ingredients for many potions
     for _ in range(20):
-        test_crafter.add_item_to_inventory(Item(name="Herb Bundle", base_value=5, item_type="component"))
-        test_crafter.add_item_to_inventory(Item(name="Clean Water", base_value=1, item_type="component"))
+        test_crafter.add_item_to_inventory(Item(name="Herb Bundle", description="Desc", base_value=5, item_type="component", quality="Common"))
+        test_crafter.add_item_to_inventory(Item(name="Clean Water", description="Desc", base_value=1, item_type="component", quality="Common"))
 
     crit_success_count = 0
     crit_failure_count = 0
@@ -611,8 +621,8 @@ if __name__ == "__main__":
     # Craft a "Steel Sword" (advanced recipe for Blacksmith) and make it "Rare"
     # To guarantee "Rare", we might need to manipulate crafting_experience or quality directly for test
     shop_in_whiterun.crafting_experience["Steel Sword"] = 20 # Ensure it's high enough for Rare
-    test_crafter.add_item_to_inventory(Item(name="Steel Ingot", base_value=25, item_type="component", quantity=3))
-    test_crafter.add_item_to_inventory(Item(name="Oak Wood", base_value=8, item_type="component", quantity=1))
+    steel_ingot_rep_test = Item(name="Steel Ingot", description="Desc", base_value=25, item_type="component", quality="Common"); steel_ingot_rep_test.quantity = 3; test_crafter.add_item_to_inventory(steel_ingot_rep_test)
+    oak_wood_rep_test = Item(name="Oak Wood", description="Desc", base_value=8, item_type="component", quality="Common"); oak_wood_rep_test.quantity = 1; test_crafter.add_item_to_inventory(oak_wood_rep_test)
 
     # Temporarily set crit chances to 0 to ensure predictable quality for this specific test item
     _orig_crit_s = Shop.CRITICAL_SUCCESS_CHANCE
@@ -646,10 +656,10 @@ if __name__ == "__main__":
     # Shop is Blacksmith, trying to craft Alchemist recipe
     print(f"{test_crafter.name} inventory before Greater Healing Potion: {[i.name for i in test_crafter.inventory]}")
     # Add ingredients for potion to test can_craft correctly
-    test_crafter.add_item_to_inventory(Item(name="Concentrated Herbs", base_value=15, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Concentrated Herbs", base_value=15, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Purified Water", base_value=5, item_type="component"))
-    test_crafter.add_item_to_inventory(Item(name="Crystal Vial", base_value=10, item_type="component"))
+    test_crafter.add_item_to_inventory(Item(name="Concentrated Herbs", description="Desc", base_value=15, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Concentrated Herbs", description="Desc", base_value=15, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Purified Water", description="Desc", base_value=5, item_type="component", quality="Common"))
+    test_crafter.add_item_to_inventory(Item(name="Crystal Vial", description="Desc", base_value=10, item_type="component", quality="Common"))
 
     if shop_in_whiterun.can_craft("Greater Healing Potion"):
         crafted_g_potion = shop_in_whiterun.craft_item("Greater Healing Potion", test_crafter)

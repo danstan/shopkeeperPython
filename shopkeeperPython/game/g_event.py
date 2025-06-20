@@ -72,7 +72,7 @@ class Event:
             description=data.get("description", ""),
             outcomes=outcomes,
             skill_check_options=skill_check_data, # Assign parsed list
-            # effects=data.get("effects", {}), # Retained for event-level direct effects
+            effects=data.get("effects", {}), # Retained for event-level direct effects
             duration=data.get("duration", 0),
             event_type=data.get("event_type", "generic"),
             is_active=data.get("is_active", False),
@@ -181,6 +181,7 @@ class EventManager:
                 scaled_dc = 0 # No DC for direct outcome
                 check_successful = True # Implicitly successful
                 auto_success_by_item = False
+                final_roll_data = {"status": "direct_outcome", "success": True, "dc": 0}
             elif not event_instance.skill_check_options and event_instance.outcomes:
                 # Take the first available outcome if 'success' isn't there
                 selected_choice = None
@@ -188,6 +189,7 @@ class EventManager:
                 scaled_dc = 0
                 check_successful = True
                 auto_success_by_item = False
+                final_roll_data = {"status": "direct_outcome", "success": True, "dc": 0}
             else:
                 print(f"Error: Invalid choice index ({choice_index}) or no skill check options for event '{event_instance.name}'.")
                 return {"message": "Error: Invalid choice or event configuration.", "rolled_successfully": False, "details": {}}
@@ -204,6 +206,7 @@ class EventManager:
 
             check_successful = False
             auto_success_by_item = False
+            roll_result_dict = {"status": "not_applicable", "dc": scaled_dc, "success": False} # Default initialization
 
             # Item Interaction Logic
             item_req = selected_choice.get('item_requirement')
@@ -222,6 +225,7 @@ class EventManager:
                         check_successful = True
                         auto_success_by_item = True
                         print(f"Outcome automatically successful due to {item_name_req}.")
+                        roll_result_dict = {"status": "auto_success", "item_used": item_name_req, "dc": 0, "success": True}
                         # Future: if item_req.get('consumable', False) and hasattr(self.character, 'remove_item_from_inventory'):
                         #     self.character.remove_item_from_inventory(found_item_in_inventory)
                         #     print(f"{item_name_req} was consumed.")
@@ -240,7 +244,7 @@ class EventManager:
             # Perform Skill Check (if not auto_success)
             if not auto_success_by_item:
                 skill_to_check = selected_choice.get('skill')
-                roll_result_dict = None # Initialize
+                # roll_result_dict is already initialized above
                 if skill_to_check and hasattr(self.character, 'perform_skill_check'):
                     # print(f"Performing {skill_to_check} check against DC {scaled_dc}.") # perform_skill_check now prints this
                     roll_result_dict = self.character.perform_skill_check(skill_name=skill_to_check, dc=scaled_dc)
@@ -388,14 +392,6 @@ class EventManager:
             "roll_data": final_roll_data if 'final_roll_data' in locals() else {"status": "no_roll_data_captured"}
         }
 
-# --- Sample Event Definitions ---
-# Commenting out old sample events as they need to be updated to the new structure.
-# event_lucky_find = Event(...)
-# event_shady_customer = Event(...)
-# event_persuade_guard = Event(...)
-# event_supply_shortage_rumor = Event(...)
-# SAMPLE_EVENTS = [] # Old sample events are cleared/removed.
-
 # --- New Skill Check Event Definitions ---
 event_suspicious_traveler = Event.from_dict({
     "name": "Suspicious Traveler",
@@ -502,7 +498,7 @@ event_merchant_distress = Event.from_dict({
     }
 })
 
-ALL_SKILL_CHECK_EVENTS = [
+GAME_EVENTS = [
     event_suspicious_traveler,
     event_ruined_shrine,
     event_merchant_distress

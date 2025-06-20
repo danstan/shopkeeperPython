@@ -211,33 +211,33 @@ class TestCharacter(unittest.TestCase):
 
         # Test case 1: Roll 5 + Acrobatics 3 = 8. DC 10. Should fail.
         mock_randint.return_value = 5
-        self.assertFalse(self.character.perform_skill_check("Acrobatics", dc=10))
+        self.assertFalse(self.character.perform_skill_check("Acrobatics", dc=10)['success'])
 
         # Test case 2: Roll 10 + Acrobatics 3 = 13. DC 10. Should succeed.
         mock_randint.return_value = 10
-        self.assertTrue(self.character.perform_skill_check("Acrobatics", dc=10))
+        self.assertTrue(self.character.perform_skill_check("Acrobatics", dc=10)['success'])
 
         # Test case 3: Roll 8 + Arcana 1 = 9. DC 10. Should fail.
         mock_randint.return_value = 8
-        self.assertFalse(self.character.perform_skill_check("Arcana", dc=10))
+        self.assertFalse(self.character.perform_skill_check("Arcana", dc=10)['success'])
 
         # Test case 4: Roll 9 + Arcana 1 = 10. DC 10. Should succeed.
         mock_randint.return_value = 9
-        self.assertTrue(self.character.perform_skill_check("Arcana", dc=10))
+        self.assertTrue(self.character.perform_skill_check("Arcana", dc=10)['success'])
 
         # Test disadvantage from exhaustion
         self.character.exhaustion_level = 1
         # Rolls will be 5 and (e.g.) 15, min is 5. 5 + Arcana 1 = 6. DC 10. Fail.
         mock_randint.side_effect = [5, 15] # First roll, second roll for disadvantage
-        self.assertFalse(self.character.perform_skill_check("Arcana", dc=10))
+        self.assertFalse(self.character.perform_skill_check("Arcana", dc=10)['success'])
 
         # Rolls will be 15 and 5, min is 5. 5 + Arcana 1 = 6. DC 10. Fail.
         mock_randint.side_effect = [15, 5]
-        self.assertFalse(self.character.perform_skill_check("Arcana", dc=10))
+        self.assertFalse(self.character.perform_skill_check("Arcana", dc=10)['success'])
 
         # Rolls will be 10 and 15, min is 10. 10 + Arcana 1 = 11. DC 10. Succeed.
         mock_randint.side_effect = [10, 15]
-        self.assertTrue(self.character.perform_skill_check("Arcana", dc=10))
+        self.assertTrue(self.character.perform_skill_check("Arcana", dc=10)['success'])
         self.character.exhaustion_level = 0 # Reset exhaustion
 
 
@@ -309,7 +309,7 @@ class TestCharacterPerformSkillCheck(unittest.TestCase):
     @patch('random.randint')
     def test_perform_skill_check_lucky_charm_reroll_success(self, mock_randint):
         """Test reroll with Lucky Charm leading to success."""
-        lucky_charm = Item(name="Lucky Charm of the Gods", effects={"allow_reroll": True}, is_consumable=True)
+        lucky_charm = Item(name="Lucky Charm of the Gods", description="A lucky charm.", base_value=10, item_type="trinket", quality="Common", effects={"allow_reroll": True}, is_consumable=True)
         self.character.add_item_to_inventory(lucky_charm)
 
         # Initial roll fails (e.g., 5), reroll succeeds (e.g., 15)
@@ -328,7 +328,7 @@ class TestCharacterPerformSkillCheck(unittest.TestCase):
 
     @patch('random.randint')
     def test_perform_skill_check_lucky_charm_reroll_still_fails(self, mock_randint):
-        lucky_charm = Item(name="Lucky Charm (Weak)", effects={"allow_reroll": True}, is_consumable=False) # Non-consumable
+        lucky_charm = Item(name="Lucky Charm (Weak)", description="A lucky charm.", base_value=10, item_type="trinket", quality="Common", effects={"allow_reroll": True}, is_consumable=False) # Non-consumable
         self.character.add_item_to_inventory(lucky_charm)
 
         mock_randint.side_effect = [3, 7] # Initial roll 3, reroll 7. Stealth mod +1. DC 15.

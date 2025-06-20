@@ -39,12 +39,12 @@
         {
             "name": "UniqueNewName",
             "stats": {
-                "CHA": 16,
+                "CHA": 12,
                 "CON": 15,
-                "DEX": 11,
+                "DEX": 13,
                 "INT": 12,
-                "STR": 9,
-                "WIS": 11
+                "STR": 14,
+                "WIS": 12
             },
             "stat_bonuses": {
                 "STR": 0,
@@ -70,7 +70,8 @@
             "skill_points_to_allocate": 0,
             "speed": 30,
             "is_dead": false,
-            "current_town_name": "Starting Village"
+            "current_town_name": "Starting Village",
+            "journal": []
         }
     ]
 }

@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Now import from app
-from app import load_data, save_users, users as app_users_global, USERS_FILE as APP_USERS_FILE_CONSTANT, generate_password_hash, check_password_hash
+from shopkeeperPython.app import load_data, save_users, users as app_users_global, USERS_FILE as APP_USERS_FILE_CONSTANT, generate_password_hash, check_password_hash
 
 class TestUserDataMigration(unittest.TestCase):
 

@@ -148,6 +148,16 @@
 
     {% else %}
     {# Main Game Interface #}
+    {# Display ALL flash messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flashes-container" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 80%; text-align: center;">
+            {% for category, message in messages %}
+                <p class="flash-{{ category }}" style="background-color: #f0f0f0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 5px;">{{ message }}</p>
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
     <div class="game-container">
         <div id="top-right-menu-button">Menu</div>
 
