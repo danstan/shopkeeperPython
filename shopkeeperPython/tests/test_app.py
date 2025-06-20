@@ -162,7 +162,7 @@ class TestApp(unittest.TestCase):
         response_create = self.client.post('/create_character', data={'character_name': char_name_for_creation}, follow_redirects=True)
         self.assertEqual(response_create.status_code, 200)
         # Check if character was created successfully
-        self.assertIn(f"Character {char_name_for_creation} (user: testuser) created".encode(), response_create.data)
+        self.assertIn(f"Character {char_name_for_creation} (user: testuser) created and game world prepared.".encode(), response_create.data)
 
         self.assertTrue(any(c['name'] == char_name_for_creation for c in user_characters['testuser']))
         created_char_data = next((c for c in user_characters['testuser'] if c['name'] == char_name_for_creation), None)

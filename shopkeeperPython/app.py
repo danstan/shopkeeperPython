@@ -480,7 +480,7 @@ def create_character_route():
 
     # Confirmation message (optional, as setup_for_character is verbose)
     if game_manager_instance.is_game_setup:
-        game_manager_instance._print(f"Character {new_character.name} (user: {username}) created and game world prepared.")
+        game_manager_instance._print(f"Character {new_character.name} (user: {username}) created")
         # Clear character creation stats from session after successful creation
         session.pop('character_creation_stats', None)
     else:
@@ -738,8 +738,17 @@ def parse_action_details(details_str: str) -> dict:
     Parses a JSON string representing action details into a dictionary.
     If details_str is empty, null, or invalid JSON, returns an empty dictionary.
     """
-    if not details_str or details_str.strip() == "":
-        return {}
+    if not isinstance(details_str, str) or not details_str or details_str.strip() == "":
+        if isinstance(details_str, (int, float)): # Handle if it's a number, which is not valid JSON for this func
+            game_manager_instance._print(f"Warning: Action details received as a number: '{details_str}'. Expected a JSON string. Using empty details.")
+            return {}
+        elif not details_str: # Handles None or empty string before strip()
+            return {}
+        # If it's not a string but not explicitly handled (e.g. list, dict directly passed),
+        # json.loads will raise TypeError later, which is caught.
+        # However, the strip() call is the main concern for AttributeError.
+        # The above check `not isinstance(details_str, str)` handles non-strings early for strip().
+        # If it *is* a string but empty after strip, it's handled by `details_str.strip() == ""`
     try:
         details_dict = json.loads(details_str)
         if not isinstance(details_dict, dict):

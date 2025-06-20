@@ -18,6 +18,8 @@ class Shop:
         3: {"cost_to_upgrade": 3000, "max_inventory_slots": 40, "crafting_quality_bonus": 2},
     }
     MAX_SHOP_LEVEL = 3
+    MAX_REPUTATION = 100
+    MIN_REPUTATION = -20
 
     CRITICAL_SUCCESS_CHANCE = 0.05
     CRITICAL_FAILURE_CHANCE = 0.05
@@ -67,8 +69,8 @@ class Shop:
         self.shop_level = 1
         self.max_inventory_slots = self.SHOP_LEVEL_CONFIG[self.shop_level]["max_inventory_slots"]
         self.reputation = 0
-        self.MAX_REPUTATION = 100
-        self.MIN_REPUTATION = -20
+        # self.MAX_REPUTATION = 100 # Moved to class level
+        # self.MIN_REPUTATION = -20 # Moved to class level
         self.markup_percentage = 1.2 # Default markup (e.g., 20% over value for player)
         self.buyback_percentage = 0.5 # Default buyback (e.g., 50% of value for player)
 
@@ -94,8 +96,13 @@ class Shop:
             print(f"SHOP: Cannot add {item.name}. Inventory is full ({len(self.inventory)}/{self.max_inventory_slots} slots).")
             return
 
+        # Ensure item has quantity BEFORE accessing it in print or other logic
+        if not hasattr(item, 'quantity'):
+            item.quantity = 1
+
         self.inventory.append(item)
-        print(f"SHOP: Added {item.name} to inventory. Inventory slots: {len(self.inventory)}/{self.max_inventory_slots}.")
+        # Now it's safe to access item.quantity
+        print(f"SHOP: Added {item.name} (Qty: {item.quantity}) to inventory. Inventory slots: {len(self.inventory)}/{self.max_inventory_slots}.")
 
 
     def remove_item_from_inventory(self, item_name: str, specific_item_to_remove: Item = None) -> Item | None:
@@ -217,9 +224,12 @@ class Shop:
             effects=recipe.get("effects", {}),
             is_magical=recipe.get("is_magical", recipe["type"] in ["potion", "scroll", "weapon", "armor", "ring", "amulet"]),
             is_attunement=recipe.get("is_attunement", False),
-            is_consumable=recipe.get("is_consumable", recipe["type"] in ["potion", "food", "scroll"]),
-            quantity=recipe.get("quantity_produced", 1) # Handle quantity_produced
+            is_consumable=recipe.get("is_consumable", recipe["type"] in ["potion", "food", "scroll"])
         )
+        # Set quantity after item creation
+        # Ensure the item object has a quantity attribute, even if it's 1.
+        # The add_item_to_inventory method might also handle this, but setting it here is safer for the instance.
+        setattr(crafted_item, 'quantity', recipe.get("quantity_produced", 1))
 
         # If quantity_produced is > 1, the Item object itself handles this via its quantity field.
         # The shop inventory will store one Item stack.

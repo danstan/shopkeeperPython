@@ -5,4 +5,4 @@ from .item import Item
 from .shop import Shop
 from .time_system import GameTime
 from .town import Town
-from .g_event import EventManager, Event, SAMPLE_EVENTS
+from .g_event import EventManager, Event, GAME_EVENTS

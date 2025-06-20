@@ -271,7 +271,24 @@ class Character:
             pass
         return healed_amount
 
-    def add_item_to_inventory(self, item: Item): self.inventory.append(item); print(f"{item.name} added to {self.name}'s inventory.")
+    def add_item_to_inventory(self, item: Item):
+        # Ensure the item being added has a quantity, default to 1 if not specified
+        if not hasattr(item, 'quantity'):
+            item.quantity = 1
+
+        for existing_item in self.inventory:
+            if existing_item.name == item.name and existing_item.quality == item.quality:
+                # Ensure existing_item also has quantity, though it should if added by this method
+                if not hasattr(existing_item, 'quantity'):
+                    existing_item.quantity = 0 # Should not happen if items are consistently managed
+                existing_item.quantity += item.quantity
+                print(f"Stacked {item.quantity}x {item.name} ({item.quality}) in {self.name}'s inventory. New total: {existing_item.quantity}.")
+                return
+
+        # If no stackable item found, add as new item
+        self.inventory.append(item)
+        print(f"{item.name} (Qty: {item.quantity}, Quality: {item.quality}) added as new stack to {self.name}'s inventory.")
+
     def remove_item_from_inventory(self, item_name: str) -> Item | None:
         for item in self.inventory:
             if item.name == item_name: self.inventory.remove(item); print(f"{item_name} removed (first found)."); return item

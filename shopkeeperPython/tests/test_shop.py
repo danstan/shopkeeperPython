@@ -60,20 +60,20 @@ class MockCharacter:
 class TestShop(unittest.TestCase):
 
     def setUp(self):
-        self.town = Town(name="Test Town")
+        self.town = Town(name="Test Town", properties=[], nearby_resources=[], unique_npc_crafters=[])
         self.owner = MockCharacter(name="Test Owner", gold=10000)
         self.shop = Shop(name="The Test Shop", owner_name=self.owner.name, town=self.town, initial_gold=5000)
 
         # Add some basic ingredients to owner's inventory for crafting tests
-        self.owner.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component", quantity=20))
-        self.owner.add_item_to_inventory(Item(name="Leather Straps", base_value=5, item_type="component", quantity=10))
-        self.owner.add_item_to_inventory(Item(name="Steel Ingot", base_value=25, item_type="component", quantity=10))
-        self.owner.add_item_to_inventory(Item(name="Oak Wood", base_value=8, item_type="component", quantity=5))
-        self.owner.add_item_to_inventory(Item(name="Concentrated Herbs", base_value=15, item_type="component", quantity=10))
-        self.owner.add_item_to_inventory(Item(name="Purified Water", base_value=5, item_type="component", quantity=5))
-        self.owner.add_item_to_inventory(Item(name="Crystal Vial", base_value=10, item_type="component", quantity=5))
-        self.owner.add_item_to_inventory(Item(name="Herb Bundle", base_value=5, item_type="component", quantity=10))
-        self.owner.add_item_to_inventory(Item(name="Clean Water", base_value=1, item_type="component", quantity=10))
+        iron_ingot = Item(name="Iron Ingot", description="Desc", base_value=10, item_type="component", quality="Common"); iron_ingot.quantity = 20; self.owner.add_item_to_inventory(iron_ingot)
+        leather_straps = Item(name="Leather Straps", description="Desc", base_value=5, item_type="component", quality="Common"); leather_straps.quantity = 10; self.owner.add_item_to_inventory(leather_straps)
+        steel_ingot = Item(name="Steel Ingot", description="Desc", base_value=25, item_type="component", quality="Common"); steel_ingot.quantity = 10; self.owner.add_item_to_inventory(steel_ingot)
+        oak_wood = Item(name="Oak Wood", description="Desc", base_value=8, item_type="component", quality="Common"); oak_wood.quantity = 5; self.owner.add_item_to_inventory(oak_wood)
+        concentrated_herbs = Item(name="Concentrated Herbs", description="Desc", base_value=15, item_type="component", quality="Common"); concentrated_herbs.quantity = 10; self.owner.add_item_to_inventory(concentrated_herbs)
+        purified_water = Item(name="Purified Water", description="Desc", base_value=5, item_type="component", quality="Common"); purified_water.quantity = 5; self.owner.add_item_to_inventory(purified_water)
+        crystal_vial = Item(name="Crystal Vial", description="Desc", base_value=10, item_type="component", quality="Common"); crystal_vial.quantity = 5; self.owner.add_item_to_inventory(crystal_vial)
+        herb_bundle = Item(name="Herb Bundle", description="Desc", base_value=5, item_type="component", quality="Common"); herb_bundle.quantity = 10; self.owner.add_item_to_inventory(herb_bundle)
+        clean_water = Item(name="Clean Water", description="Desc", base_value=1, item_type="component", quality="Common"); clean_water.quantity = 10; self.owner.add_item_to_inventory(clean_water)
 
 
     def test_shop_initialization(self):
@@ -108,8 +108,8 @@ class TestShop(unittest.TestCase):
         self.shop.set_specialization("Blacksmith")
         # Ensure owner has ingredients for Iron Armor
         self.owner.inventory = [] # Clear and add specific
-        self.owner.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component", quantity=5))
-        self.owner.add_item_to_inventory(Item(name="Leather Straps", base_value=5, item_type="component", quantity=2))
+        iron_ingot_craft = Item(name="Iron Ingot", description="Desc", base_value=10, item_type="component", quality="Common"); iron_ingot_craft.quantity = 5; self.owner.add_item_to_inventory(iron_ingot_craft)
+        leather_straps_craft = Item(name="Leather Straps", description="Desc", base_value=5, item_type="component", quality="Common"); leather_straps_craft.quantity = 2; self.owner.add_item_to_inventory(leather_straps_craft)
 
         item = self.shop.craft_item("Iron Armor", self.owner)
         self.assertIsNotNone(item)
@@ -146,34 +146,36 @@ class TestShop(unittest.TestCase):
     def test_inventory_limit(self):
         # Fill inventory to current max_slots -1
         for i in range(self.shop.max_inventory_slots -1):
-            self.shop.add_item_to_inventory(Item(name=f"TestItem{i}", base_value=1, item_type="misc"))
+            self.shop.add_item_to_inventory(Item(name=f"TestItem{i}", description="Desc", base_value=1, item_type="misc", quality="Common"))
         self.assertEqual(len(self.shop.inventory), self.shop.max_inventory_slots -1)
 
         # Add one more, should be fine
-        self.shop.add_item_to_inventory(Item(name="LastNewItem", base_value=1, item_type="misc"))
+        self.shop.add_item_to_inventory(Item(name="LastNewItem", description="Desc", base_value=1, item_type="misc", quality="Common"))
         self.assertEqual(len(self.shop.inventory), self.shop.max_inventory_slots)
 
         # Try to add another new item, should fail
-        self.shop.add_item_to_inventory(Item(name="OverflowItem", base_value=1, item_type="misc"))
+        self.shop.add_item_to_inventory(Item(name="OverflowItem", description="Desc", base_value=1, item_type="misc", quality="Common"))
         self.assertEqual(len(self.shop.inventory), self.shop.max_inventory_slots) # Should not have increased
 
         # Test stacking an existing item when full (e.g. LastNewItem now has quantity 1)
         # Add it again, it should stack
-        self.shop.add_item_to_inventory(Item(name="LastNewItem", base_value=1, item_type="misc", quantity=5))
+        last_new_item_stack = Item(name="LastNewItem", description="Desc", base_value=1, item_type="misc", quality="Common"); last_new_item_stack.quantity = 5; self.shop.add_item_to_inventory(last_new_item_stack)
         self.assertEqual(len(self.shop.inventory), self.shop.max_inventory_slots) # Still same number of slots
         found_item = next(item for item in self.shop.inventory if item.name == "LastNewItem")
         self.assertEqual(found_item.quantity, 1 + 5) # Original 1 + new 5
 
 
-    def test_crafting_quality_bonus_on_level_up(self):
+    @patch('random.random') # Add patch decorator
+    def test_crafting_quality_bonus_on_level_up(self, mock_random): # Add mock_random argument
         item_name = "Minor Healing Potion"
         # Ensure character has ingredients
-        self.owner.add_item_to_inventory(Item(name="Herb Bundle", base_value=1,item_type="component", quantity=10))
-        self.owner.add_item_to_inventory(Item(name="Clean Water", base_value=1,item_type="component", quantity=10))
+        herb_bundle_craft = Item(name="Herb Bundle", description="Desc", base_value=1,item_type="component", quality="Common"); herb_bundle_craft.quantity = 10; self.owner.add_item_to_inventory(herb_bundle_craft)
+        clean_water_craft = Item(name="Clean Water", description="Desc", base_value=1,item_type="component", quality="Common"); clean_water_craft.quantity = 10; self.owner.add_item_to_inventory(clean_water_craft)
 
         # Craft at level 1 (no quality bonus)
-        self.shop.crafting_experience[item_name] = 5 # Should be "Common"
-        item_lvl1 = self.shop.craft_item(item_name, self.owner)
+        mock_random.return_value = 0.5 # Ensure no critical success/failure for this craft
+        self.shop.crafting_experience[item_name] = 4 # Set to 4, so it becomes 5 before quality check -> Common
+        item_lvl1 = self.shop.craft_item(item_name, self.owner) # crafting_experience is now 5
         quality_lvl1 = item_lvl1.quality
         # Remove item from inventory for next craft to be clean
         self.shop.remove_item_from_inventory(item_name, specific_item_to_remove=item_lvl1)
@@ -181,8 +183,11 @@ class TestShop(unittest.TestCase):
 
         # Upgrade shop to level 2 (quality bonus +1)
         self.shop.upgrade_shop()
-        self.shop.crafting_experience[item_name] = 5 # Base count still 5, but effective is 5+1=6 ("Uncommon")
-        item_lvl2 = self.shop.craft_item(item_name, self.owner)
+        mock_random.return_value = 0.5 # Ensure no critical success/failure for this craft either
+        # crafting_experience is already 5 from the previous craft.
+        # It will be incremented to 6 before quality check for item_lvl2.
+        # Effective count will be 6 (base from experience) + 1 (shop bonus) = 7 -> Uncommon.
+        item_lvl2 = self.shop.craft_item(item_name, self.owner) # crafting_experience is now 6
         quality_lvl2 = item_lvl2.quality
 
         # Assuming QUALITY_THRESHOLDS = [(0, "Common"), (6, "Uncommon"), ...]
@@ -225,7 +230,7 @@ class TestShop(unittest.TestCase):
         self.assertEqual(item.quality, Shop.QUALITY_THRESHOLDS[0][1]) # Should be Common
 
     def test_reputation_gain_on_hq_sale(self):
-        item_to_sell = Item(name="Exquisite Sword", base_value=100, item_type="weapon", quality="Legendary")
+        item_to_sell = Item(name="Exquisite Sword", description="Desc", base_value=100, item_type="weapon", quality="Legendary")
         self.shop.add_item_to_inventory(item_to_sell)
 
         initial_reputation = self.shop.reputation
@@ -239,8 +244,8 @@ class TestShop(unittest.TestCase):
         self.shop.set_specialization("Blacksmith")
         # Craft Iron Armor - specialized, assume it becomes "Common"
         self.owner.inventory = []
-        self.owner.add_item_to_inventory(Item(name="Iron Ingot", base_value=10, item_type="component", quantity=5))
-        self.owner.add_item_to_inventory(Item(name="Leather Straps", base_value=5, item_type="component", quantity=2))
+        iron_ingot_spec = Item(name="Iron Ingot", description="Desc", base_value=10, item_type="component", quality="Common"); iron_ingot_spec.quantity = 5; self.owner.add_item_to_inventory(iron_ingot_spec)
+        leather_straps_spec = Item(name="Leather Straps", description="Desc", base_value=5, item_type="component", quality="Common"); leather_straps_spec.quantity = 2; self.owner.add_item_to_inventory(leather_straps_spec)
 
         # Set crit chances to 0 for predictable quality
         _orig_crit_s, _orig_crit_f = Shop.CRITICAL_SUCCESS_CHANCE, Shop.CRITICAL_FAILURE_CHANCE
@@ -259,14 +264,14 @@ class TestShop(unittest.TestCase):
         self.assertEqual(self.shop.reputation, initial_reputation + 1)
 
     def test_reputation_effect_on_npc_price(self):
-        item_to_sell = Item(name="Test Gem", base_value=1000, item_type="gem", quality="Common")
+        item_to_sell = Item(name="Test Gem", description="Desc", base_value=1000, item_type="gem", quality="Common")
         self.shop.add_item_to_inventory(item_to_sell)
 
         # Sale with 0 reputation
         self.shop.reputation = 0
         price_low_rep = self.shop.complete_sale_to_npc(item_to_sell.name, npc_offer_percentage=0.8)
         # Re-add item for next sale test
-        self.shop.add_item_to_inventory(Item(name="Test Gem", base_value=1000, item_type="gem", quality="Common"))
+        self.shop.add_item_to_inventory(Item(name="Test Gem", description="Desc", base_value=1000, item_type="gem", quality="Common"))
 
 
         # Sale with high reputation
@@ -286,7 +291,7 @@ class TestShop(unittest.TestCase):
 
     def test_reputation_cap(self):
         self.shop.reputation = Shop.MAX_REPUTATION -1
-        item_to_sell = Item(name="Legendary Helm", base_value=100, item_type="armor", quality="Legendary") # +4 rep
+        item_to_sell = Item(name="Legendary Helm", description="Desc", base_value=100, item_type="armor", quality="Legendary") # +4 rep
         self.shop.add_item_to_inventory(item_to_sell)
         self.shop.complete_sale_to_npc(item_to_sell.name)
         self.assertEqual(self.shop.reputation, Shop.MAX_REPUTATION)
@@ -297,12 +302,12 @@ class TestShop(unittest.TestCase):
         self.shop.specialization = "Alchemist"
         self.shop.reputation = 25
         self.shop.crafting_experience["Potion of Strength"] = 10
-        self.shop.add_item_to_inventory(Item(name="Potion of Strength", base_value=60, item_type="potion"))
+        self.shop.add_item_to_inventory(Item(name="Potion of Strength", description="Desc", base_value=60, item_type="potion", quality="Common"))
 
         shop_dict = self.shop.to_dict()
 
         # Create a new town object for from_dict, as it's required
-        new_town = Town(name=self.town.name) # Assuming town name is what's used for linkage
+        new_town = Town(name=self.town.name, properties=[], nearby_resources=[], unique_npc_crafters=[]) # Assuming town name is what's used for linkage
         loaded_shop = Shop.from_dict(shop_dict, new_town)
 
         self.assertEqual(loaded_shop.name, self.shop.name)
