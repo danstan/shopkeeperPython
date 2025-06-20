@@ -566,7 +566,9 @@ class Character:
         # print(f"  {final_formatted_string}") # Or self._print if available
         pass
 
-        return final_result
+
+    return final_result
+
 
     def to_dict(self, current_town_name: str = None) -> dict:
         # If current_town_name is None, default to "Starting Village"
