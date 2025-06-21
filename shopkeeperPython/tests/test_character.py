@@ -18,9 +18,7 @@ class TestCharacter(unittest.TestCase):
         self.assertEqual(self.character.inventory[0].quantity, 1)
 
     def test_add_item_to_inventory_stacking_existing_item(self):
-        # This test will likely fail its logic assertions after the TypeError fix,
-        # because add_item_to_inventory currently just appends.
-        # However, the goal here is to fix the TypeError first.
+        # Test that items of the same name and quality stack their quantities.
         item1 = Item(name="Arrow", description="Points", base_value=1, item_type="ammo", quality="Common")
         item1.quantity = 5
         self.character.add_item_to_inventory(item1)
@@ -29,7 +27,6 @@ class TestCharacter(unittest.TestCase):
         item2.quantity = 10
         self.character.add_item_to_inventory(item2) # This should stack
 
-        # The following assertions will likely fail due to character.add_item_to_inventory's current implementation
         self.assertEqual(len(self.character.inventory), 1, "Items did not stack, found multiple entries.")
         self.assertEqual(self.character.inventory[0].name, "Arrow")
         self.assertEqual(self.character.inventory[0].quantity, 15, "Item quantity did not stack correctly.")

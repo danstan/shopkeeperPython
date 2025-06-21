@@ -26,6 +26,12 @@ class Shop:
     CRITICAL_SUCCESS_QUALITY_BONUS = 1  # Index shift in QUALITY_TIERS
     CRITICAL_FAILURE_QUALITY_PENALTY = -1 # Index shift in QUALITY_TIERS
 
+    NPC_MIN_OFFER_PERCENTAGE = 0.7  # NPCs offer at least 70% of calculated sale price
+    NPC_MAX_OFFER_PERCENTAGE = 0.9  # NPCs offer at most 90% of calculated sale price
+    BASE_NPC_BUY_CHANCE = 0.10      # Base chance an NPC attempts to buy something
+    REPUTATION_BUY_CHANCE_MULTIPLIER = 0.001 # How much each reputation point adds to buy chance
+    MAX_NPC_BUY_CHANCE_BONUS = 0.20  # Maximum bonus chance from reputation
+
     SPECIALIZATION_TYPES = ["General Store", "Blacksmith", "Alchemist"]
 
     ADVANCED_RECIPES = {

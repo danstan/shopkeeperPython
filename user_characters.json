@@ -40,11 +40,11 @@
             "name": "UniqueNewName",
             "stats": {
                 "CHA": 12,
-                "CON": 15,
-                "DEX": 13,
+                "CON": 9,
+                "DEX": 15,
                 "INT": 12,
-                "STR": 14,
-                "WIS": 12
+                "STR": 13,
+                "WIS": 10
             },
             "stat_bonuses": {
                 "STR": 0,
@@ -58,8 +58,8 @@
             "level": 1,
             "xp": 0,
             "pending_xp": 0,
-            "base_max_hp": 12,
-            "hp": 12,
+            "base_max_hp": 9,
+            "hp": 9,
             "hit_dice": 1,
             "max_hit_dice": 1,
             "attunement_slots": 3,
