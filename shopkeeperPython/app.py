@@ -850,9 +850,26 @@ def perform_action():
     output_stream.truncate(0) # Restore this
     output_stream.seek(0) # Restore this
 
+    # Helper function to format action names for display
+    def _format_action_name_for_display(name_technical: str) -> str:
+        if not name_technical:
+            return "Unknown Action"
+
+        # Simple replacements based on common patterns
+        name_display = name_technical.replace('_', ' ').title()
+
+        # Specific overrides for better readability if needed
+        if name_technical == "rest_short":
+            name_display = "Rest (Short)"
+        elif name_technical == "rest_long":
+            name_display = "Rest (Long)"
+        # Add more specific overrides here if other actions need custom display names
+
+        return name_display
+
     if not action_name:
-        # print("Action aborted: No action_name provided.") # Diagnostic print, consider app.logger.warning()
-        game_manager_instance._print("Error: No action_name provided.")
+        flash("Error: No action selected. Please choose an action.", "error")
+        # game_manager_instance._print("Error: No action_name provided.") # Kept for log, flash is for user
         return redirect(url_for('display_game_output'))
 
     # Use the updated parse_action_details function
@@ -861,13 +878,20 @@ def perform_action():
 
     # Perform the game action
     try:
+        action_name_display = _format_action_name_for_display(action_name)
+
         # Ensure a living character is loaded before performing actions
         if player_char is None or player_char.name is None or player_char.is_dead:
-            # print(f"Action '{action_name}' aborted: No active/living character in player_char for perform_action.") # Diagnostic print, consider app.logger.warning()
             flash("No active character or character is dead. Cannot perform action.", "error")
             return redirect(url_for('display_game_output'))
 
-        # print(f"Action '{action_name}' proceeding with character: {player_char.name}") # Diagnostic print, consider app.logger.info()
+        # Crafting specific check: item name must be provided
+        if action_name == "craft":
+            item_name_to_craft = details_dict.get("item_name")
+            if not item_name_to_craft:
+                flash("Error: Item name cannot be empty for crafting.", "error")
+                # No need to call perform_hourly_action if this fails
+                return redirect(url_for('display_game_output'))
 
         # Explicitly check GameManager's setup status for the current player_char
         # This is crucial because game_manager_instance.character should be the same as player_char
@@ -880,6 +904,11 @@ def perform_action():
             flash(f"Cannot perform action. Game world not fully initialized for {player_char.name}. Try re-selecting the character.", "error")
             return redirect(url_for('display_game_output'))
 
+        # The following 'buy_from_npc' block seems like a placeholder or an alternative action path.
+        # For the current task, we are focusing on actions going through perform_hourly_action.
+        # If 'buy_from_npc' is meant to be a standard action processed by perform_hourly_action,
+        # it might not need this special handling here. If it's different, its flash messages
+        # would need separate consideration. For now, assuming it's not the primary focus for this refactor.
         if action_name == "buy_from_npc":
             npc_name = request.form.get('npc_name')
             item_name = request.form.get('item_name')
@@ -915,12 +944,14 @@ def perform_action():
                         'description': action_result_data.get('event_description'),
                         'choices': action_result_data.get('choices')
                     }
-                    # Optional: Add a message to the main output stream
-                    game_manager_instance._print(f"EVENT: {action_result_data.get('event_name')} requires your attention!")
+                    flash(f"EVENT: {action_result_data.get('event_name')}! Check Journal or Game Log for details.", "info")
+                    game_manager_instance._print(f"EVENT: {action_result_data.get('event_name')} requires your attention!") # Log remains
                 else:
                     # Action completed or no event, clear any previous event data
                     session.pop('awaiting_event_choice', None)
                     session.pop('pending_event_data', None)
+                    # Default success message for actions that don't trigger an event
+                    flash(f"Action '{action_name_display}' performed. Check Journal or Game Log for details.", "info")
 
         # ---- START NEW SAVE LOGIC ----
         # Save character state if alive and loaded
@@ -1007,9 +1038,10 @@ def perform_action():
             return redirect(url_for('display_game_output'))
 
     except Exception as e:
-        game_manager_instance._print(f"An error occurred while performing action '{action_name}': {e}")
+        game_manager_instance._print(f"An error occurred while performing action '{action_name_display}': {e}")
         import traceback
         game_manager_instance._print(f"Traceback: {traceback.format_exc()}")
+        flash("An unexpected error occurred. Check the game log for more details.", "error")
 
     # Capture action result for popup before redirecting
     session['action_result'] = output_stream.getvalue()
