@@ -15,10 +15,6 @@ from shopkeeperPython.game.town import Town
 class TestGameManager(unittest.TestCase):
 
     def setUp(self):
-        # Suppress print output during tests by redirecting stdout
-        # self.patcher = patch('sys.stdout', new_callable=MagicMock)
-        # self.mock_stdout = self.patcher.start()
-
         self.player = Character(name="Test Player") # Start with plenty of gold
         self.player.gold = 20000
         # GameManager init can be basic, setup_for_character does the heavy lifting
@@ -32,9 +28,6 @@ class TestGameManager(unittest.TestCase):
         item2 = Item(name="Leather Straps", description="Some leather straps", base_value=5, item_type="component", quality="Common"); item2.quantity = 10; self.player.add_item_to_inventory(item2)
         item3 = Item(name="Steel Ingot", description="An ingot of steel", base_value=25, item_type="component", quality="Common"); item3.quantity = 10; self.player.add_item_to_inventory(item3)
         item4 = Item(name="Oak Wood", description="A piece of oak wood", base_value=8, item_type="component", quality="Common"); item4.quantity = 5; self.player.add_item_to_inventory(item4)
-
-    # def tearDown(self):
-        # self.patcher.stop() # Stop redirecting stdout
 
     def test_initial_setup_for_character(self):
         self.assertIsNotNone(self.gm.shop)
@@ -240,95 +233,72 @@ class TestGameManager(unittest.TestCase):
 
         self.assertEqual(len(self.gm.shop.inventory), initial_inventory_count) # Item should not be crafted
 
-    @patch('random.uniform') # Outer patch, mock_uniform should be the second mock argument
-    @patch('random.random')  # Inner patch, mock_random_roll should be the first mock argument
+    @patch('random.uniform')
+    @patch('random.random')
     def test_npc_purchase_chance_with_reputation(self, mock_random_roll, mock_uniform):
+        mock_uniform.return_value = 0.9 # for npc_offer_percentage if a sale occurs
 
-        # This test focuses on the chance calculation and if a sale is attempted.
-        # It doesn't deeply verify the sale itself, which is Shop's responsibility.
-        # This mock is for random.uniform, used in shop.complete_sale_to_npc
-        mock_uniform.return_value = 0.9
-
-        # Add an item to shop inventory for NPC to buy
-        item_for_npc = Item(name="NPC Bait", description="Bait for NPCs", base_value=10, item_type="misc", quality="Common")
-
-        # Ensure shop inventory is clear before adding the specific item for this test case
-        self.gm.shop.inventory = []
-
-        self.gm.shop.add_item_to_inventory(item_for_npc)
-        # random.choice will now pick item_for_npc if the shop inventory only has this item for relevant cases.
+        # Common item for sale
+        item_to_sell_info = {"name": "NPC Bait", "description": "Bait for NPCs", "base_value": 10, "item_type": "misc", "quality": "Common"}
 
         # Case 1: Low reputation (0), high random roll (no sale)
         self.gm.shop.reputation = 0
-        # random.random() calls in perform_hourly_action: 1. skill_event_chance, 2. base_event_chance (if applicable), 3. npc_buy_chance
-        mock_random_roll.side_effect = [0.99, 0.99, 0.25] # Skill event (no), Base event (no), NPC sale (no, 0.25 > 0.1)
+        self.gm.shop.inventory = [] # Clear inventory
+        self.gm.shop.add_item_to_inventory(Item(**item_to_sell_info))
+        # For "wait" action: 1. base_event_chance, 2. npc_buy_chance, 3. customer_interaction_chance
+        mock_random_roll.side_effect = [0.99, 0.25, 0.99] # Generic event(no), NPC buy(no), Customer interaction(no)
         initial_shop_gold = self.gm.shop.gold
-        # Use a non-interfering action that still allows NPC sales to occur
-        with patch.object(self.gm.shop, 'complete_sale_to_npc', wraps=self.gm.shop.complete_sale_to_npc) as spy_complete_sale, \
+        with patch.object(self.gm.shop, 'complete_sale_to_npc', wraps=self.gm.shop.complete_sale_to_npc) as spy_sale1, \
              patch('shopkeeperPython.game.game_manager.EventManager.trigger_random_event', return_value=None), \
-             patch('shopkeeperPython.game.game_manager.GameManager._handle_customer_interaction') as mock_interaction:
+             patch('shopkeeperPython.game.game_manager.GameManager._handle_customer_interaction'):
             self.gm.perform_hourly_action("wait")
-            spy_complete_sale.assert_not_called()
+            spy_sale1.assert_not_called()
         self.assertEqual(self.gm.shop.gold, initial_shop_gold)
 
-
         # Case 2: Low reputation (0), low random roll (sale attempt)
-        mock_random_roll.side_effect = [0.99, 0.99, 0.05] # Skill event (no), Base event (no), NPC sale (yes, 0.05 < 0.1)
+        self.gm.shop.reputation = 0
+        self.gm.shop.inventory = [] # Clear inventory
+        self.gm.shop.add_item_to_inventory(Item(**item_to_sell_info))
         initial_shop_gold = self.gm.shop.gold
-        initial_shop_inventory_count = len(self.gm.shop.inventory)
-        with patch.object(self.gm.shop, 'complete_sale_to_npc', wraps=self.gm.shop.complete_sale_to_npc) as spy_complete_sale, \
+        initial_inv_count = len(self.gm.shop.inventory) # Should be 1
+        # For "wait" action: 1. base_event_chance, 2. npc_buy_chance, 3. customer_interaction_chance
+        mock_random_roll.side_effect = [0.99, 0.05, 0.99] # Generic event(no), NPC buy(yes), Customer interaction(no)
+        with patch.object(self.gm.shop, 'complete_sale_to_npc', wraps=self.gm.shop.complete_sale_to_npc) as spy_sale2, \
              patch('shopkeeperPython.game.game_manager.EventManager.trigger_random_event', return_value=None), \
-             patch('shopkeeperPython.game.game_manager.GameManager._handle_customer_interaction') as mock_interaction:
+             patch('shopkeeperPython.game.game_manager.GameManager._handle_customer_interaction'):
             self.gm.perform_hourly_action("wait")
-            if self.gm.shop.inventory : # Sale can only happen if item is in inventory
-                 spy_complete_sale.assert_called_once() # Assert that a sale was processed
-                 # We expect the item to be sold, gold increases, inventory decreases
-                 self.assertTrue(self.gm.shop.gold > initial_shop_gold)
-                 self.assertEqual(len(self.gm.shop.inventory), initial_shop_inventory_count -1)
-            else: # Item was already sold or not added correctly
-                 spy_complete_sale.assert_not_called()
-                 self.assertEqual(self.gm.shop.gold, initial_shop_gold)
-
-
-        # Re-add item for next test
-
-        self.gm.shop.inventory = [] # Clear for next case
-        item_for_npc_2 = Item(name="NPC Bait", description="Bait for NPCs", base_value=10, item_type="misc", quality="Common"); self.gm.shop.add_item_to_inventory(item_for_npc_2)
-        # mock_choice.return_value = item_for_npc_2 # Ensure "NPC Bait" is chosen for this part too
-
+            spy_sale2.assert_called_once()
+        self.assertTrue(self.gm.shop.gold > initial_shop_gold)
+        self.assertEqual(len(self.gm.shop.inventory), initial_inv_count - 1)
 
         # Case 3: High reputation (100), roll that would fail for low rep but pass for high rep
-        self.gm.shop.reputation = 100 # npc_buy_chance = min(0.1 + (100 * 0.001), 0.3) = min(0.1 + 0.1, 0.3) = 0.2
-        mock_random_roll.side_effect = [0.99, 0.99, 0.15] # Skill event (no), Base event (no), NPC sale (yes, 0.15 < 0.2)
-        initial_shop_gold = self.gm.shop.gold
-        initial_shop_inventory_count = len(self.gm.shop.inventory)
-        with patch.object(self.gm.shop, 'complete_sale_to_npc', wraps=self.gm.shop.complete_sale_to_npc) as spy_complete_sale, \
-             patch('shopkeeperPython.game.game_manager.EventManager.trigger_random_event', return_value=None), \
-             patch('shopkeeperPython.game.game_manager.GameManager._handle_customer_interaction') as mock_interaction:
-            self.gm.perform_hourly_action("wait")
-            if self.gm.shop.inventory:
-                spy_complete_sale.assert_called_once()
-                self.assertTrue(self.gm.shop.gold > initial_shop_gold)
-                self.assertEqual(len(self.gm.shop.inventory), initial_shop_inventory_count -1)
-            else:
-                spy_complete_sale.assert_not_called()
-                self.assertEqual(self.gm.shop.gold, initial_shop_gold)
-
-
-        # Case 4: High reputation (100), roll that would fail even for high rep (above cap or calculated chance)
-        self.gm.shop.inventory = [] # Clear for next case
-        item_for_npc_3 = Item(name="NPC Bait", description="Bait for NPCs", base_value=10, item_type="misc", quality="Common"); self.gm.shop.add_item_to_inventory(item_for_npc_3)
-
         self.gm.shop.reputation = 100
-        # Skill event (no), Base event (no), NPC sale (no, 0.28 > 0.2)
-        mock_random_roll.side_effect = [0.99, 0.99, 0.28]
+        self.gm.shop.inventory = []
+        self.gm.shop.add_item_to_inventory(Item(**item_to_sell_info))
         initial_shop_gold = self.gm.shop.gold
-        # Restore nested patches
-        with patch.object(self.gm.shop, 'complete_sale_to_npc', wraps=self.gm.shop.complete_sale_to_npc) as spy_complete_sale, \
-             patch('shopkeeperPython.game.game_manager.EventManager.trigger_random_event', return_value=None) as mock_trigger_event, \
-             patch('shopkeeperPython.game.game_manager.GameManager._handle_customer_interaction') as mock_interaction:
+        initial_inv_count = len(self.gm.shop.inventory) # Should be 1
+        # For "wait" action: 1. base_event_chance, 2. npc_buy_chance, 3. customer_interaction_chance
+        mock_random_roll.side_effect = [0.99, 0.15, 0.99] # Generic event(no), NPC buy(yes, 0.15 < 0.2), Customer interaction(no)
+        with patch.object(self.gm.shop, 'complete_sale_to_npc', wraps=self.gm.shop.complete_sale_to_npc) as spy_sale3, \
+             patch('shopkeeperPython.game.game_manager.EventManager.trigger_random_event', return_value=None), \
+             patch('shopkeeperPython.game.game_manager.GameManager._handle_customer_interaction'):
             self.gm.perform_hourly_action("wait")
-            spy_complete_sale.assert_not_called()
+            spy_sale3.assert_called_once()
+        self.assertTrue(self.gm.shop.gold > initial_shop_gold)
+        self.assertEqual(len(self.gm.shop.inventory), initial_inv_count - 1)
+
+        # Case 4: High reputation (100), roll that would fail even for high rep
+        self.gm.shop.reputation = 100
+        self.gm.shop.inventory = []
+        self.gm.shop.add_item_to_inventory(Item(**item_to_sell_info))
+        initial_shop_gold = self.gm.shop.gold
+        # For "wait" action: 1. base_event_chance, 2. npc_buy_chance, 3. customer_interaction_chance
+        mock_random_roll.side_effect = [0.99, 0.28, 0.99] # Generic event(no), NPC buy(no, 0.28 > 0.2), Customer interaction(no)
+        with patch.object(self.gm.shop, 'complete_sale_to_npc', wraps=self.gm.shop.complete_sale_to_npc) as spy_sale4, \
+             patch('shopkeeperPython.game.game_manager.EventManager.trigger_random_event', return_value=None), \
+             patch('shopkeeperPython.game.game_manager.GameManager._handle_customer_interaction'):
+            self.gm.perform_hourly_action("wait")
+            spy_sale4.assert_not_called()
         self.assertEqual(self.gm.shop.gold, initial_shop_gold)
 
 

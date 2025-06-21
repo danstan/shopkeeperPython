@@ -1,6 +1,7 @@
 import unittest
 import copy
 import html # Import the html module for unescaping
+import json # Added for json.dumps
 from unittest.mock import patch
 
 from shopkeeperPython.app import app, users, user_characters, graveyard, is_character_name_taken
@@ -223,7 +224,7 @@ class TestApp(unittest.TestCase):
 
         response = self._login_and_go_to_char_creation() # This attempts to go to creation page
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f"You cannot create more than {MAX_CHARS_PER_USER} characters.", response.data.decode('utf-8'))
+        self.assertIn(f"You cannot create more than {MAX_CHARS_PER_USER} active characters.", response.data.decode('utf-8'))
 
     # --- Test for Stat Display Order (Character Creation) ---
     def test_char_creation_stat_order(self):
@@ -283,21 +284,18 @@ class TestApp(unittest.TestCase):
         with self.client.session_transaction() as sess:
             sess['selected_character_slot'] = 0
 
-        # Crucially, ensure the GameManager is set up for this character.
-        # This simulates what happens when display_game_output successfully loads a character.
-        # We need to access the global game_manager_instance from the app context.
-        from shopkeeperPython.app import game_manager_instance, player_char as app_player_char
+        # The goal is to ensure that when an action is performed,
+        # the app's before_request_setup() correctly initializes g.player_char and g.game_manager.
+        # We do this by setting up the session and user_characters data.
+        # No direct manipulation of app's g.player_char or g.game_manager from the test.
 
-        loaded_char_for_gm = Character.from_dict(char_dict)
+        # To verify that the setup within the app context works as expected during an action,
+        # we can make a preliminary request (e.g., to display_game_output) that would trigger
+        # before_request_setup. Then, subsequent action posts will use that context.
+        # Alternatively, actions themselves will trigger before_request_setup.
 
-        # Manually sync app's global player_char and GM's state for testing
-        # This is a bit of a hack but necessary because test client doesn't fully replicate browser navigation flow for GM setup
-        with app.app_context(): # Ensure we are in app context for modifying globals if needed
-            app.player_char = loaded_char_for_gm # Update the global player_char in app.py
-            game_manager_instance.setup_for_character(loaded_char_for_gm)
-            self.assertTrue(game_manager_instance.is_game_setup, "GameManager failed to setup for action test helper.")
-            self.assertEqual(game_manager_instance.character.name, char_name)
-
+        # The main check will be if the actions themselves behave as expected,
+        # implying that g.player_char and g.game_manager were correctly set up by the app.
         return char_name
 
 
@@ -306,58 +304,143 @@ class TestApp(unittest.TestCase):
         """Test the 'talk_to_self' action."""
         char_name = self._setup_user_and_character_for_actions()
 
-        # Diagnostic prints
-        from shopkeeperPython.app import game_manager_instance as gm_app_level
-        from shopkeeperPython.app import output_stream as os_app_level
-        print(f"DEBUG TEST (talk_to_self): gm_app_level.output_stream is {gm_app_level.output_stream}")
-        print(f"DEBUG TEST (talk_to_self): os_app_level is {os_app_level}")
-
+        # Make the action request. The before_request hook in app.py should handle
+        # setting up g.player_char and g.game_manager based on the session.
         response = self.client.post('/action', data={'action_name': 'talk_to_self'}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
 
-        # Check the session for 'action_result' which holds the popup content
-        with self.client.session_transaction() as sess:
-            action_result = sess.get('action_result', '')
+        # The action result is popped from session by display_game_output and rendered in the page.
+        # So, we check the response data from the final GET request (due to follow_redirects=True).
+        response_html = response.data.decode('utf-8')
+        # Assuming the action result is rendered into a div with id "action-result-message"
+        # or generally available in the HTML if the popup is to be shown.
+        self.assertIn(f"  {char_name} mutters.", response_html)
 
-        self.assertIn(f"{char_name} mutters something unintelligible.", action_result)
 
     def test_action_explore_town(self):
         """Test the 'explore_town' action."""
         char_name = self._setup_user_and_character_for_actions()
 
-        # Diagnostic prints
-        from shopkeeperPython.app import game_manager_instance as gm_app_level_explore
-        from shopkeeperPython.app import output_stream as os_app_level_explore
-        print(f"DEBUG TEST (explore_town): gm_app_level.output_stream is {gm_app_level_explore.output_stream}")
-        print(f"DEBUG TEST (explore_town): os_app_level is {os_app_level_explore}")
-
         response = self.client.post('/action', data={'action_name': 'explore_town'}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
 
-        with self.client.session_transaction() as sess:
-            action_result = sess.get('action_result', '')
+        response_html = response.data.decode('utf-8')
+        self.assertIn(f"  {char_name} explores ", response_html) # Made assertion more general
 
-        self.assertIn(f"{char_name} spends an hour exploring", action_result)
-        # Further checks could be for "Found ...g!" or "Found a ..." or "Found nothing...",
-        # but exact outcome is random. Presence of exploration text is key.
 
     def test_action_wait(self):
         """Test the 'wait' action."""
         char_name = self._setup_user_and_character_for_actions()
 
-        # Diagnostic prints
-        from shopkeeperPython.app import game_manager_instance as gm_app_level_wait
-        from shopkeeperPython.app import output_stream as os_app_level_wait
-        print(f"DEBUG TEST (wait): gm_app_level.output_stream is {gm_app_level_wait.output_stream}")
-        print(f"DEBUG TEST (wait): os_app_level is {os_app_level_wait}")
-
         response = self.client.post('/action', data={'action_name': 'wait'}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
 
-        with self.client.session_transaction() as sess:
-            action_result = sess.get('action_result', '')
+        response_html = response.data.decode('utf-8')
+        self.assertIn(f"  {char_name} waits.", response_html)
 
-        self.assertIn(f"{char_name} waits for an hour", action_result)
+    @patch('shopkeeperPython.game.game_manager.random.random')
+    @patch('shopkeeperPython.game.game_manager.random.choice')
+    def test_action_explore_town_find_gold(self, mock_game_random_choice, mock_game_random_random):
+        """Test explore_town action results in finding gold."""
+        char_name = self._setup_user_and_character_for_actions()
+        username = 'testuser' # Matches the user in _setup
+
+        # Ensure the 20% chance to find something passes
+        mock_game_random_random.return_value = 0.1
+        # Configure random.choice to return a gold find
+        gold_find_amount = 10
+        mock_game_random_choice.return_value = {"type": "gold", "amount": gold_find_amount}
+
+        # Get initial gold from the character's data
+        initial_char_data = user_characters[username][0] # Assuming single character at slot 0
+        initial_gold = initial_char_data.get('gold', 0)
+
+        response = self.client.post('/action', data={'action_name': 'explore_town'}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        response_html = response.data.decode('utf-8')
+
+        # Check for the "Found X gold!" message
+        self.assertIn(f"Found {gold_find_amount} gold!", response_html)
+
+        # Verify character's gold has increased
+        updated_char_data = user_characters[username][0] # Reload character data
+        self.assertEqual(updated_char_data.get('gold', 0), initial_gold + gold_find_amount)
+
+    @patch('shopkeeperPython.game.game_manager.random.random')
+    @patch('shopkeeperPython.game.game_manager.random.choice')
+    def test_action_explore_town_find_item(self, mock_game_random_choice, mock_game_random_random):
+        """Test explore_town action results in finding a specific item."""
+        char_name = self._setup_user_and_character_for_actions()
+        username = 'testuser'
+
+        mock_game_random_random.return_value = 0.1 # Ensure find branch is taken
+        item_to_find = {
+            "type": "item", "name": "Shiny Pebble",
+            "description": "A smooth, oddly shiny pebble.",
+            "base_value": 1, "item_type": "trinket", "quality": "Common", "quantity": 1
+        }
+        mock_game_random_choice.return_value = item_to_find
+
+        response = self.client.post('/action', data={'action_name': 'explore_town'}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        response_html = response.data.decode('utf-8')
+
+        self.assertIn(f"Found {item_to_find['quantity']}x {item_to_find['name']}!", response_html)
+
+        updated_char_data = user_characters[username][0]
+        found_in_inventory = any(item['name'] == item_to_find['name'] for item in updated_char_data.get('inventory', []))
+        self.assertTrue(found_in_inventory, f"{item_to_find['name']} not found in character inventory.")
+
+    def test_action_travel_to_valid_town(self):
+        """Test traveling to a valid different town."""
+        char_name = self._setup_user_and_character_for_actions(char_name="Traveler", username="testuser")
+        username = "testuser"
+
+        initial_char_data = user_characters[username][0]
+        self.assertEqual(initial_char_data['current_town_name'], "Starting Village")
+
+        action_details = {'town_name': "Steel Flow City"}
+        response = self.client.post('/action', data={'action_name': 'travel_to_town', 'action_details': json.dumps(action_details)}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        response_html = response.data.decode('utf-8')
+
+        self.assertIn("Arrived in Steel Flow City.", response_html)
+        updated_char_data = user_characters[username][0]
+        self.assertEqual(updated_char_data['current_town_name'], "Steel Flow City")
+
+    def test_action_travel_to_current_town(self):
+        """Test attempting to travel to the current town."""
+        char_name = self._setup_user_and_character_for_actions(char_name="Homebody", username="testuser")
+        username = "testuser"
+
+        initial_char_data = user_characters[username][0]
+        self.assertEqual(initial_char_data['current_town_name'], "Starting Village")
+
+        action_details = {'town_name': "Starting Village"}
+        response = self.client.post('/action', data={'action_name': 'travel_to_town', 'action_details': json.dumps(action_details)}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        response_html = response.data.decode('utf-8')
+
+        self.assertIn("Already in Starting Village.", response_html)
+        updated_char_data = user_characters[username][0]
+        self.assertEqual(updated_char_data['current_town_name'], "Starting Village")
+
+    def test_action_travel_to_invalid_town(self):
+        """Test attempting to travel to an invalid town."""
+        char_name = self._setup_user_and_character_for_actions(char_name="Lost Adventurer", username="testuser")
+        username = "testuser"
+
+        initial_char_data = user_characters[username][0]
+        self.assertEqual(initial_char_data['current_town_name'], "Starting Village")
+
+        action_details = {'town_name': "Atlantis"} # An invalid town
+        response = self.client.post('/action', data={'action_name': 'travel_to_town', 'action_details': json.dumps(action_details)}, follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        response_html = response.data.decode('utf-8')
+
+        self.assertIn("Cannot travel to unknown town: Atlantis.", response_html)
+        updated_char_data = user_characters[username][0]
+        self.assertEqual(updated_char_data['current_town_name'], "Starting Village")
 
 
 if __name__ == '__main__':

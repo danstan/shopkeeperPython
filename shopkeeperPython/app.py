@@ -313,13 +313,68 @@ def is_character_name_taken(name_to_check: str, all_user_chars: dict, all_gravey
                     return True
     return False
 
-# Global StringIO object and GameManager instance
-output_stream = io.StringIO()
-# Initialize player_char with no name; it will be loaded or created.
-player_char = Character(name=None)
-player_char.gold = 50 # Default starting gold for new characters
+# --- Application Context Globals Setup ---
+# These will be managed per request using Flask's 'g' object.
 
-game_manager_instance = GameManager(player_character=player_char, output_stream=output_stream)
+@app.before_request
+def before_request_setup():
+    """
+    Ran before each request.
+    Initializes request-specific game objects on Flask's 'g' context object.
+    """
+    from flask import g  # Import g here to avoid circular dependency issues at module level
+
+    g.output_stream = io.StringIO()
+    # Default character if no one is logged in or selected
+    default_char = Character(name=None)
+    default_char.gold = 50 # Default starting gold
+
+    username = session.get('username')
+    selected_slot_index = session.get('selected_character_slot')
+    active_char_instance = None
+
+    # This flag helps determine if game_manager.setup_for_character() should be called.
+    # It's true if an actual character is loaded, false if using the placeholder default_char.
+    character_loaded_for_setup = False
+
+    if username and selected_slot_index is not None:
+        characters_list = user_characters.get(username, [])
+        if 0 <= selected_slot_index < len(characters_list):
+            char_data = characters_list[selected_slot_index]
+            if not char_data.get('is_dead', False):
+                active_char_instance = Character.from_dict(char_data)
+                character_loaded_for_setup = True # A specific character is being loaded
+            else:
+                session.pop('selected_character_slot', None)
+                flash(f"The selected character, {char_data.get('name', 'Unknown')}, is dead and cannot be played. Please select another character.", "warning")
+                # g.output_stream.write(f"INFO: Selected character {char_data.get('name', 'Unknown')} is dead.\n")
+        else: # Invalid slot index
+            session.pop('selected_character_slot', None)
+            # g.output_stream.write("INFO: Invalid character slot selected.\n")
+
+    if active_char_instance:
+        g.player_char = active_char_instance
+    else:
+        g.player_char = default_char
+        # If no active character, ensure game_manager doesn't think it's set up for a real game state
+        character_loaded_for_setup = False
+
+    g.game_manager = GameManager(player_character=g.player_char, output_stream=g.output_stream)
+
+    if character_loaded_for_setup:
+        # This setup is for an existing, loaded character.
+        # It ensures the GM knows about the current town, etc.
+        g.game_manager.setup_for_character(g.player_char) # g.player_char is active_char_instance here
+        if not g.game_manager.is_game_setup:
+            # This implies an issue with loading the character's environment (e.g. town not found)
+            flash(f"Warning: Failed to fully initialize game world for {g.player_char.name}. Some features might be unavailable or the character may be in an invalid state. Consider re-selecting or contacting support if issues persist.", "error")
+            # Potentially revert to a default state if setup fails critically
+            # For now, we proceed with is_game_setup as False, and routes should check this.
+    # else:
+        # If using default_char, g.game_manager is initialized with it,
+        # but g.game_manager.is_game_setup remains False by default in GameManager.
+        # No further setup is needed for the default character placeholder.
+        pass
 
 
 # --- Authentication Routes ---
@@ -357,12 +412,9 @@ def logout_route():
     session.pop('character_creation_name', None) # Clear pending char name
     get_flashed_messages()
     flash('You have been logged out.', 'success')
-    # Reset global player_char to avoid carrying over state
-    global player_char, game_manager_instance
-    player_char = Character(name=None)
-    player_char.gold = 50
-    game_manager_instance.character = player_char
-    game_manager_instance.is_game_setup = False # Or similar reset logic
+    # Session variables controlling character selection are cleared above.
+    # The new g objects (output_stream, player_char, game_manager) will be
+    # created by before_request_setup on the GET request resulting from the redirect.
     return redirect(url_for('display_game_output'))
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -429,9 +481,8 @@ def select_character_route(slot_index: int):
 
 @app.route('/create_character', methods=['POST'])
 def create_character_route():
-    global player_char
-    global game_manager_instance
-    global user_characters
+    from flask import g # Access g for current request context
+    global user_characters # Still global for persistent storage, holds all users' characters
 
     if 'username' not in session:
         flash('You must be logged in to create a character.', 'error')
@@ -486,29 +537,27 @@ def create_character_route():
     # Automatically select the newly created character
     session['selected_character_slot'] = len(user_characters[username]) - 1
 
-    # Update global player_char (still useful for immediate context if needed before full setup)
-    player_char = new_character
+    # Update g.player_char and g.game_manager for the *current* request context.
+    # This makes the newly created character immediately active for this request if needed,
+    # though the redirect will trigger before_request_setup again, which will load based on new session.
+    g.player_char = new_character
+    g.output_stream.truncate(0) # Clear stream for this new character context
+    g.output_stream.seek(0)
+    # Setup the game manager on g with the new character
+    g.game_manager.character = new_character # Assign new char to existing GM on g
+    g.game_manager.setup_for_character(new_character) # Now setup this GM instance
 
-    output_stream.truncate(0)
-    output_stream.seek(0)
-
-    # Call the new setup method
-    game_manager_instance.setup_for_character(new_character)
-
-    # Confirmation message (optional, as setup_for_character is verbose)
-    if game_manager_instance.is_game_setup:
+    if g.game_manager.is_game_setup:
         success_message = f"Character {new_character.name} (user: {username}) created and game world prepared."
         flash(success_message, "success")
-        game_manager_instance._print(success_message) # Also print to game log if desired
-        session.pop('character_creation_stats', None) # Clear stats on full success
-        session.pop('character_creation_name', None) # Clear name on full success
+        g.game_manager._print(success_message) # Also print to game log via g.game_manager
+        session.pop('character_creation_stats', None)
+        session.pop('character_creation_name', None)
     else:
-        # Character was saved, but game world setup (e.g., loading current town) failed.
-        game_manager_instance._print(f"Character {new_character.name} (user: {username}) created, but game world setup failed. is_game_setup is False.")
+        g.game_manager._print(f"Character {new_character.name} (user: {username}) created, but game world setup failed. is_game_setup is False.")
         error_message = (f"Character {new_character.name} was saved, but there was an issue preparing the game world. "
                          f"You can try selecting the character from the main menu. If issues persist, please note the character name and contact support.")
-        flash(error_message, "warning") # Warning, as character is saved.
-        # Clear character creation stats and name as the character is saved and these are used/finalized.
+        flash(error_message, "warning")
         session.pop('character_creation_stats', None)
         session.pop('character_creation_name', None)
 
@@ -519,8 +568,9 @@ def create_character_route():
 
 @app.route('/')
 def display_game_output():
-    global player_char
-    global game_manager_instance
+    from flask import g # Access g for current request context
+    # player_char, game_manager_instance, and output_stream are now on g,
+    # initialized by before_request_setup.
 
     popup_action_result = session.pop('action_result', None) # Get and clear action result from session
 
@@ -537,17 +587,18 @@ def display_game_output():
     player_stats_display = {}
     player_hp_display = 0
     player_max_hp_display = 0
-    player_gold_display = 0 # Will be set to default if showing creation form
+    player_gold_display = 0 # Will be derived from g.player_char.gold later
     current_time_display = "N/A"
     current_town_display = "N/A"
     shop_inventory_display = ["Empty"]
     player_inventory_display = ["Empty"]
-    player_journal_display = [] # Initialize journal display
+    player_journal_display = []
     dead_characters_info = []
-    character_creation_stats_display = None # For passing to template
-    pending_char_name_display = None # For character creation name persistence
+    character_creation_stats_display = None
+    pending_char_name_display = None
 
-    available_towns = list(game_manager_instance.towns_map.keys())
+    # available_towns will be derived from g.game_manager later
+    available_towns = list(g.game_manager.towns_map.keys()) if g.game_manager else []
     current_town_sub_locations = []
     all_towns_data = {}
     available_recipes = {}
@@ -555,6 +606,7 @@ def display_game_output():
 
     if user_logged_in:
         username = session['username']
+        # These still come from global persistent storage
         characters_list = user_characters.get(username, [])
         user_graveyard_list = graveyard.get(username, [])
 
@@ -568,149 +620,154 @@ def display_game_output():
         is_creating_new_char_action = request.args.get('action') == 'create_new_char'
 
         if is_creating_new_char_action:
-            if len(characters_list) < MAX_CHARS_PER_USER:
-                session.pop('selected_character_slot', None)
-                player_char_loaded_or_selected = False # Explicitly not loading a character
-                show_character_creation_form = True  # GOAL: Show the creation form
-                show_character_selection = False     # Do not show selection
+            # Check against active characters for the user (non-dead ones)
+            active_user_chars = [char_data for char_data in characters_list if not char_data.get('is_dead', False)]
+            if len(active_user_chars) < MAX_CHARS_PER_USER:
+                session.pop('selected_character_slot', None) # Ensure no character is "selected"
+                # This should cause before_request_setup on the *next* request to use default char,
+                # or if this is a POST-redirect-GET, it might already be default.
+                # For current request, we want to show creation form.
+                player_char_loaded_or_selected = False
+                show_character_creation_form = True
+                show_character_selection = False
 
-                # Prepare for character creation screen (blank character, default gold)
-                output_stream.truncate(0)
-                output_stream.seek(0)
-                unnamed_char = Character(name=None)
-                player_char = unnamed_char # Update global
-                player_char.gold = 50 # Default gold for creation form display
-                game_manager_instance.setup_for_character(unnamed_char) # Reset GM
+                # Ensure g.player_char is the default, and g.output_stream is clear for creation.
+                # before_request_setup should have set g.player_char to default if selected_character_slot is None.
+                # If g.player_char is not default, or to be absolutely sure for this path:
+                if g.player_char.name is not None: # If a character was somehow loaded
+                    g.player_char = Character(name=None)
+                    g.player_char.gold = 50
+                    g.game_manager.character = g.player_char
+                    g.game_manager.is_game_setup = False # Reset GM state for default character
 
-                # Stat rolling for character creation
+                g.output_stream.truncate(0)
+                g.output_stream.seek(0)
+                # g.player_char.gold is already 50 for default char.
+                # g.game_manager is already using this g.player_char.
+
                 if 'character_creation_stats' not in session:
-                    initial_stats = Character.roll_all_stats()
+                    initial_stats = Character.roll_all_stats() # This class method call is fine
                     session['character_creation_stats'] = {'stats': initial_stats, 'reroll_used': False}
                     flash("Stats rolled for new character! You can reroll one stat if you wish.", "info")
 
                 character_creation_stats_display = session['character_creation_stats']
                 pending_char_name_display = session.get('character_creation_name')
 
-
-                if not characters_list:
-                    current_game_output = "Welcome! Please create your first character."
+                # Game output for creation screen
+                if not characters_list: # Message based on whether user has ANY characters
+                    g.output_stream.write("Welcome! Please create your first character.")
                 else:
-                    current_game_output = "Create your new character."
+                    g.output_stream.write("Create your new character.")
+                # current_game_output will be built from g.output_stream at the end of the function
             else: # At character limit
-                flash(f"You cannot create more than {MAX_CHARS_PER_USER} characters.", "warning")
-                # Clear pending creation stats if user hits limit and is sent away from creation screen
+                flash(f"You cannot create more than {MAX_CHARS_PER_USER} active characters.", "warning")
                 session.pop('character_creation_stats', None)
-                session.pop('character_creation_name', None) # Also clear name if at limit
-                # Let flow continue to potentially show selected character or selection screen
-                # show_character_creation_form remains False
+                session.pop('character_creation_name', None)
+                # Fall through to display existing character or selection screen
+                # show_character_creation_form remains False, so next block will execute
 
 
         # This block runs if NOT (is_creating_new_char_action AND slots available)
         # It tries to load a character if one is selected,
         # OR determines if selection/creation should be shown if no character is active.
         if not show_character_creation_form: # Only proceed if not already decided to show creation form
-            # If not showing creation form, any pending creation name should be cleared
-            session.pop('character_creation_name', None)
-            selected_slot = session.get('selected_character_slot')
+            session.pop('character_creation_name', None) # Clear if not on creation form
 
-            if selected_slot is not None:
-                try:
-                    slot = int(selected_slot)
-                    if 0 <= slot < len(characters_list):
-                        char_data = characters_list[slot]
-                        if char_data.get('is_dead', False):
-                            flash(f"{char_data.get('name', 'Character')} is dead and cannot be played.", "warning")
-                            session.pop('selected_character_slot', None)
-                            player_char_loaded_or_selected = False
-                        else:
-                            loaded_player_char = Character.from_dict(char_data)
-                            game_manager_instance.setup_for_character(loaded_player_char)
-                            if game_manager_instance.is_game_setup:
-                                player_char = loaded_player_char # Update global
-                                player_char_loaded_or_selected = True
-                            else:
-                                flash(f"Failed to set up game world for {loaded_player_char.name}. Please try re-creating or contact support.", "error")
-                                player_char_loaded_or_selected = False
-                                session.pop('selected_character_slot', None)
-                    else: # Invalid slot index
-                        session.pop('selected_character_slot', None)
-                        player_char_loaded_or_selected = False
-                except (ValueError, TypeError): # Invalid slot format
-                     session.pop('selected_character_slot', None)
-                     player_char_loaded_or_selected = False
+            # g.player_char and g.game_manager are already set up by before_request_setup
+            # based on session['selected_character_slot'] or to defaults.
+            # We need to determine if a real character was loaded for player_char_loaded_or_selected.
+            # g.game_manager.is_game_setup is True if setup_for_character was successful for a loaded char.
+            if g.player_char and g.player_char.name is not None and g.game_manager.is_game_setup:
+                player_char_loaded_or_selected = True
+            else:
+                player_char_loaded_or_selected = False
+                # If a character was supposed to be loaded (selected_slot was not None) but failed
+                # (e.g. dead, invalid slot, or GM setup failed), before_request_setup might have flashed
+                # a message and potentially reverted g.player_char to default.
+                # The g.output_stream might already contain messages from before_request_setup.
+                # If g.output_stream is empty, it means a default char was loaded without issues.
 
-            # If a character is loaded and active:
             if player_char_loaded_or_selected:
-                player_name_display = player_char.name
-                player_stats_display = player_char.stats
-                player_hp_display = player_char.hp
-                player_max_hp_display = player_char.get_effective_max_hp()
-                player_gold_display = player_char.gold
-                current_time_display = game_manager_instance.time.get_time_string()
-                current_town_display = game_manager_instance.current_town.name
-                if game_manager_instance.current_town:
-                    current_town_sub_locations = game_manager_instance.current_town.sub_locations
-                for town_obj in game_manager_instance.towns_map.values():
+                player_name_display = g.player_char.name
+                player_stats_display = g.player_char.stats
+                player_hp_display = g.player_char.hp
+                player_max_hp_display = g.player_char.get_effective_max_hp()
+                # player_gold_display is handled globally at the end of display_game_output from g.player_char
+                current_time_display = g.game_manager.time.get_time_string()
+                current_town_display = g.game_manager.current_town.name if g.game_manager.current_town else "Unknown"
+                if g.game_manager.current_town:
+                    current_town_sub_locations = g.game_manager.current_town.sub_locations
+                for town_obj in g.game_manager.towns_map.values(): # towns_map is on GM instance
                     all_towns_data[town_obj.name] = {"sub_locations": town_obj.sub_locations}
                 shop_items = {}
-                for item in game_manager_instance.shop.inventory:
-                    shop_items[item.name] = shop_items.get(item.name, 0) + 1
+                if g.game_manager.shop: # Check if shop exists on GM instance
+                    for item_in_shop in g.game_manager.shop.inventory: # Use item_in_shop to avoid conflict
+                        shop_items[item_in_shop.name] = shop_items.get(item_in_shop.name, 0) + 1
                 shop_inventory_display = [f"{name} (x{qty})" for name, qty in shop_items.items()] or ["Empty"]
-                player_inventory_display = [item.name for item in player_char.inventory] or ["Empty"]
-                current_game_output = output_stream.getvalue()
-                if game_manager_instance.shop:
-                    available_recipes = game_manager_instance.shop.BASIC_RECIPES
-                if hasattr(player_char, 'journal'): # Ensure journal attribute exists
-                    player_journal_display = player_char.journal
-            else: # No character is active/loaded (and not showing creation form from action=create_new_char)
-                output_stream.truncate(0)
-                output_stream.seek(0)
-                unnamed_char = Character(name=None)
-                player_char = unnamed_char # Update global
-                player_char.gold = 50 # Default gold
-                game_manager_instance.setup_for_character(unnamed_char) # Reset GM
-
-                if characters_list: # User has characters, but none are selected/active
-                    show_character_selection = True
-                    for i, char_data_item in enumerate(characters_list):
-                        characters_for_selection.append({
-                            'name': char_data_item.get('name', 'Unknown'),
-                            'level': char_data_item.get('level', 0),
-                            'slot_index': i,
-                            'is_dead': char_data_item.get('is_dead', False)
-                        })
-                    current_game_output = "Please select a character"
-                    if len(characters_list) < MAX_CHARS_PER_USER:
-                        current_game_output += " or create a new one."
-                    # player_gold_display is implicitly 50 from player_char.gold if no char loaded
-                else: # No characters exist for this user
-                    show_character_creation_form = True # Show creation form
-                    current_game_output = "Welcome! Please create your first character."
-                    # player_gold_display is implicitly 50 as above
-                    # Check if a name was stored from a previous attempt (e.g. failed validation then redirected here)
-                    pending_char_name_display = session.get('character_creation_name')
+                player_inventory_display = [item.name for item in g.player_char.inventory] or ["Empty"]
+                # current_game_output will be built from g.output_stream at the end
+                if g.game_manager.shop:
+                    available_recipes = g.game_manager.shop.BASIC_RECIPES # Assuming this is a static/class member or simple property
+                if hasattr(g.player_char, 'journal'):
+                    player_journal_display = g.player_char.journal
+            else: # No character is active/loaded (and not decided to show creation form by action=create_new_char)
+                  # g.player_char is default, g.game_manager is default.
+                  # g.output_stream might have messages from before_request_setup (e.g. dead char selected).
+                if username: # Only show selection/creation options if logged in
+                    if characters_list: # User has characters, but none are selected/active
+                        show_character_selection = True
+                        for i, char_data_item in enumerate(characters_list):
+                            characters_for_selection.append({
+                                'name': char_data_item.get('name', 'Unknown'),
+                                'level': char_data_item.get('level', 0),
+                                'slot_index': i,
+                                'is_dead': char_data_item.get('is_dead', False)
+                            })
+                        # If g.output_stream is empty, add a default message. Otherwise, preserve message from before_request.
+                        if not g.output_stream.getvalue().strip():
+                            g.output_stream.write("Please select a character")
+                            # Check active (non-dead) characters for the "or create new" part
+                            active_user_chars = [cd for cd in characters_list if not cd.get('is_dead', False)]
+                            if len(active_user_chars) < MAX_CHARS_PER_USER:
+                                g.output_stream.write(" or create a new one.")
+                    else: # No characters exist for this user
+                        show_character_creation_form = True # Show creation form
+                        if not g.output_stream.getvalue().strip(): # If stream is empty
+                            g.output_stream.write("Welcome! Please create your first character.")
+                        # Check if a name was stored from a previous attempt
+                        pending_char_name_display = session.get('character_creation_name')
+                # player_gold_display will be from g.player_char (default) at the end
 
 
     else: # User not logged in
-        output_stream.truncate(0)
-        output_stream.seek(0)
-        unnamed_char = Character(name=None)
-        player_char = unnamed_char # Update global
-        player_char.gold = 50
-        game_manager_instance.setup_for_character(unnamed_char)
-        current_game_output = "Please log in to start your adventure."
-        session.pop('character_creation_name', None) # Clear if navigating to login page
+        # g.player_char and g.game_manager are default from before_request_setup.
+        # g.output_stream might have content if before_request_setup wrote to it (though unlikely for non-logged in).
+        # If stream is empty, provide a login message.
+        if not g.output_stream.getvalue().strip():
+            g.output_stream.write("Please log in to start your adventure.")
+        session.pop('character_creation_name', None) # Clear any pending creation name
 
-    # Ensure player_gold_display reflects the state for creation/no selection
-    if show_character_creation_form or (not player_char_loaded_or_selected and not user_logged_in) or (user_logged_in and not player_char_loaded_or_selected):
-        player_gold_display = player_char.gold # Should be 50 from unnamed_char
-        if show_character_creation_form and not pending_char_name_display: # Ensure display name is fetched if form is shown
-            pending_char_name_display = session.get('character_creation_name')
+    # Consolidate current_game_output from g.output_stream
+    # current_game_output was initialized to ""
+    # If any messages were written to g.output_stream by logic above (e.g. for char creation, selection prompts),
+    # they will be included here.
+    current_game_output += g.output_stream.getvalue()
 
+    # player_gold_display is always from g.player_char (which is either active or default)
+    player_gold_display = g.player_char.gold
+    if show_character_creation_form and not pending_char_name_display:
+        # If we decided to show creation form, ensure pending name is fetched if it exists
+        pending_char_name_display = session.get('character_creation_name')
 
-    # If no character is loaded, journal should be empty
-    if not player_char_loaded_or_selected:
+    if not player_char_loaded_or_selected: # If no specific character active, journal is empty
         player_journal_display = []
+
+    # available_towns from g.game_manager (already set if GM exists)
+    if g.game_manager:
+        available_towns = list(g.game_manager.towns_map.keys())
+    else: # Should not happen if before_request_setup is correct
+        available_towns = []
+
 
     # Retrieve event data from session for template
     awaiting_event_choice = session.get('awaiting_event_choice', False)
@@ -721,7 +778,7 @@ def display_game_output():
                            user_logged_in=user_logged_in,
                            show_character_selection=show_character_selection,
                            characters_for_selection=characters_for_selection,
-                           MAX_CHARS_PER_USER=MAX_CHARS_PER_USER,
+                           MAX_CHARS_PER_USER=MAX_CHARS_PER_USER, # This is a module global constant
                            dead_characters_info=dead_characters_info,
                            show_character_creation_form=show_character_creation_form,
                            game_output=current_game_output,
@@ -734,17 +791,17 @@ def display_game_output():
                            current_town_name=current_town_display,
                            shop_inventory=shop_inventory_display,
                            player_inventory=player_inventory_display,
-                           google_auth_is_configured=google_auth_is_configured,
+                           google_auth_is_configured=google_auth_is_configured, # Module global constant
                            available_towns=available_towns,
                            current_town_sub_locations_json=json.dumps(current_town_sub_locations),
                            all_towns_data_json=json.dumps(all_towns_data),
                            available_recipes=available_recipes,
-                           player_journal=player_journal_display, # Pass journal to template
-                           popup_action_result=popup_action_result, # Pass to template
-                           hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Added Hemlock's herbs
-                           character_creation_stats=character_creation_stats_display, # Pass to template
-                           stat_names_ordered=Character.STAT_NAMES, # Added for ordered stats display
-                           pending_char_name=pending_char_name_display, # Added for name persistence
+                           player_journal=player_journal_display,
+                           popup_action_result=popup_action_result,
+                           hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Module global constant
+                           character_creation_stats=character_creation_stats_display,
+                           stat_names_ordered=Character.STAT_NAMES, # Class attribute
+                           pending_char_name=pending_char_name_display,
                            awaiting_event_choice=awaiting_event_choice,
                            pending_event_data_json=json.dumps(pending_event_data_for_template) if pending_event_data_for_template else None,
                            last_skill_roll_str=last_skill_roll_str
@@ -790,65 +847,67 @@ def parse_action_details(details_str: str) -> dict:
     Parses a JSON string representing action details into a dictionary.
     If details_str is empty, null, or invalid JSON, returns an empty dictionary.
     """
+    from flask import g # Ensure g is accessible
+
+    # Check if g.game_manager is available; if not, cannot print, but can still attempt parse.
+    # This situation should be rare in normal operation if before_request_setup works.
+    gm_available = hasattr(g, 'game_manager') and g.game_manager is not None
+
     if not isinstance(details_str, str) or not details_str or details_str.strip() == "":
-        if isinstance(details_str, (int, float)): # Handle if it's a number, which is not valid JSON for this func
-            game_manager_instance._print(f"Warning: Action details received as a number: '{details_str}'. Expected a JSON string. Using empty details.")
+        if isinstance(details_str, (int, float)):
+            if gm_available:
+                g.game_manager._print(f"Warning: Action details received as a number: '{details_str}'. Expected a JSON string. Using empty details.")
             return {}
-        elif not details_str: # Handles None or empty string before strip()
+        elif not details_str:
             return {}
-        # If it's not a string but not explicitly handled (e.g. list, dict directly passed),
-        # json.loads will raise TypeError later, which is caught.
-        # However, the strip() call is the main concern for AttributeError.
-        # The above check `not isinstance(details_str, str)` handles non-strings early for strip().
-        # If it *is* a string but empty after strip, it's handled by `details_str.strip() == ""`
     try:
         details_dict = json.loads(details_str)
         if not isinstance(details_dict, dict):
-            # Ensure the loaded JSON is actually a dictionary
-            game_manager_instance._print(f"Warning: Action details resolved to non-dictionary type: '{details_str}'. Using empty details.")
+            if gm_available:
+                g.game_manager._print(f"Warning: Action details resolved to non-dictionary type: '{details_str}'. Using empty details.")
             return {}
         return details_dict
     except json.JSONDecodeError as e:
-        game_manager_instance._print(f"Error parsing action_details JSON string '{details_str}': {e}. Using empty details.")
+        if gm_available:
+            g.game_manager._print(f"Error parsing action_details JSON string '{details_str}': {e}. Using empty details.")
         return {}
-    except TypeError as e: # Catches errors if details_str is not string-like for json.loads
-        game_manager_instance._print(f"Error (TypeError) parsing action_details string '{details_str}': {e}. Using empty details.")
+    except TypeError as e:
+        if gm_available:
+            g.game_manager._print(f"Error (TypeError) parsing action_details string '{details_str}': {e}. Using empty details.")
         return {}
 
 
 @app.route('/action', methods=['POST'])
 def perform_action():
-    # Diagnostic prints for the /action route itself
-    print(f"DEBUG /action route: app.output_stream ID is {id(output_stream)}")
-    print(f"DEBUG /action route: id(game_manager_instance) is {id(game_manager_instance)}")
-    if game_manager_instance:
-        print(f"DEBUG /action route: game_manager_instance.output_stream ID is {id(game_manager_instance.output_stream) if game_manager_instance.output_stream else 'None'}")
-    else:
-        print("DEBUG /action route: game_manager_instance is None")
+    from flask import g # Access g for current request context
+    # output_stream, player_char, game_manager_instance are now on g.
+
+    # Diagnostic prints using g
+    # print(f"DEBUG /action route: g.output_stream ID is {id(g.output_stream)}")
+    # print(f"DEBUG /action route: id(g.game_manager) is {id(g.game_manager)}")
+    # if g.game_manager:
+    #     print(f"DEBUG /action route: g.game_manager.output_stream ID is {id(g.game_manager.output_stream) if g.game_manager.output_stream else 'None'}")
+    # else:
+    #     print("DEBUG /action route: g.game_manager is None")
 
     action_name = request.form.get('action_name')
-    action_details_str = request.form.get('action_details', '{}') # Default to empty JSON object string
+    action_details_str = request.form.get('action_details', '{}')
 
-    # --- Start of Diagnostic Logging ---
-    # print(f"\n--- /action route hit ---") # Consider app.logger.debug()
-    # print(f"Received action_name: {action_name}") # Consider app.logger.debug()
-    # print(f"Received action_details_str: {action_details_str}") # Consider app.logger.debug()
-    # print(f"Global player_char: {player_char.name if player_char else 'None'}") # Consider app.logger.debug()
-    # if player_char:
-        # print(f"Global player_char.is_dead: {player_char.is_dead}") # Consider app.logger.debug()
-    # else:
-        # print(f"Global player_char.is_dead: N/A") # Consider app.logger.debug()
-    # print(f"Global game_manager_instance available: {bool(game_manager_instance)}") # Consider app.logger.debug()
-    # if game_manager_instance:
-        # print(f"GM.character: {game_manager_instance.character.name if game_manager_instance.character else 'None'}") # Consider app.logger.debug()
-        # print(f"GM.is_game_setup: {game_manager_instance.is_game_setup if hasattr(game_manager_instance, 'is_game_setup') else 'Attribute Missing'}") # Consider app.logger.debug()
-        # print(f"GM.shop available: {bool(game_manager_instance.shop)}") # Consider app.logger.debug()
-        # print(f"GM.event_manager available: {bool(game_manager_instance.event_manager)}") # Consider app.logger.debug()
+    # --- Start of Diagnostic Logging (using g) ---
+    # print(f"\n--- /action route hit ---")
+    # print(f"Received action_name: {action_name}")
+    # print(f"Received action_details_str: {action_details_str}")
+    # print(f"g.player_char: {g.player_char.name if g.player_char else 'None'}")
+    # if g.player_char:
+    #     print(f"g.player_char.is_dead: {g.player_char.is_dead}")
+    # print(f"g.game_manager available: {bool(g.game_manager)}")
+    # if g.game_manager:
+    #     print(f"GM.character: {g.game_manager.character.name if g.game_manager.character else 'None'}")
+    #     print(f"GM.is_game_setup: {g.game_manager.is_game_setup if hasattr(g.game_manager, 'is_game_setup') else 'Attribute Missing'}")
     # --- End of Diagnostic Logging ---
 
-    # Clear the stream before new action output
-    output_stream.truncate(0) # Restore this
-    output_stream.seek(0) # Restore this
+    g.output_stream.truncate(0) # Use g.output_stream
+    g.output_stream.seek(0)   # Use g.output_stream
 
     # Helper function to format action names for display
     def _format_action_name_for_display(name_technical: str) -> str:
@@ -873,15 +932,14 @@ def perform_action():
         return redirect(url_for('display_game_output'))
 
     # Use the updated parse_action_details function
-    details_dict = parse_action_details(action_details_str)
-    # print(f"Parsed action_details_dict: {details_dict}") # Diagnostic print, consider app.logger.debug()
+    details_dict = parse_action_details(action_details_str) # parse_action_details now uses g.game_manager
 
     # Perform the game action
     try:
-        action_name_display = _format_action_name_for_display(action_name)
+        action_name_display = _format_action_name_for_display(action_name) # This helper is fine
 
-        # Ensure a living character is loaded before performing actions
-        if player_char is None or player_char.name is None or player_char.is_dead:
+        # Ensure a living character is loaded (now from g)
+        if g.player_char is None or g.player_char.name is None or g.player_char.is_dead:
             flash("No active character or character is dead. Cannot perform action.", "error")
             return redirect(url_for('display_game_output'))
 
@@ -893,15 +951,11 @@ def perform_action():
                 # No need to call perform_hourly_action if this fails
                 return redirect(url_for('display_game_output'))
 
-        # Explicitly check GameManager's setup status for the current player_char
-        # This is crucial because game_manager_instance.character should be the same as player_char
-        # and game_manager_instance.is_game_setup should be True if setup was successful.
-        if not game_manager_instance.is_game_setup or game_manager_instance.character != player_char:
-            # print(f"Action '{action_name}' aborted: GameManager not properly set up for character '{player_char.name}'.") # Consider app.logger.warning()
-            # print(f"  GM.is_game_setup: {game_manager_instance.is_game_setup}") # Consider app.logger.debug()
-            # print(f"  GM.character: {game_manager_instance.character.name if game_manager_instance.character else 'None'}") # Consider app.logger.debug()
-            # print(f"  app.player_char: {player_char.name}") # Consider app.logger.debug()
-            flash(f"Cannot perform action. Game world not fully initialized for {player_char.name}. Try re-selecting the character.", "error")
+        # Explicitly check GameManager's setup status for the current g.player_char
+        # This is crucial because g.game_manager.character should be the same as g.player_char
+        # and g.game_manager.is_game_setup should be True if setup was successful via before_request_setup.
+        if not g.game_manager.is_game_setup or g.game_manager.character != g.player_char:
+            flash(f"Cannot perform action. Game world not fully initialized for {g.player_char.name}. Try re-selecting the character or ensure the character is valid.", "error")
             return redirect(url_for('display_game_output'))
 
         # The following 'buy_from_npc' block seems like a placeholder or an alternative action path.
@@ -912,115 +966,88 @@ def perform_action():
         if action_name == "buy_from_npc":
             npc_name = request.form.get('npc_name')
             item_name = request.form.get('item_name')
-            quantity = request.form.get('quantity', 1) # Default to 1 if not provided
+            quantity = request.form.get('quantity', 1)
             try:
                 quantity = int(quantity)
             except ValueError:
-                game_manager_instance._print(f"Invalid quantity: {quantity}. Defaulting to 1.")
+                g.game_manager._print(f"Invalid quantity: {quantity}. Defaulting to 1.")
                 quantity = 1
 
             if npc_name and item_name and quantity > 0:
-                game_manager_instance._print(f"Attempting to buy {quantity} of {item_name} from {npc_name}.")
-                # Actual buying logic will be added later.
-                # For now, just log the attempt.
-                # Example: game_manager_instance.buy_item_from_npc(npc_name, item_name, quantity)
+                g.game_manager._print(f"Attempting to buy {quantity} of {item_name} from {npc_name}.")
+                # Example: g.game_manager.buy_item_from_npc(npc_name, item_name, quantity)
             else:
-                game_manager_instance._print("Missing details for buying from NPC.")
+                g.game_manager._print("Missing details for buying from NPC.")
         else:
-            # Existing actions are handled by perform_hourly_action
-            # Explicit check of player_char (already done above, but can be more specific here if needed)
-            if player_char is None or player_char.name is None or player_char.is_dead:
-                # print(f"Action '{action_name}' aborted just before perform_hourly_action: No active/living character.") # Consider app.logger.warning()
+            # Existing actions are handled by perform_hourly_action using g.game_manager
+            if g.player_char is None or g.player_char.name is None or g.player_char.is_dead: # Redundant due to earlier check, but safe
                 flash("No active character or character is dead. Cannot perform action.", "error")
                 return redirect(url_for('display_game_output'))
             else:
-                # print(f"Proceeding to game_manager_instance.perform_hourly_action for action: {action_name}") # Consider app.logger.info()
-                action_result_data = game_manager_instance.perform_hourly_action(action_name, details_dict)
+                action_result_data = g.game_manager.perform_hourly_action(action_name, details_dict)
 
                 if isinstance(action_result_data, dict) and action_result_data.get('type') == 'event_pending':
                     session['awaiting_event_choice'] = True
-                    session['pending_event_data'] = {
+                    session['pending_event_data'] = { # This session storage is fine
                         'name': action_result_data.get('event_name'),
                         'description': action_result_data.get('event_description'),
                         'choices': action_result_data.get('choices')
                     }
                     flash(f"EVENT: {action_result_data.get('event_name')}! Check Journal or Game Log for details.", "info")
-                    game_manager_instance._print(f"EVENT: {action_result_data.get('event_name')} requires your attention!") # Log remains
+                    g.game_manager._print(f"EVENT: {action_result_data.get('event_name')} requires your attention!")
                 else:
-                    # Action completed or no event, clear any previous event data
                     session.pop('awaiting_event_choice', None)
                     session.pop('pending_event_data', None)
                     # Default success message for actions that don't trigger an event
                     flash(f"Action '{action_name_display}' performed. Check Journal or Game Log for details.", "info")
 
-        # ---- START NEW SAVE LOGIC ----
-        # Save character state if alive and loaded
-        # Use global player_char which should be the same as game_manager_instance.character
-        if player_char and player_char.name and not player_char.is_dead:
+        # ---- START SAVE LOGIC (using g.player_char and g.game_manager) ----
+        if g.player_char and g.player_char.name and not g.player_char.is_dead:
             username = session.get('username')
             slot_index = session.get('selected_character_slot')
             if username and slot_index is not None:
-                # Ensure the slot_index is valid for the list of characters for that user
                 if username in user_characters and 0 <= slot_index < len(user_characters[username]):
-                    user_characters[username][slot_index] = player_char.to_dict(current_town_name=game_manager_instance.current_town.name)
-                    save_user_characters()
-                    # Optional: game_manager_instance._print("  Character data saved after action.")
+                    current_town_name_to_save = g.game_manager.current_town.name if g.game_manager.current_town else "Unknown"
+                    user_characters[username][slot_index] = g.player_char.to_dict(current_town_name=current_town_name_to_save)
+                    save_user_characters() # Global save function is fine
                 else:
-                    # This case should ideally not be reached if session management is correct
-                    game_manager_instance._print(f"  Warning: Character slot data mismatch for user {username}, slot {slot_index}. Could not save character state after action.")
+                    g.game_manager._print(f"  Warning: Character slot data mismatch for user {username}, slot {slot_index}. Could not save character state after action.")
             else:
-                # This case implies an issue with session state or a scenario where character exists without full session setup
-                 game_manager_instance._print("  Warning: User session data (username or slot_index) missing. Could not save character state after action.")
-        # ---- END NEW SAVE LOGIC ----
+                 g.game_manager._print("  Warning: User session data missing. Could not save character state after action.")
+        # ---- END SAVE LOGIC ----
 
-        # Print stream value before setting it to session for diagnostics
-        # action_route_stream_value = output_stream.getvalue() # Removed this older diagnostic
-        # print(f"DEBUG APP /action: output_stream.getvalue() before setting session is:\n'''{action_route_stream_value}'''")
-
-        # After action, check for death
-        if player_char.is_dead:
+        # After action, check for death (using g.player_char)
+        if g.player_char.is_dead:
             username = session.get('username')
             slot_index = session.get('selected_character_slot')
-            char_name_for_log = player_char.name if player_char and player_char.name else "Character"
+            char_name_for_log = g.player_char.name if g.player_char and g.player_char.name else "Character"
 
-            # Log death to journal
-            # Ensure game_manager_instance and its time object are available
             death_timestamp_str = None
-            if game_manager_instance and hasattr(game_manager_instance, 'time') and hasattr(game_manager_instance.time, 'get_time_string'):
-                death_timestamp_str = game_manager_instance.time.get_time_string()
+            if g.game_manager and hasattr(g.game_manager, 'time') and hasattr(g.game_manager.time, 'get_time_string'):
+                death_timestamp_str = g.game_manager.time.get_time_string()
 
-            # Check if death was already logged for this character instance in this "death event"
-            # This is a simple check; a more robust solution might involve a flag on the character object
-            # or checking the last few journal entries more thoroughly.
             already_logged_this_death = False
-            if game_manager_instance and game_manager_instance.character and hasattr(game_manager_instance.character, 'journal') and game_manager_instance.character.journal:
-                last_entry = game_manager_instance.character.journal[-1]
+            if g.game_manager and g.player_char and hasattr(g.player_char, 'journal') and g.player_char.journal:
+                last_entry = g.player_char.journal[-1]
                 if last_entry.action_type == "Death" and last_entry.summary.startswith(char_name_for_log):
-                    # A death entry for this character is the last one, assume it's this death.
-                    # This might not be perfectly accurate if other actions could happen after death but before this block.
                     already_logged_this_death = True
 
-            if not already_logged_this_death and game_manager_instance and hasattr(game_manager_instance, 'add_journal_entry'):
-                game_manager_instance.add_journal_entry(
-                    action_type="Death", # Using "Death" as type
+            if not already_logged_this_death and g.game_manager and hasattr(g.game_manager, 'add_journal_entry'):
+                g.game_manager.add_journal_entry( # Uses g.game_manager which has g.player_char
+                    action_type="Death",
                     summary=f"{char_name_for_log} has succumbed to their fate.",
                     outcome="Character data moved to graveyard.",
-                    timestamp=death_timestamp_str # Pass string timestamp, add_journal_entry handles conversion
+                    timestamp=death_timestamp_str
                 )
-                # Save character data one last time to ensure the death journal entry is persisted with the character
-                # before they are moved to the graveyard.
                 if username and slot_index is not None and user_characters.get(username) and 0 <= slot_index < len(user_characters[username]):
-                    # We need to save the version of player_char that has the death entry.
-                    # game_manager_instance.character should be player_char.
-                    user_characters[username][slot_index] = game_manager_instance.character.to_dict(current_town_name=game_manager_instance.current_town.name if game_manager_instance.current_town else "Unknown")
+                    current_town_name_death_save = g.game_manager.current_town.name if g.game_manager.current_town else "Unknown"
+                    user_characters[username][slot_index] = g.player_char.to_dict(current_town_name=current_town_name_death_save)
                     save_user_characters()
-
 
             if username and slot_index is not None:
                 if username in user_characters and 0 <= slot_index < len(user_characters[username]):
                     dead_char_data = user_characters[username].pop(slot_index)
-                    dead_char_data['is_dead'] = True # Ensure it's marked dead
-                    # The journal entry should be part of dead_char_data if saved correctly above.
+                    dead_char_data['is_dead'] = True
                     graveyard.setdefault(username, []).append(dead_char_data)
                     save_user_characters()
                     save_graveyard()
@@ -1028,39 +1055,31 @@ def perform_action():
                     session.pop('selected_character_slot', None)
                 else:
                     flash("Error processing character death: Character slot data mismatch.", "critical_error")
-                    # Still clear the slot, as it's likely invalid or pointing to a now-gone character
                     session.pop('selected_character_slot', None)
             else:
                 flash("Error processing character death: User session data missing.", "critical_error")
-                session.pop('selected_character_slot', None) # Clear potentially problematic slot
-
-            # Redirect to display_game_output, which will show character selection/creation
+                session.pop('selected_character_slot', None)
             return redirect(url_for('display_game_output'))
 
     except Exception as e:
-        game_manager_instance._print(f"An error occurred while performing action '{action_name_display}': {e}")
-        import traceback
-        game_manager_instance._print(f"Traceback: {traceback.format_exc()}")
+        # Ensure g.game_manager is used for printing the error
+        error_gm = getattr(g, 'game_manager', None)
+        if error_gm:
+            error_gm._print(f"An error occurred while performing action '{action_name_display}': {e}")
+            import traceback
+            error_gm._print(f"Traceback: {traceback.format_exc()}")
+        else: # Fallback if g.game_manager itself is missing
+            print(f"CRITICAL ERROR in /action, g.game_manager not found: {e}")
+            print(f"Traceback: {traceback.format_exc()}")
         flash("An unexpected error occurred. Check the game log for more details.", "error")
 
-    # Capture action result for popup before redirecting
-    session['action_result'] = output_stream.getvalue()
-    # Clear the main output_stream AFTER capturing its value for the session,
-    # so it doesn't get displayed in the main log area on the next page load.
-    # However, the game_output for the next page load in display_game_output
-    # will re-fetch from output_stream.getvalue().
-    # This means the action result WILL appear in the main log as well.
-    # If the goal is to ONLY show it in the popup and NOT in the main log,
-    # then output_stream must be cleared here.
-    # output_stream.truncate(0) # Removed as per new requirement
-    # output_stream.seek(0) # Removed as per new requirement
-
+    session['action_result'] = g.output_stream.getvalue() # Use g.output_stream
     return redirect(url_for('display_game_output'))
 
 @app.route('/submit_event_choice', methods=['POST'])
 def submit_event_choice_route():
-    global player_char # To access current character
-    global game_manager_instance # To call execute_skill_choice
+    from flask import g # Access g for current request context
+    # player_char and game_manager are now on g.
 
     if 'username' not in session or not session.get('awaiting_event_choice'):
         flash("Invalid session or no event choice pending.", "error")
@@ -1069,11 +1088,10 @@ def submit_event_choice_route():
     event_name_from_form = request.form.get('event_name')
     choice_index_str = request.form.get('choice_index')
 
-    # Clear the stream before new action output from execute_skill_choice
-    output_stream.truncate(0)
-    output_stream.seek(0)
+    g.output_stream.truncate(0) # Use g.output_stream
+    g.output_stream.seek(0)   # Use g.output_stream
 
-    stored_event_data = session.get('pending_event_data')
+    stored_event_data = session.get('pending_event_data') # Session data is fine
 
     if not event_name_from_form or choice_index_str is None or not stored_event_data:
         flash("Missing event data or choice index.", "error")
@@ -1105,14 +1123,14 @@ def submit_event_choice_route():
         return redirect(url_for('display_game_output'))
 
     # Execute the choice
-    # The execute_skill_choice method will print to output_stream and log to journal
-    execution_outcome = game_manager_instance.event_manager.execute_skill_choice(selected_event_obj, choice_index)
+    # The execute_skill_choice method will print to g.output_stream and log to journal
+    # It uses g.game_manager.character which is g.player_char
+    execution_outcome = g.game_manager.event_manager.execute_skill_choice(selected_event_obj, choice_index)
 
-    # Store roll data for display (for the next plan step)
     if isinstance(execution_outcome, dict) and 'roll_data' in execution_outcome and \
        isinstance(execution_outcome['roll_data'], dict) and 'formatted_string' in execution_outcome['roll_data']:
         session['last_skill_roll_display_str'] = execution_outcome['roll_data']['formatted_string']
-    else: # Fallback if roll_data or formatted_string isn't there as expected
+    else:
         session.pop('last_skill_roll_display_str', None)
 
 
@@ -1120,22 +1138,21 @@ def submit_event_choice_route():
     session.pop('awaiting_event_choice', None)
     session.pop('pending_event_data', None)
 
-    # Save character state after event resolution
-    if player_char and player_char.name and not player_char.is_dead:
+    # Save character state after event resolution (using g.player_char, g.game_manager)
+    if g.player_char and g.player_char.name and not g.player_char.is_dead:
         username = session.get('username')
         slot_idx = session.get('selected_character_slot')
         if username and slot_idx is not None and username in user_characters and 0 <= slot_idx < len(user_characters[username]):
-            user_characters[username][slot_idx] = player_char.to_dict(current_town_name=game_manager_instance.current_town.name)
+            current_town_name_event_save = g.game_manager.current_town.name if g.game_manager.current_town else "Unknown"
+            user_characters[username][slot_idx] = g.player_char.to_dict(current_town_name=current_town_name_event_save)
             save_user_characters()
         else:
-            game_manager_instance._print("  Warning: Could not save character state after event due to session/slot mismatch.")
+            g.game_manager._print("  Warning: Could not save character state after event due to session/slot mismatch.")
 
-    # Check for death after event resolution
-    if player_char and player_char.is_dead:
-        # Handle character death (similar to how it's done in /action route)
+    # Check for death after event resolution (using g.player_char)
+    if g.player_char and g.player_char.is_dead: # Death check using g.player_char
         username = session.get('username')
         slot_idx = session.get('selected_character_slot')
-        # char_name_for_log = player_char.name if player_char and player_char.name else "Character" # Already logged by execute_skill_choice
         if username and slot_idx is not None and user_characters.get(username) and 0 <= slot_idx < len(user_characters[username]):
             dead_char_data = user_characters[username].pop(slot_idx)
             dead_char_data['is_dead'] = True
@@ -1144,14 +1161,12 @@ def submit_event_choice_route():
             save_graveyard()
             flash(f"{dead_char_data.get('name', 'The character')} has died (due to event) and been moved to the graveyard.", "error")
             session.pop('selected_character_slot', None)
-            return redirect(url_for('display_game_output')) # Redirect to char selection
+            return redirect(url_for('display_game_output'))
 
-    # Capture the output from execute_skill_choice for the popup/main log
-    session['action_result'] = output_stream.getvalue()
-
+    session['action_result'] = g.output_stream.getvalue() # Use g.output_stream
     return redirect(url_for('display_game_output'))
 
 if __name__ == '__main__':
-    # Note: When running with `flask run`, this block might not execute depending on environment.
-    # Ensure game_manager_instance is initialized globally as above.
+    # Note: game_manager_instance, player_char, and output_stream are no longer global module variables.
+    # They are managed by before_request_setup on a per-request basis.
     app.run(debug=True, host='0.0.0.0', port=5001)

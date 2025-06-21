@@ -9,9 +9,26 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # This import will initialize app.py's global game_manager_instance,
 # whose _print output will go to its own output_stream (a StringIO).
 # We are only testing the return value of parse_action_details here.
-from shopkeeperPython.app import parse_action_details
+from shopkeeperPython.app import app, parse_action_details, before_request_setup as app_before_request_setup
 
 class TestAppUtils(unittest.TestCase):
+
+    def setUp(self):
+        """Set up an application and request context, and initialize g."""
+        self.app_context = app.app_context()
+        self.app_context.push()
+        self.request_context = app.test_request_context('/')
+        self.request_context.push()
+        # Manually run the before_request_setup to ensure g.game_manager and g.output_stream are initialized
+        # This needs to be within the request context for session access.
+        app_before_request_setup()
+
+    def tearDown(self):
+        """Pop the application and request contexts."""
+        if hasattr(self, 'request_context') and self.request_context: # Ensure it was set
+            self.request_context.pop()
+        if hasattr(self, 'app_context') and self.app_context: # Ensure it was set
+            self.app_context.pop()
 
     def test_parse_valid_json_details(self):
         """Test parsing a valid JSON string with multiple details."""
