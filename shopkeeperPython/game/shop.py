@@ -319,6 +319,55 @@ class Shop:
         price = int(item_instance.value * town_modifier * self.markup_percentage) # Changed get_value() to .value
         return price
 
+    # Modified to accept character_buying for faction discount checks
+    def calculate_sale_price(self, item_or_item_name: (Item | str), character_buying: 'Character' = None) -> int:
+        """Calculates the sale price of an item, considering town demand, shop markup, and character faction benefits."""
+        item_instance = None
+        if isinstance(item_or_item_name, str):
+            for item_in_stock in self.inventory: # Search in current inventory
+                if item_in_stock.name == item_or_item_name:
+                    item_instance = item_in_stock
+                    break
+            if not item_instance:
+                if item_or_item_name in self.BASIC_RECIPES:
+                    item_instance = Item(name=item_or_item_name, base_value=self.BASIC_RECIPES[item_or_item_name]['base_value'], item_type="unknown")
+                else:
+                    return 0
+        elif isinstance(item_or_item_name, Item):
+            item_instance = item_or_item_name
+
+        if not item_instance:
+            return 0
+
+        town_modifier = 1.0
+        if self.town and hasattr(self.town, 'get_item_price_modifier'):
+            town_modifier = self.town.get_item_price_modifier(item_instance.name)
+        elif self.town and hasattr(self.town, 'market_demand_modifiers'):
+             town_modifier = self.town.market_demand_modifiers.get(item_instance.name, 1.0)
+
+        price = int(item_instance.value * town_modifier * self.markup_percentage)
+
+        if character_buying:
+            # Check for Merchant's Guild discount
+            faction_details = character_buying.get_faction_reputation_details("merchants_guild")
+            if faction_details:
+                faction_def = character_buying.get_faction_data("merchants_guild")
+                current_rank_name = faction_details.get("rank_name")
+                if faction_def and current_rank_name:
+                    for rank_info in faction_def.get("ranks", []):
+                        if rank_info["name"] == current_rank_name:
+                            for benefit in rank_info.get("benefits", []):
+                                if benefit["type"] == "shop_discount" and \
+                                   (benefit.get("scope") == "guild_affiliated_shops" or benefit.get("scope") == "all_shops"):
+                                    # Assuming this shop is considered "guild_affiliated" for simplicity
+                                    discount_percentage = benefit["value_percentage"]
+                                    # price_before_discount = price # For logging if needed
+                                    price = int(price * (1 - discount_percentage / 100.0))
+                                    # print(f"Debug: Applied {discount_percentage}% discount. Old price: {price_before_discount}, New: {price}") # Optional debug
+                                    break
+                            break
+        return price
+
     def sell_item_to_character(self, item_name: str, character_wanting_to_buy: 'Character') -> Tuple[Item | None, int]:
         item_instance_for_sale = None
         for item_in_stock in self.inventory:
@@ -329,7 +378,8 @@ class Shop:
             print(f"SHOP: {self.name} does not have '{item_name}' in stock.")
             return None, 0
 
-        price_to_character = self.calculate_sale_price(item_instance_for_sale)
+        # Pass the character to calculate_sale_price for potential discounts
+        price_to_character = self.calculate_sale_price(item_instance_for_sale, character_wanting_to_buy)
 
         if character_wanting_to_buy.gold < price_to_character:
             print(f"SHOP: {character_wanting_to_buy.name} cannot afford {item_name} (Cost: {price_to_character}, Has: {character_wanting_to_buy.gold}).")

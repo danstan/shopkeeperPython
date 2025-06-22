@@ -110,6 +110,7 @@ class GameManager:
         town_starting = Town(
             name="Starting Village",
             properties=["Quiet farming village", "River nearby"],
+            faction_hqs=["merchants_guild"], # Added faction HQ
             nearby_resources=["Dirty Water", "Moldy Fruit", "Wild Herb", "Small Twig", "Sturdy Branch", "Grain"],
             unique_npc_crafters=[{
                 "name": "Old Man Hemlock",
@@ -128,6 +129,7 @@ class GameManager:
         town_steel_flow = Town(
             name="Steel Flow City",
             properties=["Major mining hub", "Strong warrior tradition"],
+            faction_hqs=["local_militia"], # Added faction HQ
             nearby_resources=["Scrap Metal", "Stone Fragment", "Dirty Water", "Sturdy Branch"],
             unique_npc_crafters=[{
                 "name": "Borin Stonebeard",
@@ -490,6 +492,51 @@ class GameManager:
                 action_xp_reward = self._handle_npc_dialogue("Borin Stonebeard")
             elif action_name == "talk_to_villager":
                  self.action_talk_to_customer(action_details); action_xp_reward = 2 # Re-use generic customer talk
+            elif action_name == "join_faction_action":
+                faction_id_to_join = action_details.get("faction_id")
+                if not faction_id_to_join:
+                    self._print("  Faction ID to join not specified.")
+                elif faction_id_to_join not in self.current_town.faction_hqs:
+                    self._print(f"  Cannot join {faction_id_to_join} in {self.current_town.name}. No HQ here.")
+                elif self.character.get_faction_reputation_details(faction_id_to_join):
+                     faction_def_temp = self.character.get_faction_data(faction_id_to_join)
+                     self._print(f"  {self.character.name} is already a member of {faction_def_temp['name'] if faction_def_temp else faction_id_to_join}.")
+                else:
+                    faction_def = self.character.get_faction_data(faction_id_to_join)
+                    if not faction_def:
+                        self._print(f"  Faction '{faction_id_to_join}' definition not found.")
+                    else:
+                        requirements_met = True
+                        log_entry_details = {"faction_id": faction_id_to_join, "requirements_checked": []}
+                        for req in faction_def.get("join_requirements", []):
+                            log_entry_details["requirements_checked"].append(req)
+                            if req["type"] == "gold_payment":
+                                if self.character.gold < req["amount"]:
+                                    self._print(f"  Cannot join {faction_def['name']}. Requires {req['amount']} gold, you have {self.character.gold}g."); requirements_met = False; break
+                            elif req["type"] == "skill_check":
+                                skill_check_result = self.character.perform_skill_check(req["skill"], req["dc"])
+                                self.add_journal_entry(action_type="Skill Check (Faction Join)", summary=skill_check_result["formatted_string"], details=skill_check_result)
+                                if not skill_check_result["success"]:
+                                    self._print(f"  Skill check for {req['skill']} (DC {req['dc']}) failed. Cannot join {faction_def['name']}."); requirements_met = False; break
+                            elif req["type"] == "oath_of_loyalty":
+                                self._print(f"  You swear an oath of loyalty to {faction_def['name']}.") # Automatic success
+                            else:
+                                self._print(f"  Unknown join requirement type: {req['type']}. Assuming failure for safety."); requirements_met = False; break
+
+                        if requirements_met:
+                            # Deduct costs after all checks pass
+                            for req in faction_def.get("join_requirements", []):
+                                if req["type"] == "gold_payment": self.character.gold -= req["amount"]; self._print(f"  Paid {req['amount']}g joining fee.")
+
+                            if self.character.join_faction(faction_id_to_join):
+                                self._print(f"  Successfully joined {faction_def['name']}.")
+                                self.add_journal_entry(action_type="Joined Faction", summary=f"Joined {faction_def['name']}", details=log_entry_details, outcome="Success")
+                                action_xp_reward = 20
+                            else: # Should not happen if previous checks are correct
+                                self._print(f"  Failed to join {faction_def['name']} due to an unexpected error.")
+                                self.add_journal_entry(action_type="Joined Faction", summary=f"Failed to join {faction_def['name']}", details=log_entry_details, outcome="Unexpected Failure")
+                        else:
+                            self.add_journal_entry(action_type="Joined Faction", summary=f"Attempted to join {faction_def['name']}", details=log_entry_details, outcome="Requirements not met")
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)
@@ -550,6 +597,11 @@ class GameManager:
             elif self.current_town and not self.character.is_dead and self.shop: # Fallback customer interaction
                  if random.random() < self.CUSTOMER_INTERACTION_CHANCE_PER_HOUR:
                     self._handle_customer_interaction()
+
+        # After all actions and time advancement, check for pending ASI/Feat choice
+        if self.character and hasattr(self.character, 'pending_asi_feat_choice') and self.character.pending_asi_feat_choice:
+            self._print(f"  ATTENTION: {self.character.name} has an Ability Score Improvement or Feat choice pending!")
+            # In a full UI, this might trigger a different game state or modal for the player to make their choice.
 
         if event_data_for_return and "type" in event_data_for_return: return event_data_for_return
         return {"type": "action_complete"}

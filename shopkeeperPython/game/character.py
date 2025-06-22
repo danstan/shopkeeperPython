@@ -1,5 +1,8 @@
 import random
 from .item import Item # Assuming item.py is in the same directory
+from .backgrounds import BACKGROUND_DEFINITIONS # Added for backgrounds
+from .feats import FEAT_DEFINITIONS # Added for feats
+from .factions import FACTION_DEFINITIONS, get_faction_definition, get_rank_by_reputation # Added for factions
 # To avoid circular import for type hinting if Shop is imported here,
 # we can use a string literal for Shop type hint or import it under TYPE_CHECKING.
 from typing import TYPE_CHECKING
@@ -54,7 +57,8 @@ class JournalEntry:
 
 
 class Character:
-    LEVEL_XP_THRESHOLDS = { 1: 0, 2: 300, 3: 900, 4: 2700, 5: 6500 }
+    LEVEL_XP_THRESHOLDS = { 1: 0, 2: 300, 3: 900, 4: 2700, 5: 6500 } # XP needed to reach this level
+    ASI_FEAT_LEVELS = {4, 8, 12, 16, 19} # Standard D&D 5e levels for ASI/Feat
 
     STAT_NAMES = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
 
@@ -79,8 +83,23 @@ class Character:
         "Survival": "WIS",
     }
 
-    def __init__(self, name: str = None):
+    def __init__(self, name: str = None, background_id: str = None):
         self.name = name # Can be None initially if using interactive creation
+        self.background_id = background_id
+        self.appearance_data: dict = {}
+        self.attribute_bonuses_from_background: dict = {}
+
+        # Feat related initializations
+        self.feats: list[str] = []
+        self.feat_attribute_bonuses: dict = {}
+        self.feat_stat_bonuses: dict = {}
+
+        # Faction related initializations
+        self.faction_reputations: dict = {} # E.g. {"merchants_guild": {"score": 0, "rank_name": "Applicant"}}
+
+        # ASI/Feat choice pending flag
+        self.pending_asi_feat_choice: bool = False
+
         self.stats = {stat: 0 for stat in self.STAT_NAMES}
         self.attributes = {} # Initialize attributes dictionary
         self.stat_bonuses = {stat: 0 for stat in self.STAT_NAMES}
@@ -97,12 +116,73 @@ class Character:
         self.attuned_items = []
         self.exhaustion_level = 0 # Ensure this is initialized
         self.inventory = []
-        self.gold = 100
+        self.gold = 100 # Default starting gold, can be modified by background
         self.skill_points_to_allocate = 0
         self.speed = 30
         self.is_dead = False # Added for perma-death
         self.current_town_name = "Starting Village" # Initialize current town name
         self.journal = []  # Initialize journal for storing JournalEntry objects
+
+        if self.background_id:
+            background_def = next((bg for bg in BACKGROUND_DEFINITIONS if bg["id"] == self.background_id), None)
+            if background_def:
+                print(f"Applying background: {background_def['name']} for {self.name}")
+                # Apply skill bonuses
+                for skill_bonus_info in background_def.get("starting_skill_bonuses", []):
+                    skill_name = skill_bonus_info["skill"]
+                    bonus_amount = skill_bonus_info["bonus"]
+                    self.attribute_bonuses_from_background[skill_name] = \
+                        self.attribute_bonuses_from_background.get(skill_name, 0) + bonus_amount
+                    print(f"  Applied +{bonus_amount} to {skill_name} from background.")
+
+                # Grant starting items
+                for item_info in background_def.get("starting_items", []):
+                    # We need to create an Item instance.
+                    # Assuming Item class can be instantiated from a dict similar to its to_dict structure,
+                    # or has a constructor that takes these fields.
+                    # For simplicity, we'll assume Item can be created with name, quantity, description, etc.
+                    # If Item.from_dict is robust, it's better. Otherwise, direct instantiation.
+                    # Let's try creating a dictionary that matches what Item.from_dict expects,
+                    # or what the Item constructor expects.
+                    item_data = {
+                        "name": item_info["item_name"],
+                        "quantity": item_info["quantity"],
+                        "description": item_info.get("description", ""),
+                        "base_value": item_info.get("base_value", 0),
+                        "item_type": item_info.get("item_type", "unknown"),
+                        "quality": item_info.get("quality", "Common"),
+                        "is_magical": item_info.get("is_magical", False), # Default if not specified
+                        "effects": item_info.get("effects", {}), # Default if not specified
+                        # Add other fields Item might expect, e.g. is_attunement, is_consumable
+                        "is_attunement": item_info.get("is_attunement", False),
+                        "is_consumable": item_info.get("is_consumable", False),
+                        "is_usable_in_combat": item_info.get("is_usable_in_combat", False),
+                        "equip_slot": item_info.get("equip_slot", None),
+                        "damage": item_info.get("damage", None),
+                        "armor_class": item_info.get("armor_class", None),
+
+                    }
+                    # It's safer to use Item.from_dict if it can handle potentially missing keys
+                    # by providing defaults, or if the item_info structure from backgrounds.py
+                    # is guaranteed to match the Item class structure.
+                    # For now, let's assume Item.from_dict can handle this:
+                    try:
+                        new_item = Item.from_dict(item_data)
+                        new_item.quantity = item_info["quantity"] # Ensure quantity is set from background
+                        self.add_item_to_inventory(new_item)
+                        print(f"  Added starting item: {new_item.name} (Qty: {new_item.quantity})")
+                    except Exception as e:
+                        print(f"  Error creating starting item {item_info['item_name']}: {e}. Item not added.")
+
+
+                # Add starting gold bonus
+                gold_bonus = background_def.get("starting_gold_bonus", 0)
+                self.gold += gold_bonus
+                if gold_bonus != 0:
+                    print(f"  Adjusted starting gold by {gold_bonus}. New total: {self.gold}")
+            else:
+                print(f"Warning: Background ID '{self.background_id}' not found in BACKGROUND_DEFINITIONS.")
+
         self._recalculate_all_attributes()
 
     @property
@@ -121,7 +201,10 @@ class Character:
         return self.speed
 
     def get_effective_stat(self, stat_name: str) -> int:
-        return self.stats.get(stat_name, 0) + self.stat_bonuses.get(stat_name, 0)
+        base_stat = self.stats.get(stat_name, 0)
+        item_bonus = self.stat_bonuses.get(stat_name, 0) # Bonuses from items
+        feat_bonus = self.feat_stat_bonuses.get(stat_name, 0) # Bonuses from feats
+        return base_stat + item_bonus + feat_bonus
 
     def _calculate_modifier(self, stat_score: int, is_base_stat_score: bool = False, stat_name_for_effective: str = "CON") -> int:
         if is_base_stat_score: return (stat_score - 10) // 2
@@ -194,9 +277,35 @@ class Character:
             print(f"{self.name} leveled up to Level {self.level}!")
             self.max_hit_dice = self.level
             self.hit_dice = min(self.hit_dice + 1, self.max_hit_dice) # Gain 1 HD, cap at new max
-            con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True)
 
-            print(f"{self.name} has {self.skill_points_to_allocate} skill point(s) to allocate.")
+            # HP increase on level up (e.g. roll a hit die + CON mod, or average)
+            # For simplicity, let's add a fixed amount + CON mod, or just re-evaluate based on new level for now
+            # If roll_stats() is called, it recalculates base_max_hp based on current level and CON.
+            # This seems reasonable for level ups.
+            # However, roll_stats() also sets HP to max. We might want to just increase max_hp.
+            # Let's assume a fixed HP gain per level + CON modifier for now (e.g. 5 + CON_mod for a d8 HD class)
+            # Or, more simply, ensure base_max_hp reflects the new level.
+            # The existing self.roll_stats() does: self.base_max_hp = 10 + (con_modifier * current_level)
+            # This implies a d8 hit die (average 4.5, so 5) + CON, with 10 as a base for level 1 (5+CON + 5 extra).
+            # This is a bit different from typical 5e. Let's stick to recalculating with existing formula for now.
+
+            old_max_hp = self.get_effective_max_hp()
+            con_modifier = self._calculate_modifier(self.stats["CON"], is_base_stat_score=True) # Assuming direct stat access for this calculation
+            self.base_max_hp = 10 + (con_modifier * self.level) # Recalculate base_max_hp for new level
+            hp_gained_this_level = self.get_effective_max_hp() - old_max_hp
+            self.hp += hp_gained_this_level # Add the HP gained to current HP
+            self.hp = min(self.hp, self.get_effective_max_hp()) # Ensure it doesn't exceed new max
+
+            print(f"  {self.name} gained {hp_gained_this_level} HP. Max HP is now {self.get_effective_max_hp()}.")
+
+            if self.level in self.ASI_FEAT_LEVELS:
+                self.pending_asi_feat_choice = True
+                print(f"  {self.name} has an Ability Score Improvement or Feat choice available!")
+                # Skill points are not allocated on ASI/Feat levels
+            else:
+                self.skill_points_to_allocate += 1 # Standard per GDD for non-ASI levels
+                print(f"  {self.name} gained 1 skill point. Total skill points to allocate: {self.skill_points_to_allocate}.")
+
             next_level_threshold_xp = self.LEVEL_XP_THRESHOLDS.get(self.level + 1, float('inf'))
 
     def gain_exhaustion(self, amount: int = 1):
@@ -595,11 +704,20 @@ class Character:
             "is_dead": self.is_dead, # Added for perma-death
             "current_town_name": town_name_to_save,
             "journal": [entry.to_dict() for entry in self.journal], # Serialize journal entries
+            "background_id": self.background_id,
+            "appearance_data": self.appearance_data,
+            "attribute_bonuses_from_background": self.attribute_bonuses_from_background,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> 'Character':
-        char = cls(data["name"])
+        # Background_id must be passed to constructor before other things are set up
+        # if it influences starting items/gold, which it does.
+        # However, the current __init__ applies background effects if background_id is present.
+        # So, we pass it during cls instantiation.
+        char = cls(name=data["name"], background_id=data.get("background_id"))
+
+        # Restore other attributes after basic initialization
         char.stats = data["stats"]
         char.stat_bonuses = data.get("stat_bonuses", {key: 0 for key in char.stats})
         char.ac_bonus = data.get("ac_bonus", 0)
@@ -618,8 +736,14 @@ class Character:
         char.skill_points_to_allocate = data.get("skill_points_to_allocate", 0)
         char.speed = data.get("speed", 30)
         char.is_dead = data.get("is_dead", False) # Added for perma-death
-        # Load current_town_name, defaulting if not found (e.g., older save files)
         char.current_town_name = data.get("current_town_name", "Starting Village")
+
+        # Load background related fields, providing defaults for older saves
+        # background_id is already handled by constructor.
+        char.appearance_data = data.get("appearance_data", {})
+        # attribute_bonuses_from_background might have been partially populated by __init__
+        # if background_id was present. If loading from save, this saved version should take precedence.
+        char.attribute_bonuses_from_background = data.get("attribute_bonuses_from_background", {})
 
         # Load journal entries
         journal_data = data.get("journal", [])
@@ -656,11 +780,14 @@ class Character:
         """
         Retrieves the pre-calculated score for an attribute.
         """
-        score = self.attributes.get(attribute_name)
-        if score is None:
-            print(f"Warning: Attribute '{attribute_name}' not found or not calculated. Returning 0.")
-            return 0
-        return score
+        base_score = self.attributes.get(attribute_name, 0)
+        background_bonus = self.attribute_bonuses_from_background.get(attribute_name, 0)
+        final_score = base_score + background_bonus
+
+        # This print can be very verbose, consider removing or conditionalizing it
+        # print(f"DEBUG: get_attribute_score for {attribute_name}: Base={base_score}, BgBonus={background_bonus}, Final={final_score}")
+
+        return final_score
 
     def _recalculate_all_attributes(self):
         """
@@ -671,6 +798,383 @@ class Character:
             self.attributes[attr_name] = self._calculate_attribute_score(attr_name)
         # print(f"DEBUG: Attributes for {self.name}: {self.attributes}") # Optional debug line
 
+    # --- Feat Methods ---
+    def apply_feat_effects(self, feat_id: str):
+        """
+        Applies the effects of a given feat to the character.
+        This method is primarily called when a new feat is added.
+        It handles direct, one-time changes like base_max_hp_bonus.
+        Attribute and stat bonuses are stored in their respective dictionaries
+        and are incorporated via get_attribute_score and get_effective_stat.
+        """
+        feat_def = next((f for f in FEAT_DEFINITIONS if f["id"] == feat_id), None)
+        if not feat_def:
+            print(f"Warning: Feat ID '{feat_id}' not found in FEAT_DEFINITIONS. No effects applied.")
+            return
 
-if __name__ == "__main__":
-    pass
+        print(f"Applying effects for feat: {feat_def['name']} for {self.name}")
+        recalculate_attributes = False
+        recalculate_stats_dependent = False
+
+        for effect in feat_def.get("effects", []):
+            effect_type = effect.get("type")
+            value = effect.get("value")
+
+            if effect_type == "base_max_hp_bonus":
+                old_max_hp = self.get_effective_max_hp()
+                self.base_max_hp += value
+                print(f"  Increased base_max_hp by {value}. New base_max_hp: {self.base_max_hp}")
+                # Ensure current HP is updated correctly relative to new max HP
+                new_max_hp = self.get_effective_max_hp()
+                if self.hp == old_max_hp or self.is_dead: # If at full HP (before bonus) or dead, set to new max (or more if previously above new max for some reason)
+                    self.hp = new_max_hp
+                elif self.hp > 0 : # If damaged, add the bonus HP directly
+                    self.hp += (new_max_hp - old_max_hp)
+
+                self.hp = min(self.hp, new_max_hp) # Cap at new max_hp
+                if self.is_dead and new_max_hp > 0 : # If was dead but gained HP, no longer dead (though might be at 0 HP)
+                    # This doesn't automatically revive, just means max HP is > 0
+                    # Actual revival logic is separate.
+                    pass
+
+
+            elif effect_type == "attribute_bonus":
+                attribute_name = effect.get("attribute")
+                if attribute_name in self.ATTRIBUTE_DEFINITIONS:
+                    self.feat_attribute_bonuses[attribute_name] = \
+                        self.feat_attribute_bonuses.get(attribute_name, 0) + value
+                    print(f"  Applied +{value} to {attribute_name} from feat {feat_id}.")
+                    recalculate_attributes = True
+                else:
+                    print(f"  Warning: Unknown attribute '{attribute_name}' in feat {feat_id}. Effect not applied.")
+
+            elif effect_type == "stat_bonus":
+                stat_name = effect.get("stat")
+                if stat_name in self.STAT_NAMES:
+                    self.feat_stat_bonuses[stat_name] = \
+                        self.feat_stat_bonuses.get(stat_name, 0) + value
+                    print(f"  Applied +{value} to {stat_name} from feat {feat_id}.")
+                    # Recalculating attributes is necessary as they depend on stats
+                    recalculate_attributes = True
+                    recalculate_stats_dependent = True # To indicate CON dependent things like HP might change.
+                else:
+                    print(f"  Warning: Unknown stat '{stat_name}' in feat {feat_id}. Effect not applied.")
+            else:
+                print(f"  Warning: Unknown effect type '{effect_type}' in feat {feat_id}. Effect not applied.")
+
+        if recalculate_attributes: # This implies stats might have changed too
+            self._recalculate_all_attributes()
+            # If CON changed, max HP might need update (handled by _recalculate_all_attributes if it updates HP)
+            # Base max HP is set during roll_stats or by specific bonuses.
+            # Let's ensure HP is correctly capped after stat changes.
+            # self.roll_stats() might be too much here as it re-rolls HP.
+            # A specific call to update HP based on new CON might be needed if not covered.
+            # For now, assume _recalculate_all_attributes followed by ensuring HP is capped is enough.
+            # If a stat bonus (especially CON) was applied, ensure HP reflects this.
+            # self.base_max_hp might need adjustment if a CON score changed, then self.hp.
+            # The current roll_stats sets base_max_hp = 10 + (con_modifier * current_level).
+            # If a feat changes CON, this should be updated.
+
+            # If CON changed due to a feat, re-evaluate base_max_hp based on the new CON modifier
+            if recalculate_stats_dependent and "CON" in self.feat_stat_bonuses: # Check if CON was directly affected
+                old_max_hp = self.get_effective_max_hp()
+                con_modifier = self._calculate_modifier(self.get_effective_stat("CON")) # Modifier from new effective CON
+                # This formula for base_max_hp assumes it's primarily from CON and level.
+                # If other sources (like 'tough' feat) also modify base_max_hp, this needs care.
+                # The 'tough' feat directly adds to self.base_max_hp.
+                # So, we only update the part of base_max_hp derived from CON and level.
+                # This is tricky. Let's assume base_max_hp is a sum of initial roll + tough_bonus + con_level_bonus.
+                # A simpler model: roll_stats() initializes base_max_hp. Feats add to it.
+                # If CON stat changes, then the CON-derived portion of HP should change.
+                # This might mean re-evaluating con_modifier * self.level part.
+                # For now, direct base_max_hp bonuses are additive. Changes to CON
+                # will be reflected via get_effective_stat -> _calculate_modifier -> _recalculate_all_attributes.
+                # The max_hp property will then use the new base_max_hp.
+                # The current _recalculate_all_attributes does not re-evaluate base_max_hp.
+                # This needs to be handled.
+                # A simpler approach for now: stat bonuses affect skills/modifiers. HP changes from specific HP feats.
+                # Let's assume for now that `_recalculate_all_attributes` handles implications of stat changes on skills.
+                # Direct HP effects are separate.
+                pass # Rely on _recalculate_all_attributes for skill updates. Max HP via property.
+
+            self.hp = min(self.hp, self.get_effective_max_hp()) # Ensure current HP is capped.
+
+
+    def add_feat(self, feat_id: str) -> bool:
+        """Adds a feat to the character if valid and not already present."""
+        feat_def = next((f for f in FEAT_DEFINITIONS if f["id"] == feat_id), None)
+        if not feat_def:
+            print(f"Error: Feat ID '{feat_id}' is not a valid feat definition.")
+            return False
+        if feat_id in self.feats:
+            print(f"Info: Character {self.name} already has feat '{feat_id}'.")
+            return False
+
+        self.feats.append(feat_id)
+        print(f"Feat '{feat_def['name']}' added to {self.name}.")
+        self.apply_feat_effects(feat_id)
+        return True
+
+    def has_feat(self, feat_id: str) -> bool:
+        """Checks if the character has a specific feat."""
+        return feat_id in self.feats
+
+    def to_dict(self, current_town_name: str = None) -> dict:
+        # If current_town_name is None, default to "Starting Village"
+        town_name_to_save = current_town_name if current_town_name is not None else "Starting Village"
+        return {
+            "name": self.name,
+            "stats": self.stats.copy(),
+            "stat_bonuses": self.stat_bonuses.copy(), # Item stat bonuses
+            "ac_bonus": self.ac_bonus,
+            "level": self.level,
+            "xp": self.xp,
+            "pending_xp": self.pending_xp,
+            "base_max_hp": self.base_max_hp,
+            "hp": self.hp,
+            "hit_dice": self.hit_dice,
+            "max_hit_dice": self.max_hit_dice,
+            "attunement_slots": self.attunement_slots,
+            "attuned_items": [item.to_dict() for item in self.attuned_items], # Corrected key
+            "exhaustion_level": self.exhaustion_level,
+            "inventory": [item.to_dict() for item in self.inventory],
+            "gold": self.gold,
+            "skill_points_to_allocate": self.skill_points_to_allocate,
+            "speed": self.speed,
+            "is_dead": self.is_dead,
+            "current_town_name": town_name_to_save,
+            "journal": [entry.to_dict() for entry in self.journal],
+            "background_id": self.background_id,
+            "appearance_data": self.appearance_data,
+            "attribute_bonuses_from_background": self.attribute_bonuses_from_background,
+            "feats": self.feats,
+            "feat_attribute_bonuses": self.feat_attribute_bonuses,
+            "feat_stat_bonuses": self.feat_stat_bonuses,
+            "faction_reputations": self.faction_reputations,
+            "pending_asi_feat_choice": self.pending_asi_feat_choice,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Character':
+        char = cls(name=data["name"], background_id=data.get("background_id"))
+
+        char.stats = data["stats"]
+        char.stat_bonuses = data.get("stat_bonuses", {key: 0 for key in char.stats})
+        char.ac_bonus = data.get("ac_bonus", 0)
+        char.level = data["level"]
+        char.xp = data["xp"]
+        char.pending_xp = data.get("pending_xp", 0)
+        # base_max_hp is loaded directly, assumed to be correct from save.
+        # apply_feat_effects is NOT called on load for base_max_hp to avoid double addition.
+        char.base_max_hp = data["base_max_hp"]
+        char.hp = data["hp"]
+        char.max_hit_dice = data.get("max_hit_dice", char.level)
+        char.hit_dice = data["hit_dice"]
+        char.attunement_slots = data.get("attunement_slots", 3)
+        char.inventory = [Item.from_dict(item_data) for item_data in data.get("inventory", [])]
+        # Ensuring from_dict uses the same corrected key as to_dict will use.
+        char.attuned_items = [Item.from_dict(item_data) for item_data in data.get("attuned_items", [])]
+        char.exhaustion_level = data["exhaustion_level"]
+        char.gold = data["gold"]
+        char.skill_points_to_allocate = data.get("skill_points_to_allocate", 0)
+        char.speed = data.get("speed", 30)
+        char.is_dead = data.get("is_dead", False)
+        char.current_town_name = data.get("current_town_name", "Starting Village")
+
+        char.appearance_data = data.get("appearance_data", {})
+        char.attribute_bonuses_from_background = data.get("attribute_bonuses_from_background", {})
+
+        # Load feat data
+        char.feats = data.get("feats", [])
+        char.feat_attribute_bonuses = data.get("feat_attribute_bonuses", {})
+        char.feat_stat_bonuses = data.get("feat_stat_bonuses", {})
+        # Note: We are NOT calling apply_feat_effects here for feats loaded from save.
+        # The assumption is that their effects (like base_max_hp, attribute bonuses, stat bonuses)
+        char.faction_reputations = data.get("faction_reputations", {})
+
+        # Load journal entries
+        # are already correctly stored in base_max_hp, feat_attribute_bonuses, and feat_stat_bonuses respectively.
+        # This is important to prevent issues like double-adding HP bonuses.
+        char.pending_asi_feat_choice = data.get("pending_asi_feat_choice", False)
+
+        journal_data = data.get("journal", [])
+        if journal_data:
+            char.journal = [JournalEntry.from_dict(entry_data) for entry_data in journal_data]
+        else:
+            char.journal = []
+
+        if char.is_dead:
+            char.hp = 0
+        else:
+            char.hp = min(char.hp, char.get_effective_max_hp())
+
+        char._recalculate_all_attributes()
+        return char
+
+    # --- ASI/Feat Choice Methods ---
+    def set_pending_asi_feat_choice(self, status: bool):
+        """Sets or clears the pending ASI/Feat choice flag."""
+        self.pending_asi_feat_choice = status
+        if not status:
+            print(f"ASI/Feat choice for {self.name} has been made or deferred.")
+
+    def apply_stat_increase_choice(self, stat_primary: str, points_primary: int, stat_secondary: str = None, points_secondary: int = 0) -> bool:
+        """Applies an ability score increase choice."""
+        if not self.pending_asi_feat_choice:
+            print(f"Error: No ASI/Feat choice is currently pending for {self.name}.")
+            return False
+
+        valid_points_config = (points_primary == 2 and points_secondary == 0 and not stat_secondary) or \
+                              (points_primary == 1 and points_secondary == 1 and stat_secondary and stat_primary != stat_secondary) or \
+                              (points_primary == 1 and points_secondary == 0 and not stat_secondary) # Single +1 option
+
+        if not valid_points_config:
+            print("Error: Invalid ASI point distribution. Choose +2 to one stat, or +1 to two different stats, or +1 to one stat.")
+            return False
+
+        if stat_primary not in self.STAT_NAMES or (stat_secondary and stat_secondary not in self.STAT_NAMES):
+            print(f"Error: Invalid stat name provided. Valid stats are: {self.STAT_NAMES}")
+            return False
+
+        # Check 20 cap (common 5e rule, can be adjusted)
+        MAX_STAT_VALUE = 20 # Can be made a class constant
+        can_apply_primary = (self.stats.get(stat_primary, 0) + points_primary) <= MAX_STAT_VALUE
+        can_apply_secondary = not stat_secondary or (self.stats.get(stat_secondary, 0) + points_secondary) <= MAX_STAT_VALUE
+
+        if not can_apply_primary or not can_apply_secondary:
+            print(f"Error: Stat increase would exceed cap of {MAX_STAT_VALUE}.")
+            return False
+
+        # Apply changes
+        # Store old CON modifier before applying stat changes to accurately calculate HP delta
+        old_con_mod = self._calculate_modifier(self.stats.get("CON", 0), is_base_stat_score=True)
+
+        # Apply changes
+        self.stats[stat_primary] = self.stats.get(stat_primary, 0) + points_primary
+        print(f"  {stat_primary} increased by {points_primary} to {self.stats[stat_primary]}.")
+
+        if stat_secondary and points_secondary > 0:
+            self.stats[stat_secondary] = self.stats.get(stat_secondary, 0) + points_secondary
+            print(f"  {stat_secondary} increased by {points_secondary} to {self.stats[stat_secondary]}.")
+
+        self._recalculate_all_attributes() # Updates attribute modifiers based on new stats
+
+        # Check if CON was one of the stats that changed
+        new_con_mod = self._calculate_modifier(self.stats.get("CON", 0), is_base_stat_score=True)
+        con_mod_changed = (new_con_mod != old_con_mod)
+
+        if con_mod_changed:
+            # Calculate the HP change based *only* on the change in CON modifier
+            # Each point of CON modifier adds self.level HP to max HP.
+            hp_change_from_con_mod_increase = (new_con_mod - old_con_mod) * self.level
+
+            self.base_max_hp += hp_change_from_con_mod_increase
+            self.hp += hp_change_from_con_mod_increase # Also increase current HP by the same amount
+            self.hp = min(self.hp, self.get_effective_max_hp()) # Ensure current HP doesn't exceed new max
+            print(f"  Max HP updated by {hp_change_from_con_mod_increase} due to CON change. New Max HP: {self.get_effective_max_hp()}.")
+
+        self.reapply_attuned_item_effects() # If other stats affect items or if CON change has other implications handled here
+
+        self.set_pending_asi_feat_choice(False)
+        print(f"  {self.name} applied Ability Score Increases.")
+        return True
+
+    def apply_feat_choice(self, feat_id: str) -> bool:
+        """Applies a feat choice."""
+        if not self.pending_asi_feat_choice:
+            print(f"Error: No ASI/Feat choice is currently pending for {self.name}.")
+            return False
+
+        if self.add_feat(feat_id): # add_feat already prints messages and applies effects
+            self.set_pending_asi_feat_choice(False)
+            print(f"  {self.name} chose feat: {feat_id}.")
+            return True
+        else:
+            # add_feat would print why it failed (e.g., already has feat, invalid feat)
+            return False
+
+    # --- Faction Methods ---
+    def get_faction_data(self, faction_id: str) -> dict | None:
+        """Returns the specific faction's definition from FACTION_DEFINITIONS."""
+        return get_faction_definition(faction_id)
+
+    def get_faction_reputation_details(self, faction_id: str) -> dict | None:
+        """Returns the character's reputation entry for a specific faction."""
+        return self.faction_reputations.get(faction_id)
+
+    def get_faction_score(self, faction_id: str) -> int:
+        """Returns the character's reputation score for a faction, defaults to 0."""
+        details = self.get_faction_reputation_details(faction_id)
+        return details["score"] if details else 0
+
+    def get_current_faction_rank_name(self, faction_id: str) -> str | None:
+        """Retrieves the character's current rank name in the specified faction."""
+        details = self.get_faction_reputation_details(faction_id)
+        return details["rank_name"] if details else None
+
+    def update_faction_reputation(self, faction_id: str, amount: int):
+        """
+        Updates the character's reputation score for a faction and checks for rank changes.
+        """
+        if not self.get_faction_data(faction_id):
+            print(f"Warning: Faction ID '{faction_id}' not found. Cannot update reputation.")
+            return
+
+        current_details = self.faction_reputations.get(faction_id)
+
+        if not current_details:
+            # Faction not yet in character's list, initialize it.
+            # This case should ideally be handled by join_faction first for clarity,
+            # but can be initialized here if reputation is gained before formal joining.
+            initial_rank = get_rank_by_reputation(faction_id, 0)
+            if not initial_rank: # Should not happen if faction definition is correct
+                print(f"Error: Could not determine initial rank for faction '{faction_id}'.")
+                return
+            self.faction_reputations[faction_id] = {"score": 0, "rank_name": initial_rank["name"]}
+            current_details = self.faction_reputations[faction_id]
+            print(f"{self.name} now has a reputation with {self.get_faction_data(faction_id)['name']}, starting at {initial_rank['name']}.")
+
+        old_score = current_details["score"]
+        new_score = old_score + amount
+        current_details["score"] = new_score
+
+        print(f"{self.name}'s reputation with {self.get_faction_data(faction_id)['name']} changed by {amount} to {new_score}.")
+
+        # Check for rank change
+        new_rank_def = get_rank_by_reputation(faction_id, new_score)
+        if not new_rank_def: # Should not happen
+            print(f"Error: Could not determine rank for score {new_score} in faction '{faction_id}'.")
+            return
+
+        old_rank_name = current_details["rank_name"]
+        new_rank_name = new_rank_def["name"]
+
+        if new_rank_name != old_rank_name:
+            current_details["rank_name"] = new_rank_name
+            print(f"{self.name} has achieved the rank of {new_rank_name} with {self.get_faction_data(faction_id)['name']}!")
+            # Here, you could also trigger application of new rank benefits if they are immediate
+            # For now, benefits are mostly checked passively (e.g. shop discounts)
+
+    def join_faction(self, faction_id: str) -> bool:
+        """
+        Allows the character to join a faction if not already a member.
+        Initializes reputation at 0 and the starting rank.
+        """
+        faction_def = self.get_faction_data(faction_id)
+        if not faction_def:
+            print(f"Error: Faction ID '{faction_id}' not found. Cannot join.")
+            return False
+
+        if faction_id in self.faction_reputations:
+            print(f"{self.name} is already a member of {faction_def['name']}.")
+            return False
+
+        # Determine initial rank (usually the one requiring 0 reputation)
+        initial_rank = get_rank_by_reputation(faction_id, 0)
+        if not initial_rank:
+            print(f"Error: Could not determine initial rank for faction '{faction_id}'. Joining failed.")
+            return False
+
+        self.faction_reputations[faction_id] = {"score": 0, "rank_name": initial_rank["name"]}
+        print(f"{self.name} has joined {faction_def['name']} with the rank of {initial_rank['name']}.")
+        return True

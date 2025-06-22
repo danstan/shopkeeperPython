@@ -6,7 +6,8 @@ class Town:
     """
     def __init__(self, name: str, properties: list[str], nearby_resources: list[str],
                  unique_npc_crafters: list[dict], market_demand_modifiers: dict = None,
-                 local_events_schedule: list[dict] = None, sub_locations: list[dict] = None):
+                 local_events_schedule: list[dict] = None, sub_locations: list[dict] = None,
+                 faction_hqs: list[str] = None):
         """
         Initializes a new town.
 
@@ -19,6 +20,7 @@ class Town:
                                                       Keys are item names, values are multipliers.
             local_events_schedule (list[dict], optional): Schedule for fixed local events.
             sub_locations (list[dict], optional): Sub-locations within the town.
+            faction_hqs (list[str], optional): List of faction IDs that have HQs in this town.
         """
         self.name = name
         self.properties = properties if properties is not None else []
@@ -27,6 +29,7 @@ class Town:
         self.market_demand_modifiers = market_demand_modifiers if market_demand_modifiers is not None else {}
         self.local_events_schedule = local_events_schedule if local_events_schedule is not None else []
         self.sub_locations = sub_locations if sub_locations is not None else []
+        self.faction_hqs = faction_hqs if faction_hqs is not None else []
         self.active_local_events = [] # List of active event objects or structs
 
         print(f"Town '{self.name}' established.")
@@ -72,7 +75,7 @@ class Town:
             print(f"Could not find active event '{event_name_to_remove}' to remove in {self.name}.")
 
     def __repr__(self):
-        return f"Town(name='{self.name}', properties={len(self.properties)}, resources={len(self.nearby_resources)}, sub_locations={len(self.sub_locations)})"
+        return f"Town(name='{self.name}', properties={len(self.properties)}, resources={len(self.nearby_resources)}, sub_locations={len(self.sub_locations)}, faction_hqs={len(self.faction_hqs)})"
 
 if __name__ == "__main__":
     print("--- Town System Test ---")
@@ -87,9 +90,11 @@ if __name__ == "__main__":
         sub_locations=[
             {"name": "General Store", "description": "A place to buy and sell goods."},
             {"name": "Town Square", "description": "A central gathering place."}
-        ]
+        ],
+        faction_hqs=["merchants_guild"]
     )
     print(town1)
+    print(f"  Faction HQs in {town1.name}: {town1.faction_hqs}")
     print(f"  Demand for Minor Healing Potion: {town1.get_item_price_modifier('Minor Healing Potion')}") # Expected 1.1
     print(f"  Demand for Simple Dagger: {town1.get_item_price_modifier('Simple Dagger')}") # Expected 1.0 (default)
 
@@ -101,9 +106,11 @@ if __name__ == "__main__":
             {"name": "Borin Stonebeard", "specialty": "Blacksmithing", "services": ["Repairs Gear", "Sells Metal Ingots"], "quests_available": ["Clear Mine Pests"]}
         ],
         market_demand_modifiers={"Simple Dagger": 1.25, "Iron Sword": 1.3},
-        sub_locations=[{"name": "City Market", "description": "A bustling marketplace."}]
+        sub_locations=[{"name": "City Market", "description": "A bustling marketplace."}],
+        faction_hqs=[] # No HQs in Steel Flow City for this example
     )
     print(town2)
+    print(f"  Faction HQs in {town2.name}: {town2.faction_hqs}")
     print(f"  Demand for Simple Dagger in {town2.name}: {town2.get_item_price_modifier('Simple Dagger')}") # Expected 1.25
 
     # Test active events (conceptual, as Event objects are not fully integrated here yet)
