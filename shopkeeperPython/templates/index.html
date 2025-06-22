@@ -57,10 +57,6 @@
     </style>
 </head>
 <body>
-    <div id="skill-roll-result-display-container" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1005; background-color: #fff; border: 1px solid #777; padding: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); display: none;">
-        <!-- Content will be set by JavaScript -->
-    </div>
-
     {% if not user_logged_in %}
     <div class="login-container">
         <h2>Login</h2>
@@ -290,24 +286,41 @@
                 <div class="tab-title-bar">Inventory</div>
                 <h2>Shop Inventory</h2>
                 {% if shop_inventory and shop_inventory[0] != "Empty" %}
-                <ul>
-                    {% for item_display_name in shop_inventory %}
-                    <li>{{ item_display_name }}</li>
+                <div class="inventory-grid shop-inventory-grid"> {# Added extra class for potential shop-specific styling #}
+                    {% for item in shop_inventory %} {# Assume item might be an object or dict in the future #}
+                    <div class="inventory-item-card shop-item-card"> {# Added extra class #}
+                        {# Placeholder for item icon #}
+                        <div class="item-icon-placeholder"></div>
+                        <div class="item-name">
+                            {{ item.name if item is mapping and item.name else item }} {# Handle if item is just a name string #}
+                        </div>
+                        {# Placeholder for item price (e.g., <div class="item-price">{{ item.price }} G</div>) #}
+                        {# Placeholder for item category (e.g., <div class="item-category">{{ item.category }}</div>) #}
+                        <button type="button" class="buy-item-button" data-item-name="{{ item.name if item is mapping and item.name else item }}">Buy</button>
+                    </div>
                     {% endfor %}
-                </ul>
+                </div>
                 {% else %}
-                <p>Empty</p>
+                <p>Shop inventory is currently empty.</p> {# Slightly more descriptive message #}
                 {% endif %}
 
                 <h2>Player Inventory</h2>
                 {% if player_inventory and player_inventory[0] != "Empty" %}
-                <ul>
-                    {% for item_name in player_inventory %}
-                    <li>{{ item_name }}</li>
+                <div class="inventory-grid">
+                    {% for item in player_inventory %} {# Assume item is an object or dict #}
+                    <div class="inventory-item-card">
+                        {# Placeholder for item icon (e.g., <img src="{{ item.icon_url_or_placeholder }}" alt="{{ item.name }}">) #}
+                        <div class="item-icon-placeholder"></div>
+                        <div class="item-name">
+                            {{ item.name if item is mapping and item.name else item }} {# Handle if item is just a name string for now #}
+                        </div>
+                        {# Placeholder for item quantity (e.g., <div class="item-quantity">Qty: {{ item.quantity }}</div>) #}
+                        {# Placeholder for item description/stats (e.g., <div class="item-description">{{ item.description }}</div>) #}
+                    </div>
                     {% endfor %}
-                </ul>
+                </div>
                 {% else %}
-                <p>Empty</p>
+                <p>Player inventory is empty.</p> {# Slightly more descriptive message #}
                 {% endif %}
             </div>
         </div>
@@ -375,8 +388,13 @@
 
                                 <div id="div_sell_details" class="hidden-details details-section">
                                     <h4>Sell to Your Shop</h4>
-                                    <label for="sell_item_name">Item Name to Sell:</label>
-                                    <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale">
+
+                                    <label for="sell_item_dropdown">Select Item from Inventory:</label>
+                                    <select id="sell_item_dropdown" name="sell_item_dropdown_select"></select>
+
+                                    <label for="sell_item_name">Or Type Item Name to Sell:</label>
+                                    <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale (or select from above)">
+
                                     <button type="button" class="submit-details-button" data-action="sell_to_own_shop">Sell Item</button>
                                 </div>
 
@@ -508,6 +526,96 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        var playerInventoryForSellDropdown = {{ player_inventory | default('[]') | tojson | safe }};
+
+        // Function to display toast messages
+        function showToast(message, type = 'info', duration = 5000) {
+            const container = document.getElementById('toast-container');
+            if (!container) {
+                console.error('Toast container not found!');
+                return;
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`; // Base class + type class (e.g., toast-success, toast-error)
+
+            // Optional: Add an icon based on type
+            let iconHtml = '';
+            if (type === 'success') {
+                iconHtml = '<span class="toast-icon">✔️</span>'; // Simple checkmark
+            } else if (type === 'error') {
+                iconHtml = '<span class="toast-icon">❌</span>'; // Simple X
+            } else if (type === 'warning') {
+                iconHtml = '<span class="toast-icon">⚠️</span>'; // Warning sign
+            } else {
+                iconHtml = '<span class="toast-icon">ℹ️</span>'; // Info sign
+            }
+
+            toast.innerHTML = `${iconHtml} <span class="toast-message">${message}</span>`;
+
+            container.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 100); // Small delay to allow CSS transition to catch the class change
+
+            // Remove toast after duration
+            setTimeout(() => {
+                toast.classList.remove('show');
+                // Remove the element from DOM after transition out
+                toast.addEventListener('transitionend', () => {
+                    if (toast.parentElement) {
+                        toast.parentElement.removeChild(toast);
+                    }
+                });
+            }, duration);
+        }
+
+        // Example usage (for testing, can be removed later):
+        // showToast("This is a success message!", "success");
+        // showToast("This is an error message.", "error", 7000);
+        // showToast("Standard information toast.");
+
+            // Logic for populating and handling the sell item dropdown
+            // const sellDetailsDiv = document.getElementById('div_sell_details'); // Already declared
+            const sellItemDropdown = document.getElementById('sell_item_dropdown');
+            // const sellItemNameInput = document.getElementById('sell_item_name'); // Already declared
+
+            function populateSellDropdown() {
+                if (!sellItemDropdown || !playerInventoryForSellDropdown) return;
+
+                sellItemDropdown.innerHTML = '<option value="">-- Select an item to sell --</option>'; // Default empty option
+
+                playerInventoryForSellDropdown.forEach(item => {
+                    const option = document.createElement('option');
+                    let itemName = '';
+                    if (typeof item === 'string') {
+                        itemName = item;
+                    } else if (typeof item === 'object' && item !== null && item.name) {
+                        itemName = item.name;
+                    } else {
+                        return; // Skip if item format is unexpected
+                    }
+                    option.value = itemName;
+                    option.textContent = itemName;
+                    sellItemDropdown.appendChild(option);
+                });
+            }
+
+            if (sellItemDropdown && sellItemNameInput) { // sellItemNameInput is declared further down, this might be an issue.
+                                                        // However, sellItemNameInput is fetched within actionForm block.
+                                                        // This event listener should be fine as long as sellItemNameInput becomes available
+                                                        // by the time a change event occurs.
+                sellItemDropdown.addEventListener('change', function() {
+                    // Re-fetch sellItemNameInput here to be safe, as its declaration is later.
+                    const currentSellItemNameInput = document.getElementById('sell_item_name');
+                    if (this.value && currentSellItemNameInput) {
+                        currentSellItemNameInput.value = this.value;
+                    }
+                });
+            }
+
         // Existing script for actionForm, map, sub-locations etc.
         if (document.getElementById('actionForm')) {
             const actionForm = document.getElementById('actionForm');
@@ -710,6 +818,7 @@
                             if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
                             if (sellDetailsDiv) sellDetailsDiv.style.display = 'block';
                             currentActionRequiringDetails = actionName;
+                            populateSellDropdown(); // Call to populate when the sell form is shown
                             // Do NOT submit form yet
                         } else if (actionName === 'buy_from_npc' && currentSubLocationName === "Old Man Hemlock's Hut") {
                             if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
@@ -742,6 +851,9 @@
                             // For actions not needing details from the dynamic list
                             if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({});
                             if (actionForm) {
+                            if (event.target && typeof event.target.classList !== 'undefined') { // Ensure event.target is an element
+                                event.target.classList.add('button-processing');
+                            }
                                 console.log('Submitting action (no details). Name:', hiddenActionNameInput.value);
                                 console.log('Submitting action (no details). Details:', hiddenDetailsInput.value);
                                 actionForm.submit();
@@ -856,6 +968,9 @@
                         compileAndSetActionDetails(); // This uses currentActionRequiringDetails to populate the details
 
                         if (actionForm) {
+                            if (event.target && typeof event.target.classList !== 'undefined') {
+                                event.target.classList.add('button-processing');
+                            }
                             console.log('[SubtaskDebug] Attempting to submit form. Action Name:',
                                         (hiddenActionNameInput ? hiddenActionNameInput.value : "ERROR: hiddenActionNameInput is null"),
                                         '. Details JSON:',
@@ -910,6 +1025,7 @@
                         });
                     }
                     if (actionForm) {
+                        if (submitBuyHemlockHerbButton) submitBuyHemlockHerbButton.classList.add('button-processing');
                         console.log('Submitting action (buy_from_npc Hemlock). Name:', hiddenActionNameInput.value);
                         console.log('Submitting action (buy_from_npc Hemlock). Details:', hiddenDetailsInput.value);
                         actionForm.submit();
@@ -934,6 +1050,61 @@
                  displaySubLocations([]); // Call with empty array
             }
         }
+
+            // JavaScript for Shop Item "Buy" button functionality
+            const inventoryContent = document.getElementById('inventory-content'); // Parent container for shop items
+            // const buyDetailsDiv = document.getElementById('div_buy_details'); // Already declared above
+            // const buyItemNameInput = document.getElementById('buy_item_name'); // Already declared above
+            // const actionsTabButton = document.getElementById('actions-tab-button'); // Already declared below
+            // const actionsPanelContent = document.getElementById('actions-panel-content'); // Already declared below
+
+            if (inventoryContent && buyItemNameInput && buyDetailsDiv) {
+                inventoryContent.addEventListener('click', function(event) {
+                    if (event.target.classList.contains('buy-item-button')) {
+                        const itemName = event.target.dataset.itemName;
+
+                        // Set the item name in the buy form
+                        buyItemNameInput.value = itemName;
+
+                        // Ensure the "Actions" tab and its panel are visible
+                        // Note: actionsTabButton and actionsPanelContent are defined later in this script block
+                        // This implies this new block should ideally be placed AFTER those declarations,
+                        // or those specific variables need to be hoisted or passed if this block is placed earlier.
+                        // For now, assuming they will be available in scope due to typical JS hoisting of const/let within a block,
+                        // or that this specific handler will run after full DOMContentLoaded script execution.
+                        // A safer approach might be to ensure their declaration is before this usage.
+                        // Let's re-check if they are declared BEFORE this section.
+                        // buyDetailsDiv and buyItemNameInput are declared above in the main script block.
+                        // actionsTabButton and actionsPanelContent are declared in the "New UI interaction script" block below.
+                        // This means this "Buy button functionality" block *should* be placed *inside* or *after* "New UI interaction script"
+                        // OR those two variables need to be fetched here again.
+                        // For simplicity and given the structure, let's fetch them again if not available or ensure this block is AFTER their declaration.
+                        // Re-checking... they are indeed further down. This block needs to be moved or they need to be re-fetched.
+
+                        // Let's assume for now this block will be placed after the "New UI interaction script" block for correct variable scoping.
+                        // If actionsTabButton and actionsPanelContent are not found, these lines will be skipped.
+                        const localActionsTabButton = document.getElementById('actions-tab-button');
+                        const localActionsPanelContent = document.getElementById('actions-panel-content');
+
+                        if (localActionsTabButton && localActionsPanelContent) {
+                            localActionsTabButton.click(); // Simulate click to make Actions tab active
+                        }
+
+                        // Show the buy details section (actionDetailsContainer and allDetailDivs are from the script above)
+                        if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
+                        allDetailDivs.forEach(div => { // Hide other detail forms
+                            if (div) div.style.display = 'none';
+                        });
+                        buyDetailsDiv.style.display = 'block';
+
+                        // Scroll to the buy details form for visibility
+                        buyDetailsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                        // Optional: Focus on the quantity input or the buyItemNameInput itself
+                        buyItemNameInput.focus();
+                    }
+                });
+            }
 
         // New UI interaction script
         const gameContainer = document.querySelector('.game-container');
@@ -1023,10 +1194,10 @@
 
             // Click-outside-to-close for Actions/Log tabs
             const actionsTabContainer = document.getElementById('actions-tab');
-            const actionsPanel = document.getElementById('actions-panel-content');
-            const logPanel = document.getElementById('log-panel-content');
-            const actionsButton = document.getElementById('actions-tab-button');
-            const logButton = document.getElementById('log-tab-button');
+            const actionsPanel = document.getElementById('actions-panel-content'); // This will be defined here now
+            const logPanel = document.getElementById('log-panel-content'); // This will be defined here now
+            const actionsButton = document.getElementById('actions-tab-button'); // This will be defined here now
+            const logButton = document.getElementById('log-tab-button'); // This will be defined here now
 
             document.addEventListener('click', function(event) {
                 const isActionsPanelVisible = actionsPanel && actionsPanel.classList.contains('panel-visible');
@@ -1042,27 +1213,32 @@
                 }
             });
         }
+        // The "JavaScript for Shop Item 'Buy' button functionality" block was inserted *before* this line in the previous step.
+        // It should be moved *after* the 'New UI interaction script' block if it depends on variables from it,
+        // or ensure its variables are self-contained or hoisted.
+        // Given the diff, it seems the intention was to place it before "New UI interaction script",
+        // which means `actionsTabButton` and `actionsPanelContent` would not be defined yet from that block.
+        // The added JS correctly re-fetches them as `localActionsTabButton` and `localActionsPanelContent`.
 
-        // Action Result Popup Handling
+        // Action Result (now using Toast)
         const popupActionResult = {{ popup_action_result | tojson | safe }};
-        const actionResultPopup = document.getElementById('action-result-popup');
-        const actionResultMessage = document.getElementById('action-result-message');
-        const closePopupButton = document.getElementById('close-popup-button');
-
         if (popupActionResult && popupActionResult.trim() !== "") {
-            if (actionResultMessage) {
-                // Replace newline characters with <br> tags for HTML display
-                actionResultMessage.innerHTML = popupActionResult.replace(/\n/g, '<br>');
-            }
-            if (actionResultPopup) {
-                actionResultPopup.style.display = 'block';
-            }
-        }
+            // Replace <br> tags (if any were intended for the modal) with spaces or newlines for toast readability
+            const toastMessage = popupActionResult.replace(/<br\s*\/?>/gi, " "); // Replace <br> with space for single line toast
+            // If you want multiline toasts, you might need to adjust toast CSS for white-space: pre-line;
+            // and then replace <br> with \n. For now, let's assume single line is preferred for toasts.
 
-        if (closePopupButton && actionResultPopup) {
-            closePopupButton.addEventListener('click', function() {
-                actionResultPopup.style.display = 'none';
-            });
+            let actionResultType = 'info'; // Default type
+            // Try to infer type from message content (simple check)
+            if (toastMessage.toLowerCase().includes('success') || toastMessage.toLowerCase().includes('successful')) {
+                actionResultType = 'success';
+            } else if (toastMessage.toLowerCase().includes('fail') || toastMessage.toLowerCase().includes('error') || toastMessage.toLowerCase().includes('not possible')) {
+                actionResultType = 'error';
+            } else if (toastMessage.toLowerCase().includes('warning')) {
+                actionResultType = 'warning';
+            }
+
+            showToast(toastMessage, actionResultType, 7000); // Show action result toast for 7 seconds
         }
 
         // Event Choice Popup Handling
@@ -1160,28 +1336,25 @@
             // eventPopup.style.display = 'none'; // Commented out as Jinja handles initial display state
         }
 
-        // Skill Roll Result Display
+        // Skill Roll Result Display (using Toast)
         const lastSkillRollStr = {{ last_skill_roll_str | tojson | safe }};
-        const skillRollDisplayContainer = document.getElementById('skill-roll-result-display-container');
+        if (lastSkillRollStr && lastSkillRollStr.trim() !== "") {
+            // Determine type of toast based on content of skill roll string if desired
+            // For example, if it contains "Success", use "success", if "Fail", use "error"
+            // For now, default to 'info' or a custom 'skill' type. Let's use 'info'.
+            let skillRollType = 'info';
+            if (lastSkillRollStr.toLowerCase().includes('success')) {
+                skillRollType = 'success';
+            } else if (lastSkillRollStr.toLowerCase().includes('fail') || lastSkillRollStr.toLowerCase().includes('failure')) {
+                skillRollType = 'error';
+            }
 
-        if (lastSkillRollStr && skillRollDisplayContainer) {
-            skillRollDisplayContainer.textContent = lastSkillRollStr;
-            skillRollDisplayContainer.style.display = 'block';
-
-            // Optional: Hide after a few seconds
-            setTimeout(function() {
-                skillRollDisplayContainer.style.display = 'none';
-            }, 7000); // Hide after 7 seconds
+            showToast(lastSkillRollStr, skillRollType, 7000); // Show skill roll toast for 7 seconds
         }
 
     });
     </script>
     {% endif %}
-
-    <div id="action-result-popup" style="display: none;">
-        <div id="action-result-message"></div>
-        <button id="close-popup-button">Close</button>
-    </div>
 
     <div id="subLocationActionsModal" class="modal">
         <div class="modal-content">
@@ -1204,5 +1377,8 @@
         </div>
     </div>
     {% endif %}
+
+    <div id="toast-container"></div> {# Container for toast messages #}
+
 </body>
 </html>

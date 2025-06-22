@@ -840,8 +840,7 @@ h1, h2, h3, h4, h5, h6 {
 .character-creation-container button,
 .login-container button,
 .character-selection-container li a, /* Styled as a button */
-.character-selection-container .create-new-link, /* Styled as a button */
-#action-result-popup #close-popup-button {
+.character-selection-container .create-new-link {
     padding: 8px 15px; /* Adjusted padding */
     font-family: var(--font-primary);
     color: var(--color-parchment-bg);
@@ -861,8 +860,7 @@ h1, h2, h3, h4, h5, h6 {
 .character-creation-container button:hover,
 .login-container button:hover,
 .character-selection-container li a:hover,
-.character-selection-container .create-new-link:hover,
-#action-result-popup #close-popup-button:hover {
+.character-selection-container .create-new-link:hover {
     background-color: #A52A2A; /* Darker red */
     border-style: inset;
     box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
@@ -954,20 +952,6 @@ h1, h2, h3, h4, h5, h6 {
 .character-creation-container #stats_container span {
     flex-grow: 1;
     font-family: var(--font-secondary);
-}
-#action-result-popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: var(--color-aged-paper);
-    color: var(--color-dark-ink);
-    padding: 20px;
-    border: 2px solid var(--color-deep-brown-border);
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-    display: none;
-    border-radius: 5px;
 }
 
 /* Ensure flash messages are themed if they exist */
@@ -1134,3 +1118,176 @@ em, i {
     color: var(--color-dark-ink); /* Keep it consistent */
     font-weight: bold;
 }
+
+/* Inventory Grid styles */
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Creates responsive columns */
+    gap: 10px; /* Space between items */
+    padding: 10px;
+    max-height: 300px; /* Or whatever height fits your layout */
+    overflow-y: auto; /* Add scroll for many items */
+}
+
+.inventory-item-card {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+.item-icon-placeholder {
+    width: 50px; /* Adjust as needed */
+    height: 50px; /* Adjust as needed */
+    background-color: #e0e0e0; /* Placeholder color */
+    border: 1px dashed #aaa;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    color: #777;
+}
+/* Add this to the placeholder for text if you want */
+/* .item-icon-placeholder::after { content: "Icon"; } */
+
+.item-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+    word-wrap: break-word; /* Ensure long names don't break layout */
+}
+
+/* Add styles for quantity and description if you add those elements later */
+/*
+.item-quantity {
+    font-size: 0.9em;
+    color: #555;
+}
+
+.item-description {
+    font-size: 0.8em;
+    color: #777;
+}
+*/
+
+/* Shop Item Button */
+.shop-item-card .buy-item-button {
+    margin-top: 8px;
+    padding: 5px 10px;
+    background-color: var(--color-highlight-red); /* Use existing theme variable */
+    color: var(--color-parchment-bg);
+    border: 1px solid var(--color-deep-brown-border);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: var(--font-primary);
+    font-size: 0.9em;
+}
+
+.shop-item-card .buy-item-button:hover {
+    background-color: #A52A2A; /* Darker red - consistent with other buttons */
+}
+
+/* Toast Notification System */
+#toast-container {
+    position: fixed;
+    bottom: 20px; /* Position above the action bar or adjust as needed */
+    right: 20px;
+    z-index: 2000; /* High z-index to be on top of most elements */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Toasts stack from bottom-right upwards if new ones added on top */
+}
+
+.toast {
+    background-color: var(--color-aged-paper); /* Themed background */
+    color: var(--color-dark-ink);
+    padding: 12px 18px;
+    margin-top: 10px;
+    border: 1px solid var(--color-deep-brown-border);
+    border-left-width: 5px; /* Thicker left border for emphasis, color based on type */
+    border-radius: 5px; /* Slightly rounded corners */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transform: translateX(100%); /* Start off-screen to the right */
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    min-width: 250px; /* Minimum width */
+    max-width: 350px; /* Maximum width */
+    font-family: var(--font-secondary);
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(0); /* Slide in */
+}
+
+.toast-icon {
+    margin-right: 10px;
+    font-size: 1.2em; /* Make icon slightly larger */
+}
+
+.toast-message {
+    flex-grow: 1; /* Message takes remaining space */
+    line-height: 1.4;
+}
+
+/* Type-specific styling */
+.toast-success {
+    border-left-color: #28a745; /* Green for success */
+    /* background-color: #e8f5e9; /* Lighter green background */
+}
+.toast-success .toast-icon {
+    color: #28a745;
+}
+
+.toast-error {
+    border-left-color: var(--color-highlight-red); /* Themed red for error */
+    /* background-color: #ffebee; /* Lighter red background */
+}
+.toast-error .toast-icon {
+    color: var(--color-highlight-red);
+}
+
+.toast-warning {
+    border-left-color: #ffc107; /* Yellow/Orange for warning */
+    /* background-color: #fff8e1; /* Lighter yellow background */
+}
+.toast-warning .toast-icon {
+    color: #ffc107;
+}
+
+.toast-info {
+    border-left-color: #17a2b8; /* Blue for info */
+    /* background-color: #e0f7fa; /* Lighter blue background */
+}
+.toast-info .toast-icon {
+    color: #17a2b8;
+}
+
+/* Styling for the sell item dropdown */
+#sell_item_dropdown {
+    width: 100%;
+    padding: 8px 10px; /* Match text inputs */
+    margin-bottom: 10px; /* Spacing */
+    border: 1px solid var(--color-light-border);
+    background-color: var(--color-parchment-bg);
+    color: var(--color-dark-ink);
+    font-family: var(--font-secondary);
+    border-radius: 3px;
+    box-sizing: border-box;
+    font-size: 0.85em; /* Match text inputs */
+}
+
+#sell_item_dropdown:focus {
+    border-color: var(--color-deep-brown-border);
+    box-shadow: 0 0 3px var(--color-light-border);
+    outline: none;
+}
+
+[end of shopkeeperPython/static/style.css]
