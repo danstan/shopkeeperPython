@@ -493,20 +493,25 @@ def create_character_route():
     username = session['username']
     char_name = request.form.get('character_name')
 
+    app.logger.info(f"CREATE_CHARACTER_ROUTE: User '{username}' attempting to create character. Name: '{char_name}'. Session stats: {session.get('character_creation_stats')}")
+
     if not char_name or not char_name.strip():
         flash('Character name cannot be empty or just whitespace.', 'error')
+        app.logger.warning(f"CREATE_CHARACTER_ROUTE: Character name validation failed for user '{username}'. Name: '{char_name}'")
         session['character_creation_name'] = char_name # Persist name
         return redirect(url_for('display_game_output', action='create_new_char'))
 
     # --- Global Character Name Uniqueness Check ---
     if is_character_name_taken(char_name, user_characters, graveyard):
         flash(f"Character name '{char_name}' is already taken. Please choose another.", 'error')
+        app.logger.warning(f"CREATE_CHARACTER_ROUTE: Character name '{char_name}' taken for user '{username}'.")
         session['character_creation_name'] = char_name # Persist name
         return redirect(url_for('display_game_output', action='create_new_char'))
     # --- End of Uniqueness Check ---
 
     if username not in user_characters:
         user_characters[username] = [] # Should have been created at registration, but good safeguard
+        app.logger.info(f"CREATE_CHARACTER_ROUTE: Initialized empty character list for user '{username}'.")
 
     active_characters_list = user_characters.get(username, [])
     # The prompt asks to change the limit check to active characters.
@@ -514,16 +519,19 @@ def create_character_route():
     # Now, it should be len(active_characters_list) because dead chars are moved out.
     if len(active_characters_list) >= MAX_CHARS_PER_USER:
         flash(f'You have reached the maximum of {MAX_CHARS_PER_USER} active characters. A dead character frees up their slot.', 'error')
+        app.logger.warning(f"CREATE_CHARACTER_ROUTE: User '{username}' at character limit ({MAX_CHARS_PER_USER}).")
         # Ensure creation stats are cleared if they somehow reach here at limit
         session.pop('character_creation_stats', None)
         return redirect(url_for('display_game_output'))
 
     if 'character_creation_stats' not in session or 'stats' not in session['character_creation_stats']:
         flash('Character creation session data not found. Please try starting over.', 'error')
+        app.logger.error(f"CREATE_CHARACTER_ROUTE: 'character_creation_stats' not found in session for user '{username}'. Current session stats: {session.get('character_creation_stats')}")
         session['character_creation_name'] = char_name # Persist name
         return redirect(url_for('display_game_output', action='create_new_char'))
 
     creation_data = session['character_creation_stats']
+    app.logger.info(f"CREATE_CHARACTER_ROUTE: Proceeding with creation for user '{username}', name '{char_name}', stats: {creation_data}")
     stats = creation_data['stats']
 
     new_character = Character(name=char_name)
@@ -635,7 +643,8 @@ def display_game_output():
                 player_char_loaded_or_selected = False
                 show_character_creation_form = True
                 show_character_selection = False
-                flash("DEBUG: In display_game_output for create_new_char action. show_character_creation_form set to true.", "debug")
+                # flash("DEBUG: In display_game_output for create_new_char action. show_character_creation_form set to true.", "debug")
+                app.logger.info(f"DISPLAY_GAME_OUTPUT: User '{username}' creating new char. Show creation form. Session stats: {session.get('character_creation_stats')}, Session name: {session.get('character_creation_name')}")
 
                 # Ensure g.player_char is the default, and g.output_stream is clear for creation.
                 # before_request_setup should have set g.player_char to default if selected_character_slot is None.
@@ -656,11 +665,17 @@ def display_game_output():
                 if not character_creation_data or 'stats' not in character_creation_data:
                     initial_stats = Character.roll_all_stats()  # This class method call is fine
                     session['character_creation_stats'] = {'stats': initial_stats, 'reroll_used': False}
-                    flash("Initial stats rolled and saved to session.", "debug") # Or use app.logger.debug
+                    flash("Your initial stats have been rolled. You can reroll one stat once.", "info")
+                    app.logger.info(f"DISPLAY_GAME_OUTPUT: Initial stats rolled for '{username}' due to missing/invalid session data. New stats: {session['character_creation_stats']}")
                     # print("DEBUG: Initial stats rolled and saved to session due to missing/invalid data.", flush=True)
+                else:
+                    app.logger.info(f"DISPLAY_GAME_OUTPUT: Using existing session stats for '{username}': {character_creation_data}")
+
 
                 character_creation_stats_display = session['character_creation_stats']
                 pending_char_name_display = session.get('character_creation_name')
+                app.logger.info(f"DISPLAY_GAME_OUTPUT: For creation form - User '{username}', Pending Name: '{pending_char_name_display}', Stats Display: {character_creation_stats_display}")
+
 
                 # Game output for creation screen
                 if not characters_list: # Message based on whether user has ANY characters

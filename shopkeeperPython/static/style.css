@@ -401,17 +401,19 @@ body {
 
 #actions-panel-content, #log-panel-content { /* Individual panels */
     width: 100%;
-    height: 100%;
+    height: 100%; /* This might need to be auto or fit-content if display:none is used, or controlled by max-height */
     background-color: var(--color-parchment-bg);
     overflow: hidden;
-    max-height: 0;
-    transition: max-height 0.5s ease-in-out;
+    display: none; /* Hide by default */
+    max-height: 0; /* Start with max-height 0 for transition */
+    transition: max-height 0.5s ease-in-out; /* Transition max-height */
     box-sizing: border-box;
 }
 
 #actions-panel-content.panel-visible,
 #log-panel-content.panel-visible {
-    max-height: 40vh;
+    display: block; /* Show when panel-visible class is present */
+    max-height: 40vh; /* Animate to this height */
 }
 
 #actions-panel-content > #action-controls-wrapper,

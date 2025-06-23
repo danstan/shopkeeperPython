@@ -3,6 +3,10 @@
 # Set PYTHONPATH to include the project root
 export PYTHONPATH=$(pwd)
 
+# Install dependencies
+echo "Installing dependencies..."
+pip install -r shopkeeperPython/requirements.txt
+
 # Start Flask server in the background
 echo "Starting Flask server..."
 python3 shopkeeperPython/app.py &
