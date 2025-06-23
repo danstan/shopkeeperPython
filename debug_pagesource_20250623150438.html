@@ -1,0 +1,52 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopkeeper Adventure UI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <div class="login-container">
+        <h2>Login</h2>
+        <form action="/login" method="post">
+            <div>
+                <label for="login_username">Username:</label>
+                <input type="text" id="login_username" name="username" placeholder="Username" required="">
+            </div>
+            <div>
+                <label for="login_password">Password:</label>
+                <input type="password" id="login_password" name="password" placeholder="Password" required="">
+            </div>
+            <button type="submit">Login</button>
+        </form>
+        <p>Don't have an account? <a href="/register">Register here</a></p>
+
+
+
+
+                    <p class="flash-login_error">Invalid username or password.</p>
+
+
+
+
+
+    </div>
+
+
+
+    <div id="subLocationActionsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="subLocationActionsModalTitle">
+        <div class="modal-content">
+            <span class="close-button">×</span>
+            <h3 id="subLocationActionsModalTitle">Actions</h3>
+            <div id="modal-actions-list">
+                <!-- Action buttons will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+
+
+    <div id="toast-container"></div>
+
+
+</body></html>

@@ -1,0 +1,8 @@
+DEBUG: http://localhost:5001/ - [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o
+SEVERE: http://localhost:5001/favicon.ico - Failed to load resource: the server responded with a status of 404 (NOT FOUND)
+SEVERE: http://localhost:5001/static/js/main_ui.js 13:16 "Error parsing Hemlock's herbs JSON from gameConfig:" SyntaxError: "[object Object]" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at HTMLDocument.<anonymous> (http://localhost:5001/static/js/main_ui.js:11:37)
+SEVERE: http://localhost:5001/static/js/main_ui.js 21:20 "Error parsing Borin's items JSON from gameConfig:" SyntaxError: "[object Object]" is not valid JSON
+    at JSON.parse (<anonymous>)
+    at HTMLDocument.<anonymous> (http://localhost:5001/static/js/main_ui.js:20:35)

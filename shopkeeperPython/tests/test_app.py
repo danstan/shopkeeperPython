@@ -1,6 +1,7 @@
 import unittest
 import copy
 import html # Import the html module for unescaping
+from werkzeug.security import generate_password_hash # Added import
 import json # Added for json.dumps
 from unittest.mock import patch
 
@@ -51,7 +52,14 @@ class TestApp(unittest.TestCase):
         graveyard.clear()
 
         # Add a default test user for routes that require login
-        users['testuser'] = {'password': 'password123'} # Simplified for testing login state
+        # Password must be hashed for login to succeed
+        hashed_password = generate_password_hash('password123')
+        users['testuser'] = {
+            'password': hashed_password,
+            'google_id': None, # Ensure new user structure is matched
+            'email_google': None,
+            'display_name_google': None
+        }
         user_characters['testuser'] = []
         graveyard['testuser'] = []
 
@@ -194,7 +202,7 @@ class TestApp(unittest.TestCase):
         response_data_str = response.data.decode('utf-8')
 
         # Check for the informational "Stats rolled..." message
-        self.assertIn("Stats rolled for new character! You can reroll one stat if you wish.", response_data_str)
+        self.assertIn("Initial stats rolled and saved to session.", response_data_str) # Updated expected message
         # Check that no common error messages are present
         self.assertNotIn("issue with character creator", response_data_str.lower()) # Generic check
         self.assertNotIn("Failed to initialize game", response_data_str)
@@ -236,7 +244,7 @@ class TestApp(unittest.TestCase):
         # Find the stats container (rough check, ideally use a parser)
         stats_section_start = response_data_str.find('<div id="stats_container">')
         # Find the start of the next major element after the stats container
-        stats_section_end = response_data_str.find('<div style="text-align: center; margin-top: 20px;">', stats_section_start)
+        stats_section_end = response_data_str.find('<div class="character-creation-submit-container">', stats_section_start)
         stats_html = response_data_str[stats_section_start:stats_section_end]
 
         self.assertTrue(stats_section_start != -1, "Stats container start not found in HTML")

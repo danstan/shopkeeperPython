@@ -1,0 +1,4 @@
+DEBUG: http://localhost:5001/ - [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o
+SEVERE: http://localhost:5001/favicon.ico - Failed to load resource: the server responded with a status of 404 (NOT FOUND)
+SEVERE: http://localhost:5001/ 260:34 Uncaught ReferenceError: None is not defined
+SEVERE: http://localhost:5001/static/js/main_ui.js 5:54 Uncaught TypeError: Cannot read properties of undefined (reading 'currentTownSubLocationsJson')
