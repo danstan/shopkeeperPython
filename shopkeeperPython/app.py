@@ -8,6 +8,7 @@ import shutil
 
 from shopkeeperPython.game.game_manager import GameManager
 from shopkeeperPython.game.character import Character
+from shopkeeperPython.game.shop import Shop # Ensure Shop is imported
 # Item is implicitly used by Character.to_dict/from_dict if inventory has items.
 # Pylint might not see this if no direct instantiation of Item happens in app.py.
 # For now, let's trust Pylint's static analysis; if runtime errors occur, it can be re-added.
@@ -775,6 +776,38 @@ def display_game_output():
     pending_event_data_for_template = session.get('pending_event_data', None) if awaiting_event_choice else None
     last_skill_roll_str = session.pop('last_skill_roll_display_str', None) # Pop to clear after use
 
+    # Shop data for UI
+    shop_data_for_ui = None
+    if g.game_manager and g.game_manager.shop:
+        shop_instance = g.game_manager.shop
+        next_level_cost = None
+        next_level_slots = None
+        next_level_quality_bonus = None
+        if shop_instance.shop_level < Shop.MAX_SHOP_LEVEL:
+            next_level_config = Shop.SHOP_LEVEL_CONFIG.get(shop_instance.shop_level + 1)
+            if next_level_config: # Should always exist if not max level
+                next_level_cost = next_level_config["cost_to_upgrade"]
+                next_level_slots = next_level_config["max_inventory_slots"]
+                next_level_quality_bonus = next_level_config["crafting_quality_bonus"]
+
+        shop_data_for_ui = {
+            "name": shop_instance.name,
+            "level": shop_instance.shop_level,
+            "specialization": shop_instance.specialization,
+            "inventory_count": len(shop_instance.inventory),
+            "max_inventory_slots": shop_instance.max_inventory_slots,
+            "current_quality_bonus": Shop.SHOP_LEVEL_CONFIG[shop_instance.shop_level]["crafting_quality_bonus"],
+            "next_level_cost": next_level_cost,
+            "next_level_slots": next_level_slots,
+            "next_level_quality_bonus": next_level_quality_bonus,
+            "max_level_reached": shop_instance.shop_level >= Shop.MAX_SHOP_LEVEL
+        }
+
+    shop_config_for_ui = {
+        "specialization_types": Shop.SPECIALIZATION_TYPES,
+        "max_shop_level": Shop.MAX_SHOP_LEVEL
+    }
+
     return render_template('index.html',
                            user_logged_in=user_logged_in,
                            show_character_selection=show_character_selection,
@@ -801,6 +834,10 @@ def display_game_output():
                            popup_action_result=popup_action_result,
                            hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Module global constant
                            borin_items_json=json.dumps(BORIN_ITEMS), # Added for Borin's items
+
+                           shop_data_json=json.dumps(shop_data_for_ui),
+                           shop_config_json=json.dumps(shop_config_for_ui),
+
                            character_creation_stats=character_creation_stats_display,
                            stat_names_ordered=Character.STAT_NAMES, # Class attribute
                            pending_char_name=pending_char_name_display,

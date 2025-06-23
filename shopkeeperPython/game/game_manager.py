@@ -621,6 +621,38 @@ class GameManager:
                 self._print(f"  Market Research: {insight}")
                 action_xp_reward = 5
 
+            elif action_name == "repair_gear_borin":
+                item_name_to_repair = action_details.get("item_name_to_repair")
+                if not item_name_to_repair:
+                    self._print("  Borin needs to know which item you want to repair.")
+                    action_xp_reward = 0
+                else:
+                    item_instance = next((item for item in self.character.inventory if item.name == item_name_to_repair), None)
+
+                    if not item_instance:
+                        self._print(f"  You don't seem to have a '{item_name_to_repair}' to repair.")
+                        action_xp_reward = 0
+                    else:
+                        # Calculate repair cost: 15% of base value, minimum 5 gold.
+                        repair_cost = max(5, int(item_instance.base_value * 0.15))
+
+                        if self.character.gold < repair_cost:
+                            self._print(f"  You need {repair_cost}g to repair the {item_name_to_repair}, but you only have {self.character.gold}g.")
+                            action_xp_reward = 0
+                        else:
+                            self.character.gold -= repair_cost
+                            # In a more complex system, item.is_damaged would be set to False here.
+                            self._print(f"  Borin Stonebeard takes your {item_name_to_repair} and, with a few skilled strikes of his hammer, declares it expertly repaired. Cost: {repair_cost}g.")
+                            self._print(f"  Your gold is now {self.character.gold}g.")
+                            self.add_journal_entry(
+                                action_type="Item Repair",
+                                summary=f"Repaired {item_name_to_repair} by Borin Stonebeard.",
+                                details={"item": item_name_to_repair, "cost": repair_cost},
+                                outcome=f"Paid {repair_cost}g. Player gold: {self.character.gold}g."
+                            )
+                            self.daily_gold_spent_on_purchases_by_player += repair_cost # Track as a gold sink
+                            action_xp_reward = 5
+
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)

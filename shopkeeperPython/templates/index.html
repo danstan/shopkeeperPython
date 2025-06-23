@@ -274,6 +274,14 @@
                     <p><strong>Current Town:</strong> {{ current_town_name }}</p>
                 </div>
             </div>
+            <div id="shop-mgt-tab" class="left-tab"> <!-- Use existing class for left panel tabs -->
+                <div id="shop-mgt-content" class="tab-content">
+                    <div class="tab-title-bar">Shop Management</div>
+                    <div id="shop-management-details" style="padding: 10px;">
+                        <!-- Content will be populated by JS -->
+                    </div>
+                </div>
+            </div>
         </div>
         <div id="map-container">
             <svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
@@ -413,6 +421,14 @@
                                     <input type="number" id="borin_quantity_dynamic" value="1" min="1">
                                     <button type="button" id="submit_buy_borin_item_button" class="submit-details-button">Buy Selected Item</button>
                                 </div>
+
+                                <div id="div_borin_repair_details" class="hidden-details details-section">
+                                    <h4>Repair Gear with Borin Stonebeard</h4>
+                                    <label for="borin-repair-item-select">Select Item from Your Inventory to Repair:</label>
+                                    <select id="borin-repair-item-select" name="borin_repair_item_select_input"></select>
+                                    <p>Repair Cost: <span id="borin-repair-cost-display">N/A</span></p>
+                                    <button type="button" id="submit-borin-repair-button" class="submit-details-button">Repair Selected Item</button>
+                                </div>
                             </div>
 
                             <!-- Gather Resources Button -->
@@ -522,14 +538,15 @@
             currentTownSubLocationsJson: {{ current_town_sub_locations_json | default('[]') | safe }},
             allTownsDataJson: {{ all_towns_data_json | default('{}') | safe }},
             hemlockHerbsJson: {{ hemlock_herbs_json | default('"{}"') | safe }}, // Passed as string, to be parsed by JS
-
             borinItemsJson: {{ borin_items_json | default('"{}"') | safe }},
-
             playerInventory: {{ player_inventory | default('[]') | tojson | safe }},
             awaitingEventChoice: {{ awaiting_event_choice | default('false') | tojson }},
             pendingEventDataJson: {{ pending_event_data_json | default('null') | safe }},
             lastSkillRollStr: {{ last_skill_roll_str | tojson | safe }},
             popupActionResult: {{ popup_action_result | tojson | safe }},
+            shopData: {{ shop_data_json | default('null') | safe }},
+            shopConfig: {{ shop_config_json | default('null') | safe }},
+            playerGold: {{ player_gold | default(0) | tojson }},
             performActionUrl: "{{ url_for('perform_action') }}",
             submitEventChoiceUrl: "{{ url_for('submit_event_choice_route') }}"
         };

@@ -24,6 +24,11 @@
 
 
     document.addEventListener('DOMContentLoaded', function() {
+        const shopData = window.gameConfig.shopData;
+        const shopConfig = window.gameConfig.shopConfig;
+        const shopManagementDetailsDiv = document.getElementById('shop-management-details');
+        // actionForm, hiddenActionNameInput, hiddenDetailsInput are typically fetched inside the 'actionForm' check block later
+
         var playerInventoryForSellDropdown = window.gameConfig.playerInventory;
 
         // Function to display toast messages
@@ -144,9 +149,11 @@
             const hemlockHerbsDetailsDiv = document.getElementById('div_hemlock_herbs_details');
             const hemlockHerbsListDiv = document.getElementById('hemlock-herbs-list'); // New div for list
 
-            const borinItemsDetailsDiv = document.getElementById('div_borin_items_details'); // Declare it
+            const borinItemsDetailsDiv = document.getElementById('div_borin_items_details');
+            const borinRepairDetailsDiv = document.getElementById('div_borin_repair_details');
 
-            const allDetailDivs = [craftDetailsDiv, buyDetailsDiv, sellDetailsDiv, hemlockHerbsDetailsDiv, borinItemsDetailsDiv];
+            const allDetailDivs = [craftDetailsDiv, buyDetailsDiv, sellDetailsDiv, hemlockHerbsDetailsDiv, borinItemsDetailsDiv, borinRepairDetailsDiv];
+
             let currentActionRequiringDetails = null;
             let currentSubLocationName = null;
             let selectedHemlockHerbName = null; // To store the selected Hemlock herb
@@ -355,12 +362,13 @@
 
                         } else if (actionName === 'talk_to_borin' && currentSubLocationName === "Borin Stonebeard's Smithy") {
                             if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
-                            if (borinItemsDetailsDiv) borinItemsDetailsDiv.style.display = 'block';
-                            currentActionRequiringDetails = 'buy_from_borin_ui'; // Distinct UI state
-                            selectedBorinItemName = null; // Reset selection
-                            const borinItemsListDiv = document.getElementById('borin-items-list');
-                            if (borinItemsListDiv) {
-                                borinItemsListDiv.innerHTML = ''; // Clear previous list
+                            if (borinItemsDetailsDiv) borinItemsDetailsDiv.style.display = 'block'; // Show Borin's item sale UI
+                            currentActionRequiringDetails = 'buy_from_borin_ui';
+                            selectedBorinItemName = null;
+                            const localBorinItemsListDiv = document.getElementById('borin-items-list');
+                            if (localBorinItemsListDiv) {
+                                localBorinItemsListDiv.innerHTML = '';
+
                                 if (borinItemsData && Object.keys(borinItemsData).length > 0) {
                                     const ul = document.createElement('ul');
                                     ul.style.listStyleType = 'none'; ul.style.paddingLeft = '0';
@@ -375,10 +383,38 @@
                                         `;
                                         ul.appendChild(li);
                                     }
-                                    borinItemsListDiv.appendChild(ul);
+                                    localBorinItemsListDiv.appendChild(ul);
                                 } else {
-                                    borinItemsListDiv.innerHTML = '<p>Borin has nothing to sell right now.</p>';
+                                    localBorinItemsListDiv.innerHTML = '<p>Borin has nothing to sell right now.</p>';
                                 }
+                            }
+                        } else if (actionName === 'repair_gear_borin' && currentSubLocationName === "Borin Stonebeard's Smithy") {
+                            if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
+                            if (borinRepairDetailsDiv) borinRepairDetailsDiv.style.display = 'block';
+                            currentActionRequiringDetails = 'repair_gear_borin_ui';
+
+                            const repairItemSelect = document.getElementById('borin-repair-item-select');
+                            const repairCostDisplay = document.getElementById('borin-repair-cost-display');
+                            if (repairItemSelect) {
+                                repairItemSelect.innerHTML = '<option value="">-- Select Item --</option>'; // Clear previous
+                                if (window.gameConfig && window.gameConfig.playerInventory && window.gameConfig.playerInventory.length > 0) {
+                                    window.gameConfig.playerInventory.forEach(item => {
+                                        const itemName = (typeof item === 'string') ? item : item.name;
+                                        if(itemName) {
+                                            const option = document.createElement('option');
+                                            option.value = itemName;
+                                            option.textContent = itemName;
+                                            repairItemSelect.appendChild(option);
+                                        }
+                                    });
+                                } else {
+                                    repairItemSelect.innerHTML = '<option value="">-- No items in inventory --</option>';
+                                }
+                                repairItemSelect.onchange = function() {
+                                    const selectedName = this.value;
+                                    if(repairCostDisplay) repairCostDisplay.textContent = selectedName ? "Cost determined by Borin" : "N/A";
+                                };
+                                if(repairCostDisplay) repairCostDisplay.textContent = "N/A";
                             }
 
                         } else if (!event.target.classList.contains('craft-recipe-button')) {
@@ -574,9 +610,10 @@
             // This variable is already defined at the top of this script block.
 
             // Event listener for selecting a Borin item
-            const borinItemsListDiv = document.getElementById('borin-items-list'); // Already declared if needed, or declare here
-            if (borinItemsListDiv) {
-                borinItemsListDiv.addEventListener('click', function(event) {
+            const borinItemsListDivLocal = document.getElementById('borin-items-list'); // Use local const for clarity
+            if (borinItemsListDivLocal) {
+                borinItemsListDivLocal.addEventListener('click', function(event) {
+
                     if (event.target.classList.contains('select-borin-item-button')) {
                         selectedBorinItemName = event.target.dataset.itemName;
                         document.querySelectorAll('.select-borin-item-button').forEach(btn => {
@@ -623,7 +660,6 @@
                     actionForm.submit();
                 });
             }
-
             // We need to use the sub-locations from allTownsData for the current town for consistency
             // as currentTownSubLocations might just be names, whereas allTownsData has descriptions.
             if (currentTownDisplay && currentTownDisplay.textContent && allTownsData && allTownsData[currentTownDisplay.textContent]) {
@@ -631,13 +667,95 @@
                  if (currentTownData && currentTownData.sub_locations) {
                     displaySubLocations(currentTownData.sub_locations);
                  } else {
-                    displaySubLocations([]); // Call with empty if no sub_locations defined
+                    displaySubLocations([]);
                  }
             } else {
-                 // Fallback if current_town_name isn't set or no data for it
-                 displaySubLocations([]); // Call with empty array
+                 displaySubLocations([]);
             }
         }
+
+        // Listener for Borin's Repair Submit Button
+        const submitBorinRepairButton = document.getElementById('submit-borin-repair-button');
+        if (submitBorinRepairButton && hiddenActionNameInput && hiddenDetailsInput && actionForm) {
+            submitBorinRepairButton.addEventListener('click', function() {
+                const repairItemSelect = document.getElementById('borin-repair-item-select');
+                const selectedItemName = repairItemSelect ? repairItemSelect.value : null;
+
+                if (!selectedItemName) {
+                    if(typeof showToast === 'function') showToast("Please select an item to repair.", "warning");
+                    else alert("Please select an item to repair.");
+                    return;
+                }
+
+                hiddenActionNameInput.value = 'repair_gear_borin';
+                hiddenDetailsInput.value = JSON.stringify({
+                    item_name_to_repair: selectedItemName
+                });
+                submitBorinRepairButton.classList.add('button-processing');
+                actionForm.submit();
+            });
+        }
+
+        function populateShopManagementUI() {
+            if (!shopManagementDetailsDiv || !shopData || !shopConfig) {
+                if(shopManagementDetailsDiv) shopManagementDetailsDiv.innerHTML = '<p>Shop data not available.</p>';
+                return;
+            }
+            let html = `<h3>${shopData.name}</h3>`;
+            html += `<p>Level: ${shopData.level} (Quality Bonus: +${shopData.current_quality_bonus})</p>`;
+            html += `<p>Specialization: ${shopData.specialization}</p>`;
+            html += `<p>Inventory: ${shopData.inventory_count} / ${shopData.max_inventory_slots} slots</p>`;
+            html += `<p>Player Gold: ${window.gameConfig.playerGold !== undefined ? window.gameConfig.playerGold : 'N/A'}</p>`;
+
+            // Change Specialization Form
+            html += `<h4>Change Specialization</h4>`;
+            html += `<select id="shop-specialization-select">`;
+            shopConfig.specialization_types.forEach(specType => {
+                html += \`<option value="\${specType}" \${shopData.specialization === specType ? 'selected' : ''}>\${specType}</option>\`;
+            });
+            html += `</select>`;
+            html += `<button type="button" id="submit-change-specialization" class="popup-menu-button">Set Specialization</button>`;
+
+            // Upgrade Shop Section
+            html += `<h4>Upgrade Shop</h4>`;
+            if (shopData.max_level_reached) {
+                html += `<p>Shop is at maximum level (${shopConfig.max_shop_level}).</p>`;
+            } else {
+                html += `<p>Next Level: ${shopData.level + 1}</p>`;
+                html += `<p>Cost: ${shopData.next_level_cost} Gold</p>`;
+                html += `<p>Max Inventory Slots: ${shopData.next_level_slots}</p>`;
+                html += `<p>Crafting Quality Bonus: +${shopData.next_level_quality_bonus}</p>`;
+                html += `<button type="button" id="submit-upgrade-shop" class="popup-menu-button">Upgrade Shop</button>`;
+            }
+            shopManagementDetailsDiv.innerHTML = html;
+
+            // Add event listeners (need actionForm, hiddenActionNameInput, hiddenDetailsInput from the outer scope)
+            const actionForm = document.getElementById('actionForm');
+            const hiddenActionNameInput = document.getElementById('action_name_hidden');
+            const hiddenDetailsInput = document.getElementById('action_details');
+
+            const changeSpecButton = document.getElementById('submit-change-specialization');
+            if (changeSpecButton && actionForm && hiddenActionNameInput && hiddenDetailsInput) {
+                changeSpecButton.addEventListener('click', function() {
+                    const selectElement = document.getElementById('shop-specialization-select');
+                    const selectedSpecialization = selectElement.value;
+                    hiddenActionNameInput.value = 'set_shop_specialization';
+                    hiddenDetailsInput.value = JSON.stringify({ specialization_name: selectedSpecialization });
+                    actionForm.submit();
+                });
+            }
+
+            const upgradeShopButton = document.getElementById('submit-upgrade-shop');
+            if (upgradeShopButton && actionForm && hiddenActionNameInput && hiddenDetailsInput) {
+                upgradeShopButton.addEventListener('click', function() {
+                    hiddenActionNameInput.value = 'upgrade_shop';
+                    hiddenDetailsInput.value = JSON.stringify({});
+                    actionForm.submit();
+                });
+            }
+        }
+        populateShopManagementUI(); // Call it to build the UI
+
 
             // JavaScript for Shop Item "Buy" button functionality
             const inventoryContent = document.getElementById('inventory-content'); // Parent container for shop items
@@ -716,10 +834,7 @@
             const topRightMenuButton = document.getElementById('top-right-menu-button');
             const settingsPopup = document.getElementById('settings-popup');
             const settingsOption = document.getElementById('settings-option');
-
             // const saveGameOption = document.getElementById('save-game-option'); // This was the <li>, now it's a button
-
-
             // REMOVED JavaScript hover listeners for statsTab, inventoryTab, and infoTab
             // CSS :hover will now handle their visibility and animation.
 
@@ -763,8 +878,6 @@
                     settingsPopup.style.display = 'none'; // Hide popup after click
                 });
             }
-
-
             if (saveGameOption) { // This ID no longer exists on an <li>
                 // saveGameOption.addEventListener('click', () => { // Commenting out old listener
                 //     console.log("Save Game clicked");
@@ -788,7 +901,6 @@
                     if (settingsPopup) {
                         settingsPopup.style.display = 'none';
                     }
-
                 });
             }
 
