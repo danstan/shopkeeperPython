@@ -15,68 +15,59 @@
 
 /* Global settings */
 html, body {
-    width: 100%; /* Full viewport width */
-    height: 100%; /* Full viewport height */
+    width: 100%;
+    height: 100%;
     margin: 0;
     padding: 0;
-    /* font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Replaced by new body styling */
-    /* color: #333; /* Replaced by new body styling */
     line-height: 1.6;
+    box-sizing: border-box;
+}
+*, *:before, *:after {
+    box-sizing: inherit;
 }
 
 body {
     font-family: var(--font-secondary);
     background-color: var(--color-parchment-bg);
     color: var(--color-dark-ink);
-    /* display: flex; align-items: center; justify-content: center; /* REMOVED for full screen */
 }
 
 /* =============== GENERAL LAYOUT =============== */
-/* Game Container - Full screen */
-.game-container {
-    width: 95%;
-    max-width: 1200px;
-    min-height: 90vh;
-    height: auto;
-    margin: 20px auto;
-    border: 3px solid var(--color-deep-brown-border);
-    background-color: var(--color-aged-paper);
-    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
-    border-radius: 8px; /* Added for worn corners */
-    position: relative;
-    box-sizing: border-box;
-    display: flex;
-    flex-wrap: nowrap;
-}
-
 /* Login, Character Creation/Selection Containers */
 .character-creation-container, .login-container, .character-selection-container {
     width: 50%;
-    margin: 20px auto;
-    padding: 20px;
-    border: 1px solid var(--color-deep-brown-border);
+    min-width: 350px; /* Ensure readability on smaller viewports before media queries */
+    max-width: 600px; /* Max width for these forms */
+    margin: 40px auto; /* More vertical margin */
+    padding: 25px;
+    border: 2px solid var(--color-deep-brown-border);
     border-radius: 8px;
     background-color: var(--color-aged-paper);
     color: var(--color-dark-ink);
+    box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
 }
 .login-container {
-    width: 350px;
+    width: 380px; /* Specific width for login */
 }
 .character-creation-container h2, .login-container h2, .character-selection-container h2 {
     text-align: center;
-    margin-bottom: 20px;
+    margin-top: 0;
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--color-light-border);
+    padding-bottom: 10px;
 }
 .character-creation-container div, .login-container div {
-    margin-bottom: 10px;
+    margin-bottom: 15px; /* Increased spacing */
 }
 .character-creation-container label, .login-container label {
-    display: inline-block;
-    width: auto;
-    margin-right: 10px;
+    display: block; /* Labels on their own line */
+    margin-bottom: 5px;
+    font-family: var(--font-primary);
 }
 .login-container p {
-    margin-top: 15px;
+    margin-top: 20px;
     font-family: var(--font-secondary);
+    text-align: center;
 }
 .character-selection-container ul {
     list-style-type: none;
@@ -85,12 +76,16 @@ body {
 .character-selection-container li {
     background-color: var(--color-parchment-bg);
     border: 1px solid var(--color-light-border);
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: 12px 15px;
+    margin-bottom: 12px;
     border-radius: 4px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    transition: background-color 0.2s;
+}
+.character-selection-container li:hover {
+    background-color: var(--color-aged-paper);
 }
 .graveyard-container {
     margin-top: 30px;
@@ -100,1012 +95,612 @@ body {
 .graveyard-container h3 {
     margin-bottom: 15px;
 }
-.graveyard-container ul {
-    list-style-type: none;
-    padding: 0;
-}
+.graveyard-container ul { list-style-type: none; padding: 0; }
 .graveyard-container li {
-    background-color: var(--color-aged-paper);
-    color: var(--color-dark-ink);
-    padding: 8px 15px;
-    margin-bottom: 8px;
-    border-radius: 4px;
-    border: 1px solid var(--color-light-border);
+    background-color: #e0e0e0; /* Different color for graveyard */
+    color: #555;
+    padding: 8px 15px; margin-bottom: 8px; border-radius: 4px;
+    border: 1px solid #ccc;
 }
 .character-creation-container #stats_container div {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 5px 0;
+    display: flex; align-items: center; justify-content: space-between; padding: 8px 0;
+    border-bottom: 1px dashed var(--color-light-border);
 }
-.character-creation-container #stats_container span {
-    flex-grow: 1;
-    font-family: var(--font-secondary);
-}
+.character-creation-container #stats_container div:last-child { border-bottom: none; }
+.character-creation-container #stats_container span { flex-grow: 1; font-family: var(--font-secondary); }
 
 /* =============== MAIN GAME UI LAYOUT =============== */
-/* Child elements of .game-container */
-#left-tabs-container {
-    order: 1;
-    width: 15%;
-    height: 80vh; /* Adjusted for actions-tab taking 20vh */
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-    background-color: var(--color-parchment-bg); /* Background for the container itself */
-    /* border-right: 1px solid #777; /* Separator line */
-    border: 1px solid var(--color-light-border);
-    border-right-color: var(--color-light-border);
-
-
-}
-
-#stats-tab, #info-tab {
-    width: 100%;
-    flex: 1; /* Distribute space equally within left-tabs-container */
-
-    /* background-color: var(--color-parchment-bg); /* Background now handled by #left-tabs-container */
-    /* border: 1px solid #999; /* REMOVED individual borders */
-
-    padding: 0;
-    box-sizing: border-box;
+.game-container {
+    width: 98%; /* Use more screen width */
+    max-width: 1400px; /* Allow wider layout */
+    min-height: 95vh;
+    height: auto;
+    margin: 1% auto; /* Adjusted margin */
+    border: 3px solid var(--color-deep-brown-border);
+    background-color: var(--color-aged-paper); /* Main container background */
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
     position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 220px 1fr 220px; /* Slightly wider side columns */
+    grid-template-rows: 1fr auto; /* Main content row, Bottom bar row */
+    grid-template-areas:
+        "left-col map right-col"
+        "bottom-bar bottom-bar bottom-bar";
+    gap: 8px; /* Gap between grid areas */
+    padding: 8px;
 }
 
-#info-tab {
-
-    border-top: 1px solid var(--color-light-border); /* Separator within left tabs, slightly softer */
-
+#left-info-column {
+    grid-area: left-col;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background-color: var(--color-parchment-bg); /* Lighter than game-container bg */
+    border: 1px solid var(--color-light-border);
+    border-radius: 4px;
+    overflow-y: auto;
 }
 
 #map-container {
-    order: 2;
-
-    flex-grow: 1; /* Takes remaining width (approx 70%) */
-    height: 80vh; /* Adjusted height */
-    /* border: 1px solid #666; /* REMOVED in favor of container borders */
-
+    grid-area: map;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 5px; /* Keep padding for SVG */
-    box-sizing: border-box;
-
-    background-color: var(--color-parchment-bg); /* White background for map area */
-    border-right: 1px solid var(--color-light-border); /* Separator line */
-
-}
-
-#map-container svg {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-#inventory-tab {
-    order: 3;
-
-    width: 15%;
-    height: 80vh; /* Adjusted height */
-    background-color: var(--color-parchment-bg); /* Background for the container itself */
-    /* border: 1px solid #999; /* REMOVED individual borders, now uses consistent border */
-    border-left: 1px solid var(--color-light-border); /* Added for consistency */
-    padding: 0;
-    box-sizing: border-box;
-    position: relative;
+    padding: 10px;
+    background-color: var(--color-parchment-bg);
+    border: 1px solid var(--color-light-border);
+    border-radius: 4px;
     overflow: hidden;
+}
+#map-container svg { width: 100%; height: 100%; object-fit: contain; }
+
+#right-inventory-column {
+    grid-area: right-col;
     display: flex;
     flex-direction: column;
-    /* border-left: 1px solid #999; /* REMOVED as map-container has border-right */
+    gap: 8px;
+    padding: 8px;
+    background-color: var(--color-parchment-bg); /* Lighter than game-container bg */
+    border: 1px solid var(--color-light-border);
+    border-radius: 4px;
+    overflow-y: auto;
 }
 
-#actions-tab {
-    /* order: 4; */ /* Removed for absolute positioning */
-    width: 100%;
-    /* height: 20vh; */ /* Removed, height now determined by content */
+#bottom-bar {
+    grid-area: bottom-bar;
+    background-color: var(--color-aged-paper); /* Match game-container bg for seamless look */
+    border-top: 2px solid var(--color-deep-brown-border);
+    display: flex;
+    flex-direction: column;
+    min-height: 180px; /* Increased min height */
+    max-height: 38vh; /* Adjusted max height */
+}
+
+/* Mini Panels and Full Panels Styling */
+.mini-panel {
+    background-color: var(--color-aged-paper); /* Slightly darker for contrast with column bg */
+    border: 1px solid var(--color-deep-brown-border);
+    border-radius: 3px;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.mini-panel:hover, .mini-panel:focus {
+    background-color: #E0D2B0; /* Slightly lighter aged paper */
+    outline: none;
+    box-shadow: 0 0 5px var(--color-highlight-gold);
+}
+.mini-panel h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 1em; /* Slightly larger */
+    border-bottom: 1px solid var(--color-light-border);
+    padding-bottom: 5px;
+    color: var(--color-deep-brown-border);
+}
+.mini-panel p {
+    font-size: 0.85em; /* Slightly larger */
+    margin: 4px 0;
+    font-family: var(--font-secondary);
+    color: var(--color-dark-ink);
+    word-break: break-word;
+}
+
+.full-panel-container {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.65); /* Darker overlay */
+    z-index: 1070;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px; /* Padding for small screens */
+}
+.full-panel-content {
     background-color: var(--color-aged-paper);
-    /* border: 1px solid #888; /* REMOVED individual border */
-    border-top: 2px solid var(--color-deep-brown-border); /* Stronger separator from content above */
-
-    padding: 0;
-    box-sizing: border-box;
-    position: absolute; /* Changed from relative */
-    bottom: 0; /* Added */
-    left: 0; /* Added */
-    z-index: 20; /* Added */
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    /* border-left: 1px solid #999; */ /* Removed as it might be irrelevant */
+    padding: 25px;
+    border: 3px solid var(--color-deep-brown-border);
+    border-radius: 6px;
+    width: 90%;
+    max-width: 700px; /* Wider full panels */
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
 }
+.full-panel-content h2, .full-panel-content h3 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--color-light-border);
+    padding-bottom: 10px;
+    margin-bottom: 20px; /* More space after headings */
+    color: var(--color-deep-brown-border);
+}
+.close-full-panel {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: transparent;
+    border: none;
+    font-size: 2em; /* Larger close button */
+    line-height: 1;
+    color: var(--color-dark-ink);
+    cursor: pointer;
+    padding: 5px;
+}
+.close-full-panel:hover { color: var(--color-highlight-red); }
 
 /* Settings Menu Button and Popup */
 #top-right-menu-button {
     position: absolute;
-    top: 5px; /* Adjusted for aesthetics */
-    right: 5px; /* Adjusted for aesthetics */
-    width: auto; /* Fit content */
-    padding: 5px 10px; /* Padding for button */
-    height: auto;
-    background-color: #f0f0f0;
-    border: 1px solid #aaa;
-    z-index: 1000; /* Ensure it's above other content */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    top: 10px; right: 10px;
+    padding: 8px 12px;
+    background-color: var(--color-light-border);
+    border: 1px solid var(--color-deep-brown-border);
+    color: var(--color-dark-ink);
+    font-family: var(--font-primary);
+    z-index: 1100; /* Ensure above full panels */
     cursor: pointer;
     border-radius: 4px;
+    transition: background-color 0.2s;
 }
+#top-right-menu-button:hover { background-color: var(--color-deep-brown-border); color: var(--color-parchment-bg); }
 
 #settings-popup {
     display: none;
     position: absolute;
-    top: 35px; /* Position below button */
-    right: 5px;
-    width: 180px; /* Slightly narrower */
+    top: 45px; /* Position below button */
+    right: 10px;
+    width: 200px; /* Wider popup */
     background-color: var(--color-aged-paper);
     border: 1px solid var(--color-deep-brown-border);
     padding: 0;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    z-index: 1001; /* Above button */
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    z-index: 1101; /* Above button */
     border-radius: 4px;
 }
-
-#settings-popup ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-}
-
+#settings-popup ul { list-style-type: none; margin: 0; padding: 0; }
 #settings-popup li {
-    padding: 8px 12px; /* Adjusted padding */
+    padding: 10px 15px;
     cursor: pointer;
     font-family: var(--font-secondary);
     color: var(--color-dark-ink);
     border-bottom: 1px solid var(--color-light-border);
-    font-size: 0.9em; /* Consistent font size */
+    font-size: 0.95em;
+    transition: background-color 0.2s;
 }
+#settings-popup li:last-child { border-bottom: none; }
+#settings-popup li:hover { background-color: var(--color-parchment-bg); color: var(--color-highlight-red); }
+#settings-popup a { text-decoration: none; color: inherit; display: block; }
 
-#settings-popup li:last-child {
-    border-bottom: none;
-}
 
-#settings-popup li:hover {
-    background-color: var(--color-parchment-bg);
-    color: var(--color-highlight-red);
-}
-
-#settings-popup a {
-    text-decoration: none;
-    color: var(--color-dark-ink);
-    display: block;
-}
-
-/* Styling for text within SVG map elements */
-#map-container svg text {
-    font-weight: bold;
-    font-size: 10px; /* Example size, adjust as needed */
-    fill: var(--color-dark-ink);
-}
-
-/* =============== TABS (SIDE & BOTTOM) =============== */
-/* Common styles for all tab types (stats, info, inventory, actions) */
-/* Note: #stats-tab, #info-tab, #inventory-tab specific layout styles are under MAIN GAME UI LAYOUT */
-/*       #actions-tab specific layout styles are under MAIN GAME UI LAYOUT */
-
-/* Tab Titles and Content Area Styling (Common to Side and Bottom Tabs) */
-.tab-title-bar {
-    padding: 5px 8px; /* Adjusted padding */
-    font-family: var(--font-primary);
-    background-color: transparent;
-    color: var(--color-dark-ink);
-    border-bottom: 1px solid var(--color-light-border);
-    text-align: center;
-    font-weight: bold;
-    font-size: 0.85em; /* Slightly increased font size */
-    box-sizing: border-box;
-    flex-shrink: 0;
-    cursor: default; /* Default cursor for non-interactive titles */
-}
-
-.tab-content {
-    padding: 8px; /* Consistent padding */
-    margin-top: 0; /* No margin, spacing handled by padding */
-    background-color: var(--color-parchment-bg);
-    color: var(--color-dark-ink);
-    height: 100%; /* Fill the parent tab area */
-    overflow-y: auto; /* Scroll if content overflows */
-    box-sizing: border-box;
-    flex-grow: 1; /* Ensure it takes available space in flex column */
-}
-
-/* Styling for the actual content of hoverable side tabs */
-#stats-content, #info-content, #inventory-content {
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.35s ease-in-out, transform 0.35s ease-in-out, visibility 0s linear 0.35s;
-    position: absolute;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 5;
-}
-
-#stats-content, #info-content {
-    transform: translateX(-100%);
-    left: 0;
-}
-
-#inventory-content {
-    transform: translateX(100%);
-    left: 0;
-}
-
-/* Hover states to bring side tab content into view */
-#stats-tab:hover #stats-content,
-#info-tab:hover #info-content,
-#inventory-tab:hover #inventory-content {
-    transform: translateX(0);
-    opacity: 1;
-    visibility: visible;
-    transition-delay: 0s;
-    z-index: 25;
-}
-
-/* Actions/Log Tab Specifics */
+/* =============== TABS (BOTTOM BAR) =============== */
 .actions-log-tab-buttons {
     display: flex;
     flex-shrink: 0;
+    background-color: var(--color-deep-brown-border); /* Background for the tab button bar */
 }
 
-#actions-tab-button, #log-tab-button {
+.tab-button { /* Generic style for Action/Log tab buttons */
     flex-grow: 1;
-    padding: 8px 5px;
+    padding: 10px 8px; /* Increased padding */
     background-color: var(--color-light-border);
     color: var(--color-dark-ink);
     font-family: var(--font-primary);
-    border-bottom: 1px solid var(--color-deep-brown-border);
+    border: none; /* Remove default button border */
+    border-bottom: 2px solid transparent; /* For active state indication */
     text-align: center;
     font-weight: bold;
-    font-size: 0.85em;
+    font-size: 1em; /* Larger font */
     cursor: pointer;
-    transition: background-color 0.3s ease;
-    border-right: 1px solid var(--color-deep-brown-border);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    /* border-right: 1px solid var(--color-deep-brown-border); /* Separator, if needed */
 }
+/* .actions-log-tab-buttons .tab-button:last-child { border-right: none; } */
 
-#log-tab-button {
-    border-right: none;
-}
-
-#actions-tab-button:hover, #log-tab-button:hover {
-    background-color: #a0a0a0; /* Consider theming this hover */
-}
-
-#actions-tab-button.active-tab-button,
-#log-tab-button.active-tab-button {
-    background-color: var(--color-parchment-bg);
-    color: var(--color-dark-ink);
-    border-bottom-color: var(--color-parchment-bg);
-}
-
-#actions-content { /* Container for action AND log panels */
-    display: block;
-    background-color: var(--color-parchment-bg);
-    height: auto;
-    overflow: hidden;
-    position: relative;
-}
-
-#actions-panel-content, #log-panel-content { /* Individual panels */
-    width: 100%;
-    height: 100%;
-    background-color: var(--color-parchment-bg);
-    overflow: hidden;
-    max-height: 0;
-    transition: max-height 0.5s ease-in-out;
-    box-sizing: border-box;
-}
-
-#actions-panel-content.panel-visible,
-#log-panel-content.panel-visible {
-    max-height: 40vh;
-}
-
-#actions-panel-content > #action-controls-wrapper,
-#log-panel-content > .log-box {
-    height: 100%;
-    overflow-y: auto;
-}
-
-/* Content styling for Stats, Info, Inventory text content (within the slidable panels) */
-#stats-content h2, #info-content h2, #inventory-content h2:first-child {
-    font-family: var(--font-primary);
-    font-size: 1.0em;
-    margin-top: 0;
-    margin-bottom: 8px;
-    color: var(--color-dark-ink);
-    text-align: left;
-    padding: 2px 0;
-    border-bottom: 1px solid var(--color-light-border);
-}
-#inventory-content h2 {
-    font-family: var(--font-primary);
-    font-size: 1.0em;
-    margin-top: 10px;
-    margin-bottom: 6px;
-    color: var(--color-dark-ink);
-    border-bottom: 1px solid var(--color-light-border);
-    padding-bottom: 3px;
-}
-
-#stats-content p, #info-content p, #inventory-content p {
-    font-family: var(--font-secondary);
-    font-size: 0.85em;
-    margin: 4px 0;
-    color: var(--color-dark-ink);
-    text-align: left;
-    word-wrap: break-word;
-}
-
-#stats-content ul, #info-content ul, #inventory-content ul {
-    padding-left: 10px;
-    margin-bottom: 8px;
-    list-style-type: disc;
-}
-
-#stats-content li, #info-content li, #inventory-content li {
-    font-family: var(--font-secondary);
-    font-size: 0.8em;
-    padding: 1px 0;
-    color: var(--color-dark-ink);
-    text-align: left;
-    word-wrap: break-word;
-    margin-bottom: 2px;
-}
-
-#inventory-content p.empty-message {
-    font-style: italic;
-    color: #777;
-}
-
-/* =============== MODALS =============== */
-/* Modal styles - Transferred and Refined */
-/* Note: Some of these rules were previously under "Migrated head styles" or standalone */
-.modal { /* Targets #subLocationActionsModal and #event-choice-popup */
-    display: none;
-    position: fixed;
-    z-index: 1050;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.5);
-}
-
-.modal-content {
-    background-color: var(--color-aged-paper); /* Themed */
-    position: fixed;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    padding: 25px;
-    border: 2px solid var(--color-deep-brown-border); /* Themed */
-    border-radius: 8px;
-    width: 90%;
-    max-width: 450px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    text-align: left;
-}
-
-/* Specific text alignment for h3 and p inside any modal-content, from head style */
-.modal-content h3, .modal-content p {
-    text-align: center;
-}
-
-.modal-content h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.5em;
-    font-family: var(--font-primary); /* Themed */
-    color: var(--color-dark-ink); /* Themed */
-    border-bottom: 1px solid var(--color-light-border); /* Themed */
-    padding-bottom: 10px;
-}
-
-.close-button {
-    color: var(--color-dark-ink); /* Themed */
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 32px;
-    font-weight: bold;
-    line-height: 1;
-}
-
-.close-button:hover,
-.close-button:focus {
-    color: var(--color-highlight-red); /* Themed */
-    text-decoration: none;
-    cursor: pointer;
-}
-
-#modal-actions-list {
-    margin-top: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-#modal-actions-list ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-#modal-actions-list li {
-    margin-bottom: 0;
-}
-
-.modal #modal-actions-list .action-button {
-    width: 100%;
-    padding: 12px 15px;
-    background-color: var(--color-highlight-red);
+.tab-button:hover, .tab-button:focus {
+    background-color: var(--color-deep-brown-border);
     color: var(--color-parchment-bg);
-    font-family: var(--font-primary);
-    border: 2px outset var(--color-light-border);
-    border-radius: 3px;
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    text-shadow: 1px 1px 1px var(--color-dark-ink);
-    cursor: pointer;
-    font-size: 1em;
-    text-align: center;
-    transition: background-color 0.2s ease-in-out, border-style 0.2s ease-in-out;
+    outline: none;
+}
+.tab-button.active-tab-button {
+    background-color: var(--color-parchment-bg); /* Content area background */
+    color: var(--color-dark-ink);
+    border-bottom-color: var(--color-highlight-red); /* Active tab indicator */
 }
 
-.modal #modal-actions-list .action-button:hover {
-    background-color: #A52A2A;
-    border-style: inset;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
+#bottom-panel-content-area {
+    flex-grow: 1;
+    background-color: var(--color-parchment-bg);
+    position: relative;
+    overflow-y: auto;
+    padding: 15px; /* Padding for content inside */
 }
 
-#event-popup-choices {
-    text-align: center;
+.panel-content { /* Common styling for #actions-panel-content and #log-panel-content */
+    width: 100%;
+    background-color: var(--color-parchment-bg);
+    /* padding: 10px; /* Padding moved to #bottom-panel-content-area */
+    display: none;
 }
+.panel-content.panel-visible { display: block; }
+
+#action-controls-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Increased gap */
+}
+
+.action-section {
+    background-color: var(--color-aged-paper);
+    padding: 15px;
+    border: 1px solid var(--color-light-border);
+    border-radius: 4px;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+}
+.action-section h4, .action-section h5 {
+    margin-top: 0;
+    margin-bottom: 12px; /* Increased space */
+    font-size: 1.1em; /* Slightly larger */
+    border-bottom: 1px solid var(--color-light-border);
+    padding-bottom: 6px;
+    color: var(--color-deep-brown-border);
+}
+.action-section p { margin-bottom: 10px; }
+
+.button-list {
+    list-style-type: none; padding: 0; margin: 0;
+    display: flex; flex-wrap: wrap; gap: 10px; /* Increased gap */
+}
+.button-list li { margin: 0; } /* Remove default li margin if any */
+
+
+/* =============== MODALS (Event Popup) =============== */
+.modal {
+    display: none; position: fixed; z-index: 1050;
+    left: 0; top: 0; width: 100%; height: 100%;
+    overflow: auto; background-color: rgba(0,0,0,0.7); /* Darker overlay */
+}
+.modal-content {
+    background-color: var(--color-aged-paper);
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    padding: 30px; /* Increased padding */
+    border: 2px solid var(--color-deep-brown-border);
+    border-radius: 8px;
+    width: 90%; max-width: 500px; /* Slightly wider modal */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    text-align: left; /* Default for content, specific elements can override */
+}
+.modal-content h3, .modal-content p { text-align: center; }
+.modal-content h3 {
+    margin-top: 0; margin-bottom: 20px;
+    font-size: 1.6em; font-family: var(--font-primary);
+    color: var(--color-deep-brown-border);
+    border-bottom: 1px solid var(--color-light-border);
+    padding-bottom: 15px;
+}
+.modal .close-button { /* General modal close button, can be used by event modal if needed */
+    color: var(--color-dark-ink);
+    position: absolute; top: 10px; right: 15px;
+    font-size: 2em; font-weight: bold; line-height: 1;
+    background: none; border: none; cursor: pointer; padding: 5px;
+}
+.modal .close-button:hover, .modal .close-button:focus {
+    color: var(--color-highlight-red);
+}
+#event-popup-choices { text-align: center; margin-top: 20px; }
 #event-popup-choices button {
-    margin: 5px;
-    padding: 10px 15px;
-    cursor: pointer;
-    font-family: var(--font-primary);
+    margin: 8px; padding: 12px 20px;
+    cursor: pointer; font-family: var(--font-primary);
     color: var(--color-parchment-bg);
     background-color: var(--color-deep-brown-border);
     border: 2px outset var(--color-light-border);
-    border-radius: 3px;
+    border-radius: 4px; font-size: 1em;
+    transition: background-color 0.2s, border-style 0.2s;
 }
 #event-popup-choices button:hover {
-    background-color: #7a5c4f;
-    border-style: inset;
+    background-color: #7a5c4f; border-style: inset;
 }
-
-/* =============== MENUS & POPUPS =============== */
-/* (Settings Menu Button and Popup rules were here, now moved to their new section) */
-/* (Styling for text within SVG map elements was here, now moved to SPECIFIC UI COMPONENTS) */
-
 
 /* =============== BUTTONS =============== */
-/* General button styles will be consolidated here later */
-/* Specific button instances like .map-destination-button, .popup-menu-button etc. */
-/* This includes buttons in #action-controls-wrapper, modals, login forms etc. */
-
-/* Buttons in Character Creation, Login, Character Selection, and Popups */
-.character-creation-container button,
-.login-container button,
-.character-selection-container li a, /* Styled as a button */
-.character-selection-container .create-new-link {
-    padding: 8px 15px; /* Adjusted padding */
-    font-family: var(--font-primary);
-    color: var(--color-parchment-bg);
-    background-color: var(--color-highlight-red); /* Primary action color */
-    border: 2px outset var(--color-light-border);
-    border-radius: 3px;
-    cursor: pointer;
-    text-decoration: none; /* For anchor tags styled as buttons */
-    display: inline-block;
-    line-height: normal;
-    text-shadow: 1px 1px 1px var(--color-dark-ink);
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    margin: 5px;
-}
-
-/* Hover/Focus States for the above buttons */
-.character-creation-container button:hover,
-.login-container button:hover,
-.character-selection-container li a:hover,
-.character-selection-container .create-new-link:hover {
-    background-color: #A52A2A; /* Darker red */
-    border-style: inset;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
-}
-
-/* Google Login Button - Specific styling */
-.google-login-button {
-    padding: 8px 15px; /* Adjusted padding */
-    font-family: var(--font-secondary); /* Non-themed font */
-    color: white !important; /* Ensure white text */
-    background-color: #4285F4 !important; /* Google's blue */
-    border: 2px outset var(--color-light-border);
-    border-radius: 3px;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-    line-height: normal;
-    text-shadow: 1px 1px 1px #333; /* Subtle shadow for depth */
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    margin: 5px;
-}
-.google-login-button:hover {
-    background-color: #357ae8 !important; /* Google's hover blue */
-    border-style: inset;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
-}
-.google-login-button img {
-    width: 18px;
-    height: 18px;
-    vertical-align: middle;
-    margin-right: 10px;
-}
-
-.character-creation-container button:disabled {
-    background-color: var(--color-light-border); /* Muted */
-    color: var(--color-aged-paper);
-    border-style: solid; /* Not outset/inset */
-    text-shadow: none;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-/* Styles for buttons within #action-controls-wrapper */
-#action-controls-wrapper input[type="submit"],
-#action-controls-wrapper .submit-details-button,
-#action-controls-wrapper .map-destination-button,
-#action-controls-wrapper .sub-location-button,
-#action-controls-wrapper .action-button,
-#action-controls-wrapper .general-action-button {
+/* Base Action Button Style */
+.action-button {
     background-color: var(--color-deep-brown-border);
     color: var(--color-parchment-bg);
     font-family: var(--font-primary);
-    padding: 6px 10px;
+    padding: 8px 15px; /* Standardized padding */
     border: 2px outset var(--color-light-border);
-    border-radius: 3px;
+    border-radius: 4px; /* Slightly more rounded */
     cursor: pointer;
-    font-size: 0.85em;
-    margin-right: 5px;
-    margin-bottom: 5px;
+    font-size: 0.9em;
     text-align: center;
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    text-shadow: 1px 1px 1px var(--color-dark-ink);
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+    transition: background-color 0.2s, border-style 0.2s, box-shadow 0.2s;
+    text-decoration: none; /* For <a> styled as buttons */
+    display: inline-block; /* For <a> tags */
+    line-height: normal;
 }
-
-/* Specific button type overrides for important actions */
-#action-controls-wrapper .map-destination-button,
-#action-controls-wrapper .submit-details-button {
-    background-color: var(--color-highlight-red);
-}
-
-/* Hover/Focus States for buttons in #action-controls-wrapper */
-#action-controls-wrapper input[type="submit"]:hover,
-#action-controls-wrapper .general-action-button:hover,
-#action-controls-wrapper .sub-location-button:hover,
-#action-controls-wrapper .action-button:hover {
-    background-color: #7a5c4f; /* Lighter deep brown */
+.action-button:hover, .action-button:focus {
+    background-color: #7a5c4f; /* Darker shade of deep-brown */
     border-style: inset;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
-}
-
-#action-controls-wrapper .map-destination-button:hover,
-#action-controls-wrapper .submit-details-button:hover {
-    background-color: #A52A2A; /* Darker red */
-    border-style: inset;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
-}
-
-/* Comments to clarify which original specific styles are now overridden or use defaults */
-/* #action-controls-wrapper .map-destination-button { background-color: #007bff; } */ /* Now var(--color-highlight-red) */
-/* #action-controls-wrapper .sub-location-button { background-color: #28a745; } */  /* Now var(--color-deep-brown-border) */
-/* #action-controls-wrapper .action-button { background-color: #ffc107; color: #333; } */ /* Now var(--color-deep-brown-border) & themed text */
-/* #action-controls-wrapper .submit-details-button { background-color: #17a2b8; } */ /* Now var(--color-highlight-red) */
-/* #action-controls-wrapper .general-action-button { background-color: #6c757d; } */ /* Now var(--color-deep-brown-border) */
-
-/* (The #action-controls-wrapper form-related styles that were below this will be moved into the FORMS & INPUTS section) */
-
-/* =============== FORMS & INPUTS =============== */
-/* General form, label, input styles have been moved here from the bottom of the file */
-input[type="text"],
-input[type="number"],
-input[type="password"] {
-    background-color: var(--color-parchment-bg);
-    color: var(--color-dark-ink);
-    border: 1px solid var(--color-light-border);
-    border-radius: 3px;
-    font-family: var(--font-secondary);
-    padding: 8px 10px;
-    box-sizing: border-box; /* ensure padding doesn't expand element size */
-}
-
-input[type="text"]:focus,
-input[type="number"]:focus,
-input[type="password"]:focus {
-    border-color: var(--color-deep-brown-border);
-    box-shadow: 0 0 3px var(--color-light-border);
-    outline: none; /* Remove default browser outline */
-}
-
-label {
-    color: var(--color-dark-ink);
-    font-family: var(--font-primary);
-    /* font-size: 0.9em; /* Adjust if primary font is too large */
-}
-
-/* Styling for the sell item dropdown */
-#sell_item_dropdown {
-    width: 100%;
-    padding: 8px 10px; /* Match text inputs */
-    margin-bottom: 10px; /* Spacing */
-    border: 1px solid var(--color-light-border);
-    background-color: var(--color-parchment-bg);
-    color: var(--color-dark-ink);
-    font-family: var(--font-secondary);
-    border-radius: 3px;
-    box-sizing: border-box;
-    font-size: 0.85em; /* Match text inputs */
-}
-
-#sell_item_dropdown:focus {
-    border-color: var(--color-deep-brown-border);
-    box-shadow: 0 0 3px var(--color-light-border);
+    box-shadow: 1px 1px 4px rgba(0,0,0,0.5) inset;
     outline: none;
 }
 
-/* Styles for #action-controls-wrapper inputs, .details-section inputs ... */
-#action-controls-wrapper form div {
-    margin-bottom: 8px;
+/* Important Action Buttons (Red) */
+.map-destination-button,
+.submit-details-button,
+.buy-item-button, /* From inventory cards */
+#submit_buy_hemlock_herb_button,
+#submit_buy_borin_item_button,
+#submit-borin-repair-button,
+.character-creation-container button, /* Includes reroll */
+.login-container button,
+.character-selection-container li a,
+.character-selection-container .create-new-link {
+    background-color: var(--color-highlight-red);
+}
+.map-destination-button:hover, .map-destination-button:focus,
+.submit-details-button:hover, .submit-details-button:focus,
+.buy-item-button:hover, .buy-item-button:focus,
+#submit_buy_hemlock_herb_button:hover, #submit_buy_hemlock_herb_button:focus,
+#submit_buy_borin_item_button:hover, #submit_buy_borin_item_button:focus,
+#submit-borin-repair-button:hover, #submit-borin-repair-button:focus,
+.character-creation-container button:hover, .character-creation-container button:focus,
+.login-container button:hover, .login-container button:focus,
+.character-selection-container li a:hover, .character-selection-container li a:focus,
+.character-selection-container .create-new-link:hover, .character-selection-container .create-new-link:focus {
+    background-color: #A52A2A; /* Darker red */
 }
 
-#action-controls-wrapper label {
-    display: block;
-    margin-bottom: 4px;
-    font-weight: bold;
-    font-size: 0.9em;
+/* Google Login Button - Specific styling (keeps its unique look) */
+.google-login-button {
+    padding: 8px 15px; font-family: var(--font-secondary);
+    color: white !important; background-color: #4285F4 !important;
+    border: 2px outset var(--color-light-border); border-radius: 3px;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; /* For image align */
+    line-height: normal; text-shadow: 1px 1px 1px #333;
+    box-shadow: 1px 1px 2px rgba(0,0,0,0.5); margin: 5px;
+}
+.google-login-button:hover {
+    background-color: #357ae8 !important; border-style: inset;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
+}
+.google-login-button img { width: 18px; height: 18px; margin-right: 10px; }
+
+.character-creation-container button:disabled {
+    background-color: var(--color-light-border); color: var(--color-aged-paper);
+    border-style: solid; text-shadow: none; cursor: not-allowed; opacity: 0.7;
 }
 
-#action-controls-wrapper input[type="text"],
-#action-controls-wrapper input[type="number"] {
-    width: calc(100% - 20px);
-    margin-bottom: 8px;
-    font-size: 0.85em;
+/* Popup Menu Button (e.g., Save Game in menu) */
+.popup-menu-button { /* Inherits .action-button, can add specifics if needed */
+    width: 100%; /* Make buttons in popup full width */
+    margin: 5px 0;
 }
 
-#action-controls-wrapper input[type="text"]:focus,
-#action-controls-wrapper input[type="number"]:focus {
-    /* Properties inherited from general input:focus */
-}
 
-#action-controls-wrapper input[type="hidden"] {
-    display: none;
-}
-
-#action-controls-wrapper #action-details-container {
-    border-top: 1px dashed #ccc;
-    padding-top: 10px;
-    margin-top: 10px;
-}
-
-#action-controls-wrapper .details-section {
-    background-color: #fdfdfd;
-    border: 1px solid #e0e0e0;
+/* =============== FORMS & INPUTS =============== */
+input[type="text"], input[type="number"], input[type="password"], select {
+    background-color: var(--color-parchment-bg);
+    color: var(--color-dark-ink);
+    border: 1px solid var(--color-deep-brown-border); /* Stronger border */
     border-radius: 3px;
-    padding: 10px;
-    margin-top: 8px;
-}
-#action-controls-wrapper .details-section h4 {
-    margin-bottom: 8px;
+    font-family: var(--font-secondary);
+    padding: 10px 12px; /* More padding */
+    box-sizing: border-box;
+    width: 100%; /* Default to full width within their container */
+    margin-bottom: 10px; /* Space below inputs */
     font-size: 0.9em;
-    border-bottom: 1px solid #f0f0f0;
-    padding-bottom: 4px;
 }
-#action-controls-wrapper .details-section label {
-    font-size: 0.8em;
+input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus, select:focus {
+    border-color: var(--color-highlight-gold);
+    box-shadow: 0 0 5px var(--color-highlight-gold);
+    outline: none;
+}
+label {
+    color: var(--color-dark-ink);
+    font-family: var(--font-primary);
+    display: block; /* Ensure labels are above inputs */
+    margin-bottom: 5px;
+    font-size: 0.95em;
 }
 
-/* From "Styles moved from index.html" - specific to forms */
-/* .hidden-details is a utility class, will be moved to UTILITIES */
-.details-section label { /* This is a more general .details-section label */
-    display: block;
-    margin-top: 5px;
+/* Styling for dynamic forms within the actions panel */
+.dynamic-form {
+    background-color: var(--color-parchment-bg);
+    border: 1px solid var(--color-deep-brown-border);
+    border-radius: 4px;
+    padding: 15px;
+    /* margin-top: 10px; /* Handled by gap in #action-controls-wrapper */
 }
-.details-section input { /* This is also more general */
-    width: calc(100% - 10px);
-    padding: 5px;
-    margin-top: 2px;
+.dynamic-form .form-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 15px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-light-border);
 }
+.dynamic-form .form-header h4 {
+    margin: 0; font-size: 1.1em; /* Larger form titles */
+    border-bottom: none; color: var(--color-deep-brown-border);
+}
+.close-dynamic-form {
+    background: none; border: none; font-size: 1.8em; cursor: pointer;
+    color: var(--color-dark-ink); padding: 0 5px; line-height: 1;
+}
+.close-dynamic-form:hover { color: var(--color-highlight-red); }
+
+.dynamic-form label { font-size: 0.9em; margin-top: 10px; }
+.dynamic-form input[type="text"], .dynamic-form input[type="number"], .dynamic-form select {
+    margin-bottom: 15px; /* More space between form elements */
+}
+.dynamic-form p { margin-bottom: 10px; } /* For text like "Repair Cost:" */
+
 
 /* =============== SPECIFIC UI COMPONENTS =============== */
-/* ... #map-container svg text ... */
 /* Styling for text within SVG map elements */
 #map-container svg text {
-    font-weight: bold;
-    font-size: 10px; /* Example size, adjust as needed */
-    fill: var(--color-dark-ink);
+    font-weight: bold; font-size: 10px; fill: var(--color-dark-ink);
 }
 
-/* ... Inventory Grid (.inventory-grid, .inventory-item-card) ... */
+/* Inventory Grid */
 .inventory-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Creates responsive columns */
-    gap: 10px; /* Space between items */
-    padding: 10px;
-    max-height: 300px; /* Or whatever height fits your layout */
-    overflow-y: auto; /* Add scroll for many items */
-}
-
-.inventory-item-card {
-    border: 1px solid #ccc; /* Consider var(--color-light-border) */
-    border-radius: 5px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    background-color: #f9f9f9; /* Consider var(--color-parchment-bg) or var(--color-aged-paper) for theme */
-}
-
-.item-icon-placeholder {
-    width: 50px; /* Adjust as needed */
-    height: 50px; /* Adjust as needed */
-    background-color: #e0e0e0; /* Placeholder color */
-    border: 1px dashed #aaa;
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8em;
-    color: #777;
-}
-
-.item-name {
-    font-weight: bold;
-    margin-bottom: 5px;
-    word-wrap: break-word; /* Ensure long names don't break layout */
-}
-
-/* Shop Item Button is under BUTTONS section */
-
-/* ... Journal Display (#journal-entries-list, .journal-*) ... */
-#log-panel-content .log-box {
-    height: 300px; /* Or match other panel heights like 40vh */
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); /* Wider items */
+    gap: 12px; padding: 10px;
+    max-height: 280px; /* Adjust as needed for full panel */
     overflow-y: auto;
-    padding: 10px;
-    background-color: var(--color-aged-paper);
-    border: 1px solid var(--color-light-border); /* Ensure consistent border if not already applied */
+    margin-bottom: 15px; /* Space between player/shop grids */
 }
-
-#journal-entries-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-#journal-entries-list li {
-    background-color: var(--color-parchment-bg);
+.inventory-item-card {
     border: 1px solid var(--color-light-border);
-    border-radius: 4px;
-    padding: 10px;
-    margin-bottom: 10px;
+    border-radius: 4px; padding: 10px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    background-color: var(--color-parchment-bg); /* Lighter card background */
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.inventory-item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 2px 3px 6px rgba(0,0,0,0.15);
+}
+.item-icon-placeholder {
+    width: 60px; height: 60px; /* Larger icon */
+    background-color: #e0e0e0; border: 1px dashed #aaa;
+    margin-bottom: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.8em; color: #777; border-radius: 3px;
+}
+.item-name {
+    font-weight: bold; margin-bottom: 8px; word-wrap: break-word;
+    font-family: var(--font-secondary); font-size: 0.9em;
+}
+
+/* Journal Display */
+#log-panel-content .log-box {
+    /* height: 100%; /* Fill available space in #bottom-panel-content-area */
+    overflow-y: auto;
+    /* padding: 10px; /* Padding is on #bottom-panel-content-area */
+    background-color: var(--color-parchment-bg);
+    /* border: 1px solid var(--color-light-border); /* Border on parent if needed */
+}
+#journal-entries-list { list-style-type: none; padding: 0; margin: 0; }
+#journal-entries-list li {
+    background-color: var(--color-aged-paper); /* Slightly different from log-box bg */
+    border: 1px solid var(--color-light-border);
+    border-radius: 4px; padding: 12px; margin-bottom: 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
-
 .journal-timestamp {
-    display: block;
-    font-size: 0.75em;
-    color: #777; /* Consider theming */
-    margin-bottom: 5px;
-    text-align: right;
+    display: block; font-size: 0.75em; color: #666; /* Darker timestamp */
+    margin-bottom: 6px; text-align: right;
 }
-
 .journal-action-type {
-    display: block; /* Ensures it takes its own line if needed and respects margin-bottom */
-    font-weight: bold;
-    color: var(--color-highlight-red);
-    margin-bottom: 3px;
+    display: block; font-weight: bold; color: var(--color-highlight-red);
+    margin-bottom: 5px; font-size: 1em; /* Match action section headings */
 }
-
 .journal-summary {
-    font-size: 0.9em;
-    color: var(--color-dark-ink);
-    margin-top: 0; /* Reset default p margin */
-    margin-bottom: 5px;
+    font-size: 0.9em; color: var(--color-dark-ink); margin: 0 0 8px 0;
 }
-
 .journal-details {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    padding-left: 15px;
-    border-left: 2px solid var(--color-light-border);
-    font-size: 0.8em;
-    background-color: rgba(0,0,0,0.02);
-    padding: 8px; /* Increased padding slightly */
+    margin: 8px 0; padding: 10px;
+    border-left: 3px solid var(--color-light-border);
+    font-size: 0.85em; background-color: rgba(0,0,0,0.02);
     border-radius: 3px;
 }
-
-.journal-details strong { /* Targeting the "Details:" text */
-    color: var(--color-dark-ink); /* Keep it consistent, not necessarily red */
-    font-weight: bold;
-}
-
-
-.journal-details ul {
-    list-style-type: disc;
-    margin: 5px 0 5px 20px; /* Indent bullets */
-    padding-left: 0; /* Reset browser default if any */
-}
-
-.journal-details li {
-    margin-bottom: 2px;
-    color: var(--color-dark-ink); /* Ensure text color contrasts with subtle background */
-}
-
+.journal-details strong { color: var(--color-deep-brown-border); font-weight: bold; }
+.journal-details ul { list-style-type: disc; margin: 5px 0 5px 20px; padding-left: 0; }
+.journal-details li { margin-bottom: 3px; color: var(--color-dark-ink); }
 .journal-outcome {
-    font-size: 0.85em;
-    color: #333; /* Using a fairly dark grey for now */
-    margin-top: 8px; /* Increased margin-top for better separation */
-    font-style: italic;
-    padding: 8px; /* Increased padding */
-    background-color: rgba(0,0,0,0.02);
-    border-radius: 3px;
-    border-top: 1px dashed var(--color-light-border); /* Add a subtle separator */
+    font-size: 0.85em; color: #333; margin-top: 10px;
+    font-style: italic; padding: 10px;
+    background-color: rgba(0,0,0,0.02); border-radius: 3px;
+    border-top: 1px dashed var(--color-light-border);
 }
+.journal-outcome strong { color: var(--color-deep-brown-border); font-weight: bold; }
 
-.journal-outcome strong { /* Targeting the "Outcome:" text */
-    color: var(--color-dark-ink); /* Keep it consistent */
-    font-weight: bold;
-}
-
-/* ... Toast Notifications (#toast-container, .toast, .toast-*) ... */
+/* Toast Notifications */
 #toast-container {
-    position: fixed;
-    bottom: 20px; /* Position above the action bar or adjust as needed */
-    right: 20px;
-    z-index: 2000; /* High z-index to be on top of most elements */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end; /* Toasts stack from bottom-right upwards if new ones added on top */
+    position: fixed; bottom: 20px; right: 20px;
+    z-index: 2000; display: flex; flex-direction: column; align-items: flex-end;
 }
-
 .toast {
-    background-color: var(--color-aged-paper); /* Themed background */
-    color: var(--color-dark-ink);
-    padding: 12px 18px;
-    margin-top: 10px;
+    background-color: var(--color-aged-paper); color: var(--color-dark-ink);
+    padding: 15px 20px; margin-top: 10px;
     border: 1px solid var(--color-deep-brown-border);
-    border-left-width: 5px; /* Thicker left border for emphasis, color based on type */
-    border-radius: 5px; /* Slightly rounded corners */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    transform: translateX(100%); /* Start off-screen to the right */
+    border-left-width: 6px; border-radius: 5px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+    opacity: 0; transform: translateX(100%);
     transition: opacity 0.5s ease, transform 0.5s ease;
-    min-width: 250px; /* Minimum width */
-    max-width: 350px; /* Maximum width */
-    font-family: var(--font-secondary);
-    font-size: 0.9em;
-    display: flex;
-    align-items: center;
+    min-width: 280px; max-width: 400px;
+    font-family: var(--font-secondary); font-size: 0.95em;
+    display: flex; align-items: center;
 }
+.toast.show { opacity: 1; transform: translateX(0); }
+.toast-icon { margin-right: 12px; font-size: 1.3em; }
+.toast-message { flex-grow: 1; line-height: 1.4; }
+.toast-success { border-left-color: #28a745; }
+.toast-success .toast-icon { color: #28a745; }
+.toast-error { border-left-color: var(--color-highlight-red); }
+.toast-error .toast-icon { color: var(--color-highlight-red); }
+.toast-warning { border-left-color: #ffc107; }
+.toast-warning .toast-icon { color: #ffc107; }
+.toast-info { border-left-color: #17a2b8; }
+.toast-info .toast-icon { color: #17a2b8; }
 
-.toast.show {
-    opacity: 1;
-    transform: translateX(0); /* Slide in */
-}
-
-.toast-icon {
-    margin-right: 10px;
-    font-size: 1.2em; /* Make icon slightly larger */
-}
-
-.toast-message {
-    flex-grow: 1; /* Message takes remaining space */
-    line-height: 1.4;
-}
-
-/* Type-specific styling */
-.toast-success {
-    border-left-color: #28a745; /* Green for success */
-}
-.toast-success .toast-icon {
-    color: #28a745;
-}
-
-.toast-error {
-    border-left-color: var(--color-highlight-red); /* Themed red for error */
-}
-.toast-error .toast-icon {
-    color: var(--color-highlight-red);
-}
-
-.toast-warning {
-    border-left-color: #ffc107; /* Yellow/Orange for warning */
-}
-.toast-warning .toast-icon {
-    color: #ffc107;
-}
-
-.toast-info {
-    border-left-color: #17a2b8; /* Blue for info */
-}
-.toast-info .toast-icon {
-    color: #17a2b8;
-}
-
-/* ... Flash Messages (.flash-*, .flashes-container) ... */
+/* Flash Messages */
 #flashes-container {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    width: 80%;
-    max-width: 600px;
-    text-align: center;
+    position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+    z-index: 1500; width: 90%; max-width: 600px; text-align: center;
+}
+.flash-success, .flash-error { /* Common flash styling */
+    padding: 12px 15px; margin-bottom: 10px; border-radius: 4px;
+    font-family: var(--font-secondary); font-size: 0.9em;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 .flash-success {
-    color: green;
-    background-color: lightgreen;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid green;
-    border-radius: 4px;
+    color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb;
 }
 .flash-error {
-    color: var(--color-highlight-red);
-    background-color: #ffdddd; /* Light red */
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid var(--color-highlight-red);
-    border-radius: 4px;
+    color: var(--color-highlight-red); background-color: #f8d7da;
+    border: 1px solid #f5c6cb; /* Lighter red border */
 }
 
-/* ... Other specific components like .status-deceased, .google-auth-container-modifiers ... */
-.status-deceased {
-    color: var(--color-highlight-red);
-    font-weight: bold;
-}
-
-.google-auth-container-modifiers {
-    margin-top: 20px;
-    text-align: center;
-}
-
+/* Other specific components */
+.status-deceased { color: var(--color-highlight-red); font-weight: bold; }
+.google-auth-container-modifiers { margin-top: 25px; text-align: center; }
 #skill-roll-result-display-container {
-    text-align: center;
-    font-weight: bold;
-    color: var(--color-dark-ink);
+    text-align: center; font-weight: bold; color: var(--color-dark-ink);
+    margin: 15px 0; padding: 10px; background-color: var(--color-parchment-bg);
+    border: 1px dashed var(--color-light-border); border-radius: 4px;
 }
-
-#shop-management-details {
-    padding: 10px;
-}
-
+#shop-management-details { padding: 10px; }
+#shop-management-details h3 { font-size: 1.2em; margin-bottom: 10px; }
+#shop-management-details p { margin-bottom: 8px; font-size: 0.9em; }
+#shop-management-details select { width: auto; margin-right: 10px; }
 
 /* =============== SCROLLBARS =============== */
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
+::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track {
     background: var(--color-parchment-bg);
     border-left: 1px solid var(--color-light-border);
@@ -1113,1267 +708,61 @@ label {
 }
 ::-webkit-scrollbar-thumb {
     background-color: var(--color-light-border);
-    border-radius: 2px;
-    border: 1px solid var(--color-deep-brown-border);
-}
-::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-deep-brown-border);
-}
-::-webkit-scrollbar-corner {
-    background: var(--color-parchment-bg);
-}
-
-body, .tab-content, #action-controls-wrapper, #game-output {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-light-border) var(--color-parchment-bg);
-}
-
-
-/* =============== UTILITIES / MISC =============== */
-/* General heading styling - ensure they use primary font and dark ink */
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-primary);
-    color: var(--color-dark-ink);
-}
-
-strong, b {
-    font-weight: bold;
-    color: var(--color-highlight-red);
-}
-em, i {
-    font-family: var(--font-secondary);
-    font-style: italic;
-    color: var(--color-deep-brown-border);
-}
-
-/* .hidden-details is a utility class, also used within #action-controls-wrapper */
-.hidden-details {
-    display: none;
-    margin-top: 10px;
-}
-
-.inline-form {
-    display: inline;
-}
-
-/* Styles for sections within #action-controls-wrapper that are more about layout/structure */
-/* (The main #action-controls-wrapper rule is under MAIN GAME UI LAYOUT section as it defines a major layout block) */
-/* (This needs to be re-evaluated, #action-controls-wrapper itself is a form container, not just layout) */
-#action-controls-wrapper .action-box-section {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 8px;
-    margin-bottom: 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-#action-controls-wrapper .action-box-section:last-child {
-    margin-bottom: 0;
-}
-
-#action-controls-wrapper ul {
-    padding-left: 0;
-    margin-top: 4px;
-    margin-bottom: 8px;
-}
-
-#action-controls-wrapper ul li {
-    padding: 2px 0;
-    font-size: 0.85em;
-}
-
-#action-controls-wrapper hr {
-    border: 0;
-    height: 1px;
-    background: #eee; /* Lighter hr */
-    margin: 15px 0; /* Reduced margin */
-}
-
-/* Headings within #action-controls-wrapper */
-#action-controls-wrapper h1, /* If any h1 are used */
-#action-controls-wrapper h2,
-#action-controls-wrapper h3,
-#action-controls-wrapper h4 {
-    font-family: var(--font-primary);
-    color: var(--color-dark-ink);
-    margin-top: 0; /* Remove default top margin */
-    margin-bottom: 8px; /* Consistent bottom margin */
-    padding-bottom: 4px; /* Space before border */
-    border-bottom: 1px solid var(--color-light-border);
-}
-#action-controls-wrapper h1 { font-size: 1.2em; font-family: var(--font-primary); color: var(--color-dark-ink); }
-#action-controls-wrapper h2 { font-size: 1.1em; font-family: var(--font-primary); color: var(--color-dark-ink); }
-#action-controls-wrapper h3 { font-size: 1.0em; font-family: var(--font-primary); color: var(--color-dark-ink); }
-#action-controls-wrapper h4 { font-size: 0.9em; border-bottom: none; margin-bottom: 4px; font-family: var(--font-primary); color: var(--color-dark-ink);}
-
-#action-controls-wrapper #current-town-display {
-    font-weight: bold;
-    color: #28a745;
-    font-size: 0.9em;
-}
-#action-controls-wrapper .sub-location-description {
-    font-size: 0.8em;
-    color: #555;
-    margin-left: 10px;
-    display: block;
-}
-#action-controls-wrapper input[type="hidden"] {
-    display: none;
-}
-
-/* Details section within action controls */
-#action-controls-wrapper #action-details-container { /* If this specific ID is still used */
-    border-top: 1px dashed #ccc; /* Lighter border */
-    padding-top: 10px;
-    margin-top: 10px;
-}
-#action-controls-wrapper .hidden-details { display: none; }
-#action-controls-wrapper .details-section { /* Generic class for sections like buy/sell forms */
-    background-color: #fdfdfd; /* Slightly off-white */
-    border: 1px solid #e0e0e0;
     border-radius: 3px;
-    padding: 10px; /* Consistent padding */
-    margin-top: 8px;
-}
-#action-controls-wrapper .details-section h4 {
-    margin-bottom: 8px; /* Space after heading in details section */
-    font-size: 0.9em;
-    border-bottom: 1px solid #f0f0f0;
-    padding-bottom: 4px;
-}
-#action-controls-wrapper .details-section label {
-    font-size: 0.8em;
-}
-
-
-/* Content styling for Stats, Info, Inventory tabs */
-#stats-content h2, #info-content h2, #inventory-content h2:first-child {
-    font-family: var(--font-primary);
-    font-size: 1.0em;
-    margin-top: 0;
-    margin-bottom: 8px;
-    color: var(--color-dark-ink);
-    text-align: left;
-    padding: 2px 0;
-    border-bottom: 1px solid var(--color-light-border);
-}
-#inventory-content h2 { /* Subsequent h2 in inventory */
-    font-family: var(--font-primary);
-    font-size: 1.0em;
-    margin-top: 10px;
-    margin-bottom: 6px;
-    color: var(--color-dark-ink);
-    border-bottom: 1px solid var(--color-light-border);
-    padding-bottom: 3px;
-}
-
-#stats-content p, #info-content p, #inventory-content p {
-    font-family: var(--font-secondary);
-    font-size: 0.85em; /* Slightly smaller text */
-    margin: 4px 0;
-    color: var(--color-dark-ink);
-    text-align: left;
-    word-wrap: break-word;
-}
-
-#stats-content ul, #info-content ul, #inventory-content ul {
-    padding-left: 10px; /* Indent list */
-    margin-bottom: 8px;
-    list-style-type: disc; /* Use standard bullets */
-}
-
-#stats-content li, #info-content li, #inventory-content li {
-    font-family: var(--font-secondary);
-    font-size: 0.8em; /* Smaller list item text */
-    padding: 1px 0;
-    color: var(--color-dark-ink);
-    text-align: left;
-    word-wrap: break-word;
-    margin-bottom: 2px; /* Space between list items */
-}
-
-#inventory-content p.empty-message { /* For "Inventory is empty" type messages */
-    font-style: italic;
-    color: #777;
-}
-
-/* Remove duplicated/obsolete general rules */
-/* The old .container, .log-action-container etc. are assumed to be removed from HTML or will be styled if used within tabs */
-/* The specific #stats-tab, #inventory-tab, #actions-tab fixed px widths from older versions are removed */
-/* The multiple html, body definitions are consolidated at the top */
-/* The multiple .game-container definitions are consolidated */
-
-/* Modal styles - Transferred and Refined */
-.modal { /* Targets #subLocationActionsModal */
-    display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1050; /* Higher than most elements, adjust if needed (e.g. Bootstrap modals are often 1050) */
-    left: 0;
-    top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if modal content is too long */
-    background-color: rgba(0,0,0,0.5); /* Slightly darker backdrop */
-}
-
-.modal-content { /* Class for the content area of the modal */
-    background-color: #fefefe;
-    /* margin: 15% auto; /* Replaced with transform for better centering */
-    position: fixed; /* Changed to fixed for transform centering */
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    padding: 25px; /* Increased padding */
-    border: 1px solid #888;
-    border-radius: 8px; /* Added border-radius */
-    width: 90%; /* Responsive width */
-    max-width: 450px; /* Slightly increased max-width */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3); /* Enhanced box-shadow */
-}
-
-.modal-content h3 { /* Styling for heading within modal */
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.5em;
-    color: #333;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-}
-
-.close-button { /* For the 'X' button */
-    color: #555; /* Darker for better visibility */
-    position: absolute; /* Position relative to modal-content */
-    top: 10px; /* Adjusted position */
-    right: 15px; /* Adjusted position */
-    font-size: 32px; /* Larger size */
-    font-weight: bold;
-    line-height: 1; /* Ensure proper vertical alignment */
-}
-
-.close-button:hover,
-.close-button:focus {
-    color: #000; /* Black on hover/focus */
-    text-decoration: none;
-    cursor: pointer;
-}
-
-#modal-actions-list {
-    margin-top: 15px; /* Space above the buttons list */
-    display: flex;
-    flex-direction: column;
-    gap: 12px; /* Space between action buttons */
-}
-
-#modal-actions-list ul { /* If an UL is still used, though direct buttons are more likely with flex */
-    list-style-type: none;
-    padding: 0;
-    margin: 0; /* Reset margin if UL is present */
-    display: flex;
-    flex-direction: column;
-    gap: 12px; /* Space between li elements if ul is used */
-}
-
-#modal-actions-list li { /* If an LI is still used */
-    margin-bottom: 0; /* Handled by gap in parent (ul or #modal-actions-list) */
-}
-
-/* Styling for buttons specifically within the modal, using .action-button class */
-/* This ensures consistency if .action-button is used elsewhere but needs specific modal styling */
-.modal #modal-actions-list .action-button {
-    width: 100%;
-    padding: 12px 15px; /* Generous padding */
-    background-color: var(--color-highlight-red);
-    color: var(--color-parchment-bg);
-    font-family: var(--font-primary);
-    border: 2px outset var(--color-light-border);
-    border-radius: 3px;
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    text-shadow: 1px 1px 1px var(--color-dark-ink);
-    cursor: pointer;
-    font-size: 1em; /* Clear font size */
-    text-align: center;
-    transition: background-color 0.2s ease-in-out, border-style 0.2s ease-in-out;
-}
-
-.modal #modal-actions-list .action-button:hover {
-    background-color: #A52A2A; /* Darker red */
-    border-style: inset;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
-}
-
-/* =============== FORMS & INPUTS =============== */
-/* General form, label, input styles */
-input[type="text"],
-input[type="number"],
-input[type="password"] {
-    background-color: var(--color-parchment-bg);
-    color: var(--color-dark-ink);
-    border: 1px solid var(--color-light-border);
-    border-radius: 3px;
-    font-family: var(--font-secondary);
-    padding: 8px 10px;
-    box-sizing: border-box; /* ensure padding doesn't expand element size */
-}
-
-input[type="text"]:focus,
-input[type="number"]:focus,
-input[type="password"]:focus {
-    border-color: var(--color-deep-brown-border);
-    box-shadow: 0 0 3px var(--color-light-border);
-    outline: none; /* Remove default browser outline */
-}
-
-label {
-    color: var(--color-dark-ink);
-    font-family: var(--font-primary);
-    /* font-size: 0.9em; /* Adjust if primary font is too large */
-}
-
-/* Styles for #action-controls-wrapper inputs, .details-section inputs ... */
-/* (This was previously part of the BUTTONS section, now more appropriately here) */
-#action-controls-wrapper form div {
-    margin-bottom: 8px;
-}
-
-#action-controls-wrapper label { /* This is more specific than general label, keep here */
-    display: block;
-    margin-bottom: 4px;
-    /* font-family, color inherited */
-    font-weight: bold;
-    font-size: 0.9em;
-}
-
-/* Combined text and number inputs from #action-controls-wrapper */
-#action-controls-wrapper input[type="text"],
-#action-controls-wrapper input[type="number"] {
-    width: calc(100% - 20px);
-    /* padding, border, background-color, color, font-family, border-radius, box-sizing inherited from general input */
-    margin-bottom: 8px;
-    font-size: 0.85em; /* Specific font size */
-}
-/* Combined focus styles for text and number inputs from #action-controls-wrapper */
-#action-controls-wrapper input[type="text"]:focus,
-#action-controls-wrapper input[type="number"]:focus {
-    /* Properties inherited from general input:focus */
-}
-
-#action-controls-wrapper input[type="hidden"] {
-    display: none;
-}
-
-/* Details section within action controls */
-#action-controls-wrapper #action-details-container {
-    border-top: 1px dashed #ccc;
-    padding-top: 10px;
-    margin-top: 10px;
-}
-/* .hidden-details is a utility class, will be moved to UTILITIES */
-#action-controls-wrapper .details-section {
-    background-color: #fdfdfd;
-    border: 1px solid #e0e0e0;
-    border-radius: 3px;
-    padding: 10px;
-    margin-top: 8px;
-}
-#action-controls-wrapper .details-section h4 { /* This H4 is specific to forms */
-    margin-bottom: 8px;
-    font-size: 0.9em;
-    border-bottom: 1px solid #f0f0f0;
-    padding-bottom: 4px;
-    /* font-family, color inherited from general h4 */
-}
-#action-controls-wrapper .details-section label { /* This is more specific than general #action-controls-wrapper label */
-    font-size: 0.8em;
-}
-
-/* Styling for the sell item dropdown */
-#sell_item_dropdown {
-    width: 100%;
-    padding: 8px 10px;
-    margin-bottom: 10px;
-    border: 1px solid var(--color-light-border);
-    background-color: var(--color-parchment-bg);
-    color: var(--color-dark-ink);
-    font-family: var(--font-secondary);
-    border-radius: 3px;
-    box-sizing: border-box;
-    font-size: 0.85em;
-}
-
-#sell_item_dropdown:focus {
-    border-color: var(--color-deep-brown-border);
-    box-shadow: 0 0 3px var(--color-light-border);
-    outline: none;
-}
-
-/* From "Styles moved from index.html" - specific to forms */
-/* .hidden-details is a utility class, will be moved to UTILITIES */
-.details-section label { /* This is a more general .details-section label, could be merged or kept if distinct from action-controls one */
-    display: block;
-    margin-top: 5px;
-}
-.details-section input { /* This is also more general */
-    width: calc(100% - 10px);
-    padding: 5px;
-    margin-top: 2px;
-    /* Theming will be inherited from global input styles */
-}
-
-#action-controls-wrapper ul {
-    list-style-type: none;
-    padding-left: 0;
-    margin-top: 4px;
-    margin-bottom: 8px;
-}
-
-#action-controls-wrapper ul li {
-    padding: 2px 0;
-    font-size: 0.85em;
-}
-
-#action-controls-wrapper hr {
-    border: 0;
-    height: 1px;
-    background: #eee; /* Lighter hr */
-    margin: 15px 0; /* Reduced margin */
-}
-
-/* Headings within #action-controls-wrapper (structural for this component) */
-#action-controls-wrapper h1,
-#action-controls-wrapper h2,
-#action-controls-wrapper h3,
-#action-controls-wrapper h4 {
-    /* font-family, color inherited from general h* */
-    margin-top: 0;
-    margin-bottom: 8px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--color-light-border);
-}
-#action-controls-wrapper h1 { font-size: 1.2em; }
-#action-controls-wrapper h2 { font-size: 1.1em; }
-#action-controls-wrapper h3 { font-size: 1.0em; }
-#action-controls-wrapper h4 { font-size: 0.9em; border-bottom: none; margin-bottom: 4px;} /* H4 in details section is more specific */
-
-#action-controls-wrapper #current-town-display {
-    font-weight: bold;
-    color: #28a745; /* Consider theming */
-    font-size: 0.9em;
-}
-#action-controls-wrapper .sub-location-description {
-    font-size: 0.8em;
-    color: #555;  /* Consider theming */
-    margin-left: 10px;
-    display: block;
-}
-
-/* General heading styling - ensure they use primary font and dark ink */
-/* Placed in UTILITIES as a base style */
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-primary);
-    color: var(--color-dark-ink);
-}
-
-strong, b {
-    font-weight: bold;
-    color: var(--color-highlight-red);
-}
-em, i {
-    font-family: var(--font-secondary);
-    font-style: italic;
-    color: var(--color-deep-brown-border);
-}
-
-.hidden-details {
-    display: none;
-    margin-top: 10px;
-}
-
-.inline-form {
-    display: inline;
-}
-
-/* =============== SPECIFIC UI COMPONENTS =============== */
-/* ... #map-container svg text ... */
-/* Styling for text within SVG map elements */
-#map-container svg text {
-    font-weight: bold;
-    font-size: 10px; /* Example size, adjust as needed */
-    fill: var(--color-dark-ink);
-}
-
-/* ... Inventory Grid (.inventory-grid, .inventory-item-card) ... */
-.inventory-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Creates responsive columns */
-    gap: 10px; /* Space between items */
-    padding: 10px;
-    max-height: 300px; /* Or whatever height fits your layout */
-    overflow-y: auto; /* Add scroll for many items */
-}
-
-.inventory-item-card {
-    border: 1px solid #ccc; /* Consider var(--color-light-border) */
-    border-radius: 5px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    background-color: #f9f9f9; /* Consider var(--color-parchment-bg) or var(--color-aged-paper) for theme */
-}
-
-.item-icon-placeholder {
-    width: 50px; /* Adjust as needed */
-    height: 50px; /* Adjust as needed */
-    background-color: #e0e0e0; /* Placeholder color */
-    border: 1px dashed #aaa;
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8em;
-    color: #777;
-}
-
-.item-name {
-    font-weight: bold;
-    margin-bottom: 5px;
-    word-wrap: break-word; /* Ensure long names don't break layout */
-}
-
-/* Shop Item Button is under BUTTONS section */
-
-/* ... Journal Display (#journal-entries-list, .journal-*) ... */
-#log-panel-content .log-box {
-    height: 300px; /* Or match other panel heights like 40vh */
-    overflow-y: auto;
-    padding: 10px;
-    background-color: var(--color-aged-paper);
-    border: 1px solid var(--color-light-border); /* Ensure consistent border if not already applied */
-}
-
-#journal-entries-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-#journal-entries-list li {
-    background-color: var(--color-parchment-bg);
-    border: 1px solid var(--color-light-border);
-    border-radius: 4px;
-    padding: 10px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.journal-timestamp {
-    display: block;
-    font-size: 0.75em;
-    color: #777; /* Consider theming */
-    margin-bottom: 5px;
-    text-align: right;
-}
-
-.journal-action-type {
-    display: block; /* Ensures it takes its own line if needed and respects margin-bottom */
-    font-weight: bold;
-    color: var(--color-highlight-red);
-    margin-bottom: 3px;
-}
-
-.journal-summary {
-    font-size: 0.9em;
-    color: var(--color-dark-ink);
-    margin-top: 0; /* Reset default p margin */
-    margin-bottom: 5px;
-}
-
-.journal-details {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    padding-left: 15px;
-    border-left: 2px solid var(--color-light-border);
-    font-size: 0.8em;
-    background-color: rgba(0,0,0,0.02);
-    padding: 8px; /* Increased padding slightly */
-    border-radius: 3px;
-}
-
-.journal-details strong { /* Targeting the "Details:" text */
-    color: var(--color-dark-ink); /* Keep it consistent, not necessarily red */
-    font-weight: bold;
-}
-
-
-.journal-details ul {
-    list-style-type: disc;
-    margin: 5px 0 5px 20px; /* Indent bullets */
-    padding-left: 0; /* Reset browser default if any */
-}
-
-.journal-details li {
-    margin-bottom: 2px;
-    color: var(--color-dark-ink); /* Ensure text color contrasts with subtle background */
-}
-
-.journal-outcome {
-    font-size: 0.85em;
-    color: #333; /* Using a fairly dark grey for now */
-    margin-top: 8px; /* Increased margin-top for better separation */
-    font-style: italic;
-    padding: 8px; /* Increased padding */
-    background-color: rgba(0,0,0,0.02);
-    border-radius: 3px;
-    border-top: 1px dashed var(--color-light-border); /* Add a subtle separator */
-}
-
-.journal-outcome strong { /* Targeting the "Outcome:" text */
-    color: var(--color-dark-ink); /* Keep it consistent */
-    font-weight: bold;
-}
-
-/* ... Toast Notifications (#toast-container, .toast, .toast-*) ... */
-#toast-container {
-    position: fixed;
-    bottom: 20px; /* Position above the action bar or adjust as needed */
-    right: 20px;
-    z-index: 2000; /* High z-index to be on top of most elements */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end; /* Toasts stack from bottom-right upwards if new ones added on top */
-}
-
-.toast {
-    background-color: var(--color-aged-paper); /* Themed background */
-    color: var(--color-dark-ink);
-    padding: 12px 18px;
-    margin-top: 10px;
-    border: 1px solid var(--color-deep-brown-border);
-    border-left-width: 5px; /* Thicker left border for emphasis, color based on type */
-    border-radius: 5px; /* Slightly rounded corners */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    transform: translateX(100%); /* Start off-screen to the right */
-    transition: opacity 0.5s ease, transform 0.5s ease;
-    min-width: 250px; /* Minimum width */
-    max-width: 350px; /* Maximum width */
-    font-family: var(--font-secondary);
-    font-size: 0.9em;
-    display: flex;
-    align-items: center;
-}
-
-.toast.show {
-    opacity: 1;
-    transform: translateX(0); /* Slide in */
-}
-
-.toast-icon {
-    margin-right: 10px;
-    font-size: 1.2em; /* Make icon slightly larger */
-}
-
-.toast-message {
-    flex-grow: 1; /* Message takes remaining space */
-    line-height: 1.4;
-}
-
-/* Type-specific styling */
-.toast-success {
-    border-left-color: #28a745; /* Green for success */
-}
-.toast-success .toast-icon {
-    color: #28a745;
-}
-
-.toast-error {
-    border-left-color: var(--color-highlight-red); /* Themed red for error */
-}
-.toast-error .toast-icon {
-    color: var(--color-highlight-red);
-}
-
-.toast-warning {
-    border-left-color: #ffc107; /* Yellow/Orange for warning */
-}
-.toast-warning .toast-icon {
-    color: #ffc107;
-}
-
-.toast-info {
-    border-left-color: #17a2b8; /* Blue for info */
-}
-.toast-info .toast-icon {
-    color: #17a2b8;
-}
-
-/* ... Flash Messages (.flash-*, .flashes-container) ... */
-#flashes-container {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    width: 80%;
-    max-width: 600px;
-    text-align: center;
-}
-.flash-success {
-    color: green;
-    background-color: lightgreen;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid green;
-    border-radius: 4px;
-}
-.flash-error {
-    color: var(--color-highlight-red);
-    background-color: #ffdddd; /* Light red */
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid var(--color-highlight-red);
-    border-radius: 4px;
-}
-
-/* ... Other specific components like .status-deceased, .google-auth-container-modifiers ... */
-.status-deceased {
-    color: var(--color-highlight-red);
-    font-weight: bold;
-}
-
-.google-auth-container-modifiers {
-    margin-top: 20px;
-    text-align: center;
-}
-
-#skill-roll-result-display-container {
-    text-align: center;
-    font-weight: bold;
-    color: var(--color-dark-ink);
-}
-
-#shop-management-details {
-    padding: 10px;
-}
-
-
-/* =============== SCROLLBARS =============== */
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-::-webkit-scrollbar-track {
-    background: var(--color-parchment-bg);
-    border-left: 1px solid var(--color-light-border);
-    border-top: 1px solid var(--color-light-border);
-}
-::-webkit-scrollbar-thumb {
-    background-color: var(--color-light-border);
-    border-radius: 2px;
-    border: 1px solid var(--color-deep-brown-border);
-}
-::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-deep-brown-border);
-}
-::-webkit-scrollbar-corner {
-    background: var(--color-parchment-bg);
-}
-
-body, .tab-content, #action-controls-wrapper, #game-output {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-light-border) var(--color-parchment-bg);
-}
-
-
-/* =============== UTILITIES / MISC =============== */
-/* General heading styling - ensure they use primary font and dark ink */
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-primary);
-    color: var(--color-dark-ink);
-}
-
-/* Styles moved from index.html */
-.hidden-details {
-    display: none;
-    margin-top: 10px;
-}
-.details-section label {
-    display: block;
-    margin-top: 5px;
-}
-.details-section input {
-    width: calc(100% - 10px);
-    padding: 5px;
-    margin-top: 2px;
-    /* Theming will be inherited from global input styles */
-}
-/* Styles for character creation, login, selection */
-.character-creation-container, .login-container, .character-selection-container {
-    width: 50%;
-    margin: 20px auto;
-    padding: 20px;
-    border: 1px solid var(--color-deep-brown-border);
-    border-radius: 8px;
-    background-color: var(--color-aged-paper);
-    color: var(--color-dark-ink);
-}
-.login-container {
-    width: 350px;
-}
-.character-creation-container h2, .login-container h2, .character-selection-container h2 {
-    text-align: center;
-    margin-bottom: 20px;
-    /* font-family and color inherited from general h2 styling */
-}
-.character-creation-container div, .login-container div {
-    margin-bottom: 10px;
-}
-.character-creation-container label, .login-container label {
-    display: inline-block;
-    width: auto;
-    margin-right: 10px;
-    /* font-family and color inherited from general label styling */
-}
-/* Inputs in these containers will inherit from global input[type="text"] etc. styles */
-
-/* Buttons in Character Creation, Login, Character Selection, and Popups */
-.character-creation-container button,
-.login-container button,
-.character-selection-container li a, /* Styled as a button */
-.character-selection-container .create-new-link {
-    padding: 8px 15px; /* Adjusted padding */
-    font-family: var(--font-primary);
-    color: var(--color-parchment-bg);
-    background-color: var(--color-highlight-red); /* Primary action color */
-    border: 2px outset var(--color-light-border);
-    border-radius: 3px;
-    cursor: pointer;
-    text-decoration: none; /* For anchor tags styled as buttons */
-    display: inline-block;
-    line-height: normal;
-    text-shadow: 1px 1px 1px var(--color-dark-ink);
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    margin: 5px;
-}
-
-/* Hover/Focus States for the above buttons */
-.character-creation-container button:hover,
-.login-container button:hover,
-.character-selection-container li a:hover,
-.character-selection-container .create-new-link:hover {
-    background-color: #A52A2A; /* Darker red */
-    border-style: inset;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
-}
-
-/* Google Login Button - Specific styling */
-.google-login-button {
-    padding: 8px 15px; /* Adjusted padding */
-    font-family: var(--font-secondary); /* Non-themed font */
-    color: white !important; /* Ensure white text */
-    background-color: #4285F4 !important; /* Google's blue */
-    border: 2px outset var(--color-light-border);
-    border-radius: 3px;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-    line-height: normal;
-    text-shadow: 1px 1px 1px #333; /* Subtle shadow for depth */
-    box-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    margin: 5px;
-}
-.google-login-button:hover {
-    background-color: #357ae8 !important; /* Google's hover blue */
-    border-style: inset;
-    box-shadow: 1px 1px 3px rgba(0,0,0,0.6) inset;
-}
-.google-login-button img {
-    width: 18px;
-    height: 18px;
-    vertical-align: middle;
-    margin-right: 10px;
-}
-
-.character-creation-container button:disabled {
-    background-color: var(--color-light-border); /* Muted */
-    color: var(--color-aged-paper);
-    border-style: solid; /* Not outset/inset */
-    text-shadow: none;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-.login-container p { /* For "Don't have an account?" text */
-    margin-top: 15px;
-    font-family: var(--font-secondary);
-}
-.character-selection-container ul {
-    list-style-type: none;
-    padding: 0;
-}
-.character-selection-container li {
-    background-color: var(--color-parchment-bg);
-    border: 1px solid var(--color-light-border);
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.graveyard-container {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid var(--color-light-border);
-}
-.graveyard-container h3 {
-    margin-bottom: 15px;
-    /* font-family and color inherited from general h3 styling */
-}
-.graveyard-container ul {
-    list-style-type: none;
-    padding: 0;
-}
-.graveyard-container li {
-    background-color: var(--color-aged-paper);
-    color: var(--color-dark-ink);
-    padding: 8px 15px;
-    margin-bottom: 8px;
-    border-radius: 4px;
-    border: 1px solid var(--color-light-border);
-}
-.character-creation-container #stats_container div {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 5px 0;
-}
-.character-creation-container #stats_container span {
-    flex-grow: 1;
-    font-family: var(--font-secondary);
-}
-
-/* Ensure flash messages are themed if they exist */
-.flash-success {
-    color: green;
-    background-color: lightgreen;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid green;
-    border-radius: 4px;
-}
-.flash-error {
-    color: var(--color-highlight-red);
-    background-color: #ffdddd; /* Light red */
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid var(--color-highlight-red);
-    border-radius: 4px;
-}
-/* Add other flash categories as needed */
-/* Final check on modal content theming */
-.modal-content {
-    background-color: var(--color-aged-paper);
     border: 2px solid var(--color-deep-brown-border);
-    color: var(--color-dark-ink);
 }
-.modal-content h3 {
-    font-family: var(--font-primary);
-    color: var(--color-dark-ink);
-    border-bottom-color: var(--color-light-border);
-}
-.modal .close-button {
-    color: var(--color-dark-ink);
-}
-.modal .close-button:hover {
-    color: var(--color-highlight-red);
-}
+::-webkit-scrollbar-thumb:hover { background-color: var(--color-deep-brown-border); }
+::-webkit-scrollbar-corner { background: var(--color-parchment-bg); }
 
-/* Scrollbar Styling - WebKit */
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-::-webkit-scrollbar-track {
-    background: var(--color-parchment-bg);
-    border-left: 1px solid var(--color-light-border); /* For vertical scrollbars */
-    border-top: 1px solid var(--color-light-border); /* For horizontal scrollbars */
-}
-::-webkit-scrollbar-thumb {
-    background-color: var(--color-light-border);
-    border-radius: 2px;
-    border: 1px solid var(--color-deep-brown-border);
-}
-::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-deep-brown-border);
-}
-::-webkit-scrollbar-corner {
-    background: var(--color-parchment-bg);
-}
-
-/* Scrollbar Styling - Firefox */
-/* Apply to body and specific scrollable elements as needed */
-body, .tab-content, #action-controls-wrapper, #game-output { /* Add other key scrollable elements if missed */
+body, .full-panel-content, #bottom-panel-content-area, #left-info-column, #right-inventory-column, #log-panel-content .log-box {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-light-border) var(--color-parchment-bg);
+    scrollbar-color: var(--color-deep-brown-border) var(--color-parchment-bg);
 }
 
-strong, b {
-    font-weight: bold; /* Ensure it's bold */
-    color: var(--color-highlight-red); /* Optional: make bold text stand out more */
-}
-em, i {
-    font-family: var(--font-secondary); /* Keep secondary for readability in italics */
-    font-style: italic;
-    color: var(--color-deep-brown-border); /* Slightly richer for emphasis */
-}
+/* =============== UTILITIES / MISC =============== */
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-primary); color: var(--color-dark-ink); }
+strong, b { font-weight: bold; color: var(--color-highlight-red); }
+em, i { font-family: var(--font-secondary); font-style: italic; color: var(--color-deep-brown-border); }
+.hidden-details { display: none !important; } /* Ensure this utility class works */
+.inline-form { display: inline; }
 
-/* Journal Display Styles */
-#log-panel-content .log-box {
-    height: 300px; /* Or match other panel heights like 40vh */
-    overflow-y: auto;
-    padding: 10px;
-    background-color: var(--color-aged-paper);
-    border: 1px solid var(--color-light-border); /* Ensure consistent border if not already applied */
-}
+/* Cleanup of old/redundant styles from previous structure */
+/* Removed: #left-tabs-container, #stats-tab, #info-tab, #shop-mgt-tab, #inventory-tab */
+/* Removed: #actions-tab (old bottom bar) and its direct content if not covered by new structure */
+/* Removed: Old hover styles for side panels (#stats-content, #info-content, #inventory-content) */
+/* Removed: #current-actions-list (replaced by #current-sub-location-actions-list) */
+/* Removed: #action-details-container (replaced by #dynamic-action-forms-container) */
+/* Removed: .action-box-section (replaced by .action-section) */
+/* Removed: Old specific #action-controls-wrapper label, input, h*, ul, li, hr styles if now covered by general or .action-section / .dynamic-form styles */
 
-#journal-entries-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-#journal-entries-list li {
-    background-color: var(--color-parchment-bg);
-    border: 1px solid var(--color-light-border);
-    border-radius: 4px;
-    padding: 10px;
+/* Ensure headings within new action sections are consistent */
+.action-section h3 { /* General headings for action groups like Travel, Current Location */
+    font-size: 1.2em;
     margin-bottom: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--color-light-border);
+    color: var(--color-deep-brown-border);
 }
 
-.journal-timestamp {
-    display: block;
-    font-size: 0.75em;
-    color: #777;
-    margin-bottom: 5px;
-    text-align: right;
+/* Ensure input fields within #action-controls-wrapper (now in .dynamic-form or general .action-section) are full width */
+#action-controls-wrapper input[type="text"],
+#action-controls-wrapper input[type="number"],
+#action-controls-wrapper select {
+    width: 100%;
 }
 
-.journal-action-type {
-    display: block; /* Ensures it takes its own line if needed and respects margin-bottom */
-    font-weight: bold;
-    color: var(--color-highlight-red);
-    margin-bottom: 3px;
-}
-
-.journal-summary {
-    font-size: 0.9em;
+#action-controls-wrapper #current-town-display-actions { /* For the span in actions panel */
+    font-weight: normal; /* Less emphasis than the main heading */
     color: var(--color-dark-ink);
-    margin-top: 0; /* Reset default p margin */
-    margin-bottom: 5px;
 }
-
-.journal-details {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    padding-left: 15px;
-    border-left: 2px solid var(--color-light-border);
-    font-size: 0.8em;
-    background-color: rgba(0,0,0,0.02);
-    padding: 8px; /* Increased padding slightly */
-    border-radius: 3px;
+#current-sub-location-name-display { /* For the h5 displaying selected sub-location */
+    color: var(--color-deep-brown-border);
+    margin-bottom: 10px;
+    font-size: 1.05em;
 }
-
-.journal-details strong { /* Targeting the "Details:" text */
-    color: var(--color-dark-ink); /* Keep it consistent, not necessarily red */
-    font-weight: bold;
-}
-
-
-.journal-details ul {
-    list-style-type: disc;
-    margin: 5px 0 5px 20px; /* Indent bullets */
-    padding-left: 0; /* Reset browser default if any */
-}
-
-.journal-details li {
-    margin-bottom: 2px;
-    color: var(--color-dark-ink); /* Ensure text color contrasts with subtle background */
-}
-
-.journal-outcome {
-    font-size: 0.85em;
-    color: #333; /* Using a fairly dark grey for now */
-    margin-top: 8px; /* Increased margin-top for better separation */
-    font-style: italic;
-    padding: 8px; /* Increased padding */
-    background-color: rgba(0,0,0,0.02);
-    border-radius: 3px;
-    border-top: 1px dashed var(--color-light-border); /* Add a subtle separator */
-}
-
-.journal-outcome strong { /* Targeting the "Outcome:" text */
-    color: var(--color-dark-ink); /* Keep it consistent */
-    font-weight: bold;
-}
-
-/* Inventory Grid styles */
-.inventory-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Creates responsive columns */
-    gap: 10px; /* Space between items */
-    padding: 10px;
-    max-height: 300px; /* Or whatever height fits your layout */
-    overflow-y: auto; /* Add scroll for many items */
-}
-
-.inventory-item-card {
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    background-color: #f9f9f9;
-}
-
-.item-icon-placeholder {
-    width: 50px; /* Adjust as needed */
-    height: 50px; /* Adjust as needed */
-    background-color: #e0e0e0; /* Placeholder color */
-    border: 1px dashed #aaa;
-    margin-bottom: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8em;
-    color: #777;
-}
-/* Add this to the placeholder for text if you want */
-/* .item-icon-placeholder::after { content: "Icon"; } */
-
-.item-name {
-    font-weight: bold;
-    margin-bottom: 5px;
-    word-wrap: break-word; /* Ensure long names don't break layout */
-}
-
-/* Add styles for quantity and description if you add those elements later */
-/*
-.item-quantity {
-    font-size: 0.9em;
-    color: #555;
-}
-
-.item-description {
-    font-size: 0.8em;
-    color: #777;
-}
-*/
-
-/* Shop Item Button */
-.shop-item-card .buy-item-button {
-    margin-top: 8px;
-    padding: 5px 10px;
-    background-color: var(--color-highlight-red); /* Use existing theme variable */
-    color: var(--color-parchment-bg);
-    border: 1px solid var(--color-deep-brown-border);
-    border-radius: 3px;
-    cursor: pointer;
-    font-family: var(--font-primary);
-    font-size: 0.9em;
-}
-
-.shop-item-card .buy-item-button:hover {
-    background-color: #A52A2A; /* Darker red - consistent with other buttons */
-}
-
-/* Toast Notification System */
-#toast-container {
-    position: fixed;
-    bottom: 20px; /* Position above the action bar or adjust as needed */
-    right: 20px;
-    z-index: 2000; /* High z-index to be on top of most elements */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end; /* Toasts stack from bottom-right upwards if new ones added on top */
-}
-
-.toast {
-    background-color: var(--color-aged-paper); /* Themed background */
-    color: var(--color-dark-ink);
-    padding: 12px 18px;
+#shop-management-details button { /* Ensure shop management buttons use action-button style */
     margin-top: 10px;
-    border: 1px solid var(--color-deep-brown-border);
-    border-left-width: 5px; /* Thicker left border for emphasis, color based on type */
-    border-radius: 5px; /* Slightly rounded corners */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    opacity: 0;
-    transform: translateX(100%); /* Start off-screen to the right */
-    transition: opacity 0.5s ease, transform 0.5s ease;
-    min-width: 250px; /* Minimum width */
-    max-width: 350px; /* Maximum width */
-    font-family: var(--font-secondary);
-    font-size: 0.9em;
-    display: flex;
-    align-items: center;
 }
-
-.toast.show {
-    opacity: 1;
-    transform: translateX(0); /* Slide in */
+#shop-management-details select {
+    margin-bottom: 0; /* Remove bottom margin if it's inline with a button */
 }
-
-.toast-icon {
-    margin-right: 10px;
-    font-size: 1.2em; /* Make icon slightly larger */
-}
-
-.toast-message {
-    flex-grow: 1; /* Message takes remaining space */
-    line-height: 1.4;
-}
-
-/* Type-specific styling */
-.toast-success {
-    border-left-color: #28a745; /* Green for success */
-    /* background-color: #e8f5e9; /* Lighter green background */
-}
-.toast-success .toast-icon {
-    color: #28a745;
-}
-
-.toast-error {
-    border-left-color: var(--color-highlight-red); /* Themed red for error */
-    /* background-color: #ffebee; /* Lighter red background */
-}
-.toast-error .toast-icon {
-    color: var(--color-highlight-red);
-}
-
-.toast-warning {
-    border-left-color: #ffc107; /* Yellow/Orange for warning */
-    /* background-color: #fff8e1; /* Lighter yellow background */
-}
-.toast-warning .toast-icon {
-    color: #ffc107;
-}
-
-.toast-info {
-    border-left-color: #17a2b8; /* Blue for info */
-    /* background-color: #e0f7fa; /* Lighter blue background */
-}
-.toast-info .toast-icon {
-    color: #17a2b8;
-}
-
-/* (The #action-controls-wrapper ul, li, hr, h1-h4, #current-town-display, .sub-location-description rules will be moved to UTILITIES or FORMS & INPUTS) */
-/* (The #action-controls-wrapper #action-details-container and its children rules will be moved to FORMS & INPUTS) */
-/* (General input, label, h1-h6, strong, em rules will be moved to FORMS & INPUTS or UTILITIES) */
-/* (Styles moved from index.html will be moved to their respective new categories) */
-/* (Scrollbar rules will be moved to SCROLLBARS) */
-/* (Journal, Inventory, Toast, Flash, and other specific component styles will be moved to SPECIFIC UI COMPONENTS) */

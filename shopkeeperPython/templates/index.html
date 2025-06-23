@@ -201,14 +201,20 @@
     <div class="game-container">
         <div id="top-right-menu-button" aria-haspopup="true" aria-expanded="false" aria-controls="settings-popup">Menu</div>
 
-        <div id="left-tabs-container">
-            <div id="stats-tab">
-                <div id="stats-content" class="tab-content">
-                    <div class="tab-title-bar">Stats</div>
-                    <h2>Player Status</h2>
+        <!-- Left Info Column -->
+        <div id="left-info-column" class="info-column">
+            <div class="mini-panel" id="mini-stats-panel" tabindex="0" role="button" aria-controls="full-stats-panel-container" aria-expanded="false">
+                <h4>Stats</h4>
+                <p>HP: <span class="mini-hp-value">{{ player_hp }}/{{ player_max_hp }}</span></p>
+                <p>Gold: <span class="mini-gold-value">{{ player_gold }} G</span></p>
+            </div>
+            <div class="full-panel-container" id="full-stats-panel-container" role="dialog" aria-labelledby="stats-panel-title" style="display: none;">
+                <div class="full-panel-content">
+                    <button class="close-full-panel" aria-label="Close Stats Panel">&times;</button>
+                    <h2 id="stats-panel-title">Player Status</h2>
                     <p><strong>Name:</strong> {{ player_name }}</p>
-                    <p><strong>HP:</strong> {{ player_hp }} / {{ player_max_hp }}</p>
-                    <p><strong>Gold:</strong> {{ player_gold }} G</p>
+                    <p><strong>HP:</strong> <span class="full-hp-value">{{ player_hp }}</span> / <span class="full-max-hp-value">{{ player_max_hp }}</span></p>
+                    <p><strong>Gold:</strong> <span class="full-gold-value">{{ player_gold }} G</span></p>
                     <p><strong>Stats:</strong></p>
                     <ul>
                         {% for stat, value in player_stats.items() %}
@@ -217,95 +223,112 @@
                     </ul>
                 </div>
             </div>
-            <div id="info-tab">
-                <div id="info-content" class="tab-content">
-                    <div class="tab-title-bar">Info</div>
-                    <h2>Game Info</h2>
-                    <p><strong>Current Time:</strong> {{ current_time }}</p>
-                    <p><strong>Current Town:</strong> {{ current_town_name }}</p>
+
+            <div class="mini-panel" id="mini-info-panel" tabindex="0" role="button" aria-controls="full-info-panel-container" aria-expanded="false">
+                <h4>Info</h4>
+                <p>Time: <span class="mini-time-value">{{ current_time }}</span></p>
+                <p>Town: <span class="mini-town-value">{{ current_town_name }}</span></p>
+            </div>
+            <div class="full-panel-container" id="full-info-panel-container" role="dialog" aria-labelledby="info-panel-title" style="display: none;">
+                <div class="full-panel-content">
+                    <button class="close-full-panel" aria-label="Close Info Panel">&times;</button>
+                    <h2 id="info-panel-title">Game Info</h2>
+                    <p><strong>Current Time:</strong> <span class="full-time-value">{{ current_time }}</span></p>
+                    <p><strong>Current Town:</strong> <span class="full-town-value">{{ current_town_name }}</span></p>
                 </div>
             </div>
-            <div id="shop-mgt-tab" class="left-tab"> <!-- Use existing class for left panel tabs -->
-                <div id="shop-mgt-content" class="tab-content">
-                    <div class="tab-title-bar">Shop Management</div>
+
+            <div class="mini-panel" id="mini-shop-mgt-panel" tabindex="0" role="button" aria-controls="full-shop-mgt-panel-container" aria-expanded="false">
+                <h4>Shop Mgt</h4>
+                <p>Level: <span class="mini-shop-level-value">{{ shop_data_json.level if shop_data_json else 'N/A' }}</span></p>
+            </div>
+            <div class="full-panel-container" id="full-shop-mgt-panel-container" role="dialog" aria-labelledby="shop-mgt-panel-title" style="display: none;">
+                <div class="full-panel-content">
+                    <button class="close-full-panel" aria-label="Close Shop Management Panel">&times;</button>
+                    <h2 id="shop-mgt-panel-title">Shop Management</h2>
                     <div id="shop-management-details">
                         <!-- Content will be populated by JS -->
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Center Map Area -->
         <div id="map-container">
             <svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
               <rect width="100%" height="100%" fill="#cccccc"></rect>
               <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="24px" fill="#333333">Overworld Map</text>
             </svg>
         </div>
-        <div id="inventory-tab">
-            <div id="inventory-content" class="tab-content">
-                <div class="tab-title-bar">Inventory</div>
-                <h2>Shop Inventory</h2>
-                {% if shop_inventory and shop_inventory[0] != "Empty" %}
-                <div class="inventory-grid shop-inventory-grid"> {# Added extra class for potential shop-specific styling #}
-                    {% for item in shop_inventory %} {# Assume item might be an object or dict in the future #}
-                    <div class="inventory-item-card shop-item-card"> {# Added extra class #}
-                        {# Placeholder for item icon #}
-                        <div class="item-icon-placeholder"></div>
-                        <div class="item-name">
-                            {{ item.name if item is mapping and item.name else item }} {# Handle if item is just a name string #}
-                        </div>
-                        {# Placeholder for item price (e.g., <div class="item-price">{{ item.price }} G</div>) #}
-                        {# Placeholder for item category (e.g., <div class="item-category">{{ item.category }}</div>) #}
-                        <button type="button" class="buy-item-button" data-item-name="{{ item.name if item is mapping and item.name else item }}">Buy</button>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                <p>Shop inventory is currently empty.</p> {# Slightly more descriptive message #}
-                {% endif %}
 
-                <h2>Player Inventory</h2>
-                {% if player_inventory and player_inventory[0] != "Empty" %}
-                <div class="inventory-grid">
-                    {% for item in player_inventory %} {# Assume item is an object or dict #}
-                    <div class="inventory-item-card">
-                        {# Placeholder for item icon (e.g., <img src="{{ item.icon_url_or_placeholder }}" alt="{{ item.name }}">) #}
-                        <div class="item-icon-placeholder"></div>
-                        <div class="item-name">
-                            {{ item.name if item is mapping and item.name else item }} {# Handle if item is just a name string for now #}
+        <!-- Right Inventory Column -->
+        <div id="right-inventory-column" class="info-column">
+            <div class="mini-panel" id="mini-inventory-panel" tabindex="0" role="button" aria-controls="full-inventory-panel-container" aria-expanded="false">
+                <h4>Inventory</h4>
+                <p>Player: <span class="mini-player-item-count">{{ player_inventory | length if player_inventory and player_inventory[0] != "Empty" else 0 }}</span> items</p>
+                <p>Shop: <span class="mini-shop-item-count">{{ shop_inventory | length if shop_inventory and shop_inventory[0] != "Empty" else 0 }}</span> items</p>
+            </div>
+            <div class="full-panel-container" id="full-inventory-panel-container" role="dialog" aria-labelledby="inventory-panel-title" style="display: none;">
+                <div class="full-panel-content">
+                    <button class="close-full-panel" aria-label="Close Inventory Panel">&times;</button>
+                    <h2 id="inventory-panel-title">Inventory</h2>
+                    <h3>Shop Stock</h3>
+                    {% if shop_inventory and shop_inventory[0] != "Empty" %}
+                    <div class="inventory-grid shop-inventory-grid">
+                        {% for item in shop_inventory %}
+                        <div class="inventory-item-card shop-item-card">
+                            <div class="item-icon-placeholder"></div>
+                            <div class="item-name">
+                                {{ item.name if item is mapping and item.name else item }}
+                            </div>
+                            <button type="button" class="buy-item-button action-button" data-item-name="{{ item.name if item is mapping and item.name else item }}">Buy</button>
                         </div>
-                        {# Placeholder for item quantity (e.g., <div class="item-quantity">Qty: {{ item.quantity }}</div>) #}
-                        {# Placeholder for item description/stats (e.g., <div class="item-description">{{ item.description }}</div>) #}
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                    {% else %}
+                    <p>Shop inventory is currently empty.</p>
+                    {% endif %}
+
+                    <h3>Player Items</h3>
+                    {% if player_inventory and player_inventory[0] != "Empty" %}
+                    <div class="inventory-grid player-inventory-grid">
+                        {% for item in player_inventory %}
+                        <div class="inventory-item-card">
+                            <div class="item-icon-placeholder"></div>
+                            <div class="item-name">
+                                {{ item.name if item is mapping and item.name else item }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p>Player inventory is empty.</p>
+                    {% endif %}
                 </div>
-                {% else %}
-                <p>Player inventory is empty.</p> {# Slightly more descriptive message #}
-                {% endif %}
             </div>
         </div>
-        <div id="actions-tab">
-            <div class="actions-log-tab-buttons" role="tablist">
-                <div id="actions-tab-button" role="tab" aria-controls="actions-panel-content" aria-selected="true">Actions</div>
-                <div id="log-tab-button" role="tab" aria-controls="log-panel-content" aria-selected="false">Log</div>
-            </div>
-            <div id="actions-content" class="tab-content">
 
-                <div id="actions-panel-content" role="tabpanel" aria-labelledby="actions-tab-button"> <!-- Panel for Actions -->
+        <!-- Bottom Actions/Log Bar -->
+        <div id="bottom-bar">
+            <div class="actions-log-tab-buttons" role="tablist">
+                <button id="actions-tab-button" role="tab" aria-controls="actions-panel-content" aria-selected="true" class="tab-button active-tab-button">Actions</button>
+                <button id="log-tab-button" role="tab" aria-controls="log-panel-content" aria-selected="false" class="tab-button">Log</button>
+            </div>
+            <div id="bottom-panel-content-area">
+                <div id="actions-panel-content" class="panel-content tab-content panel-visible" role="tabpanel" aria-labelledby="actions-tab-button">
                     <div id="action-controls-wrapper">
-                        <!-- All original form elements and action sections MUST be HERE -->
                         <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
                             <input type="hidden" id="action_name_hidden" name="action_name" value="">
                             <input type="hidden" id="action_details" name="action_details" value="{}">
-                            <!-- ... other hidden inputs if any ... -->
 
-                            <div id="world-map-container" class="action-box-section">
-                                <h2>World Map</h2>
+                            <div id="travel-actions-container" class="action-section">
+                                <h4>Travel</h4>
                                 <div id="map-destinations">
                                     {% if available_towns %}
-                                        <p>Choose a destination to travel to:</p>
-                                        <ul>
+                                        <p>Choose a destination:</p>
+                                        <ul class="button-list">
                                             {% for town_name_key in available_towns %}
-                                            <li><button class="map-destination-button" data-town-name="{{ town_name_key }}">{{ town_name_key }}</button></li>
+                                            <li><button type="button" class="map-destination-button action-button" data-town-name="{{ town_name_key }}">{{ town_name_key }}</button></li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}
@@ -314,85 +337,83 @@
                                 </div>
                             </div>
 
-
-                            <div id="current-location-container" class="action-box-section">
-                                <h2>Current Location: <span id="current-town-display">{{ current_town_name }}</span></h2>
-                                <div id="sub-locations-list">
-                                    <!-- Sub-locations of the current town will be populated here by JavaScript -->
+                            <div id="location-interactions-container" class="action-section">
+                                <h4>Current Location: <span id="current-town-display-actions">{{ current_town_name }}</span></h4>
+                                <div id="sub-locations-list" class="button-list">
+                                    <!-- JS populates sub-location buttons -->
                                 </div>
-                                <div id="current-actions-list">
-                                    <!-- Actions for the selected sub-location will be populated here by JavaScript -->
+                                <div id="current-sub-location-actions-container">
+                                    <h5 id="current-sub-location-name-display" style="display:none;"></h5>
+                                    <div id="current-sub-location-actions-list" class="button-list">
+                                        <!-- JS populates actions for a selected sub-location -->
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Container for Action Detail Forms -->
-                            <div id="action-details-container" class="action-box-section"> <!-- Initially hidden, spans full width if flex items wrap -->
-                                <h3>Action Details</h3>
+                            <div id="general-actions-container" class="action-section">
+                                <h4>General</h4>
+                                <ul class="button-list">
+                                    <li><button type="button" id="gatherResourcesButton" class="action-button">Gather Resources</button></li>
+                                </ul>
+                            </div>
 
-                                <div id="div_craft_details" class="hidden-details details-section">
-                                    <h4>Craft Item</h4>
+                            <!-- Dynamic Action Forms Area (sibling to other action sections) -->
+                            <div id="dynamic-action-forms-container" class="action-section" style="display: none;">
+                                <!-- JS will inject forms like craft, buy, sell, NPC interactions here -->
+                                <div id="div_craft_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Craft Item</h4><button type="button" class="close-dynamic-form" aria-label="Close Craft Form">&times;</button></div>
                                     <label for="craft_item_name">Item Name to Craft:</label>
                                     <input type="text" id="craft_item_name" name="craft_item_name_detail_input" placeholder="e.g., Minor Healing Potion">
-                                    <button type="button" class="submit-details-button" data-action="craft">Craft It!</button>
+                                    <button type="button" class="submit-details-button action-button" data-action="craft">Craft It!</button>
                                 </div>
 
-                                <div id="div_buy_details" class="hidden-details details-section">
-                                    <h4>Buy from Your Shop</h4>
+                                <div id="div_buy_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Buy from Your Shop</h4><button type="button" class="close-dynamic-form" aria-label="Close Buy Form">&times;</button></div>
                                     <label for="buy_item_name">Item Name to Buy:</label>
                                     <input type="text" id="buy_item_name" name="buy_item_name_detail_input" placeholder="e.g., Simple Dagger">
                                     <label for="buy_quantity">Quantity:</label>
                                     <input type="number" id="buy_quantity" name="buy_quantity_detail_input" value="1" min="1">
-                                    <button type="button" class="submit-details-button" data-action="buy_from_own_shop">Buy Item(s)</button>
+                                    <button type="button" class="submit-details-button action-button" data-action="buy_from_own_shop">Buy Item(s)</button>
                                 </div>
 
-                                <div id="div_sell_details" class="hidden-details details-section">
-                                    <h4>Sell to Your Shop</h4>
-
+                                <div id="div_sell_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Sell to Your Shop</h4><button type="button" class="close-dynamic-form" aria-label="Close Sell Form">&times;</button></div>
                                     <label for="sell_item_dropdown">Select Item from Inventory:</label>
                                     <select id="sell_item_dropdown" name="sell_item_dropdown_select"></select>
-
                                     <label for="sell_item_name">Or Type Item Name to Sell:</label>
                                     <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale (or select from above)">
-
-                                    <button type="button" class="submit-details-button" data-action="sell_to_own_shop">Sell Item</button>
+                                    <button type="button" class="submit-details-button action-button" data-action="sell_to_own_shop">Sell Item</button>
                                 </div>
 
-                                <div id="div_hemlock_herbs_details" class="hidden-details details-section">
-                                    <h4>Buy Herbs from Hemlock</h4>
+                                <div id="div_hemlock_herbs_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Buy Herbs from Hemlock</h4><button type="button" class="close-dynamic-form" aria-label="Close Hemlock Form">&times;</button></div>
                                     <div id="hemlock-herbs-list"></div>
                                     <label for="hemlock_quantity_dynamic">Quantity:</label>
                                     <input type="number" id="hemlock_quantity_dynamic" value="1" min="1">
-                                    <button type="button" id="submit_buy_hemlock_herb_button">Buy Selected Herb</button>
+                                    <button type="button" id="submit_buy_hemlock_herb_button" class="action-button">Buy Selected Herb</button>
                                 </div>
 
-                                <div id="div_borin_items_details" class="hidden-details details-section">
-                                    <h4>Buy from Borin Stonebeard</h4>
+                                <div id="div_borin_items_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Buy from Borin Stonebeard</h4><button type="button" class="close-dynamic-form" aria-label="Close Borin Buy Form">&times;</button></div>
                                     <div id="borin-items-list"></div>
                                     <label for="borin_quantity_dynamic">Quantity:</label>
                                     <input type="number" id="borin_quantity_dynamic" value="1" min="1">
-                                    <button type="button" id="submit_buy_borin_item_button" class="submit-details-button">Buy Selected Item</button>
+                                    <button type="button" id="submit_buy_borin_item_button" class="action-button">Buy Selected Item</button>
                                 </div>
 
-                                <div id="div_borin_repair_details" class="hidden-details details-section">
-                                    <h4>Repair Gear with Borin Stonebeard</h4>
-                                    <label for="borin-repair-item-select">Select Item from Your Inventory to Repair:</label>
+                                <div id="div_borin_repair_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Repair Gear with Borin</h4><button type="button" class="close-dynamic-form" aria-label="Close Borin Repair Form">&times;</button></div>
+                                    <label for="borin-repair-item-select">Item to Repair:</label>
                                     <select id="borin-repair-item-select" name="borin_repair_item_select_input"></select>
                                     <p>Repair Cost: <span id="borin-repair-cost-display">N/A</span></p>
-                                    <button type="button" id="submit-borin-repair-button" class="submit-details-button">Repair Selected Item</button>
+                                    <button type="button" id="submit-borin-repair-button" class="action-button">Repair Selected Item</button>
                                 </div>
-                            </div>
+                            </div> <!-- End dynamic-action-forms-container -->
+                        </form>
+                    </div> <!-- End action-controls-wrapper -->
+                </div> <!-- End actions-panel-content -->
 
-                            <!-- Gather Resources Button -->
-                            <div class="action-box-section">
-                                <h3>General Actions</h3>
-                                <button type="button" id="gatherResourcesButton" class="general-action-button">Gather Resources</button>
-                                <!-- Add other general town/area actions here if needed -->
-                            </div>
-                        </form> <!-- Close actionForm -->
-                    </div> <!-- Close action-controls-wrapper -->
-                </div> <!-- Close actions-panel-content -->
-
-                <div id="log-panel-content" role="tabpanel" aria-labelledby="log-tab-button"> <!-- Panel for Log -->
+                <div id="log-panel-content" class="panel-content tab-content" role="tabpanel" aria-labelledby="log-tab-button" style="display: none;">
                     <div class="log-box">
                         <h2>Journal</h2>
                         {% if player_journal %}
@@ -402,7 +423,7 @@
                                 <span class="journal-timestamp">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M:%S') if entry.timestamp else 'No timestamp' }}</span>
                                 <strong class="journal-action-type">{{ entry.action_type }}</strong>
                                 <p class="journal-summary">{{ entry.summary }}</p>
-                                {% if entry.details and entry.details is mapping and entry.details | length > 0 %} {# Ensure details is a non-empty mapping #}
+                                {% if entry.details and entry.details is mapping and entry.details | length > 0 %}
                                 <div class="journal-details">
                                     <strong>Details:</strong>
                                     <ul>
@@ -422,11 +443,11 @@
                         <p>No journal entries yet.</p>
                         {% endif %}
                     </div>
-                </div> <!-- Close log-panel-content -->
-            </div> <!-- Close actions-content -->
-        </div> <!-- Close actions-tab -->
+                </div> <!-- End log-panel-content -->
+            </div> <!-- End bottom-panel-content-area -->
+        </div> <!-- End bottom-bar -->
 
-        <div id="settings-popup" role="menu">
+        <div id="settings-popup" role="menu" style="display: none;">
             <ul>
                 <li id="settings-option" role="menuitem">Settings</li>
                 <li role="menuitem"><a href="{{ url_for('logout_route') }}" id="logout-option">Logout</a></li>
