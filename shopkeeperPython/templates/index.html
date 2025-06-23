@@ -131,7 +131,6 @@
                             <span>{{ stat_key }}: {{ stat_value }}</span>
                             {% if not character_creation_stats.reroll_used %}
                             <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" class="inline-form">
-                            <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" class="inline-form">
                                 <button type="submit">Reroll {{ stat_key }}</button>
                             </form>
                             {% endif %}
@@ -142,7 +141,7 @@
                         <div>
                             <span>{{ stat_key }}: {{ stat_value }}</span>
                             {% if not character_creation_stats.reroll_used %}
-                            <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" style="display: inline;">
+                            <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" class="inline-form">
                                 <button type="submit">Reroll {{ stat_key }}</button>
                             </form>
                             {% endif %}
@@ -237,7 +236,7 @@
         </div>
         <div id="map-container">
             <svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-              <rect width="100%" height="100%" fill="#cccccc" />
+              <rect width="100%" height="100%" fill="#cccccc"></rect>
               <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="24px" fill="#333333">Overworld Map</text>
             </svg>
         </div>
@@ -434,54 +433,6 @@
                 <li role="menuitem"><button type="button" id="save-game-button" class="popup-menu-button">Save Game</button></li>
             </ul>
         </div>
-
-
-
-        <!--
-        <h1>Shopkeeper Adventure</h1>
-
-        <div class="container">
-            <div class="status-container">
-                <!-- Player Status was here -->
-
-                <!-- Game Info was here -->
-            </div>
-
-            <div class="inventory-container">
-                <!-- Shop Inventory was here -->
-                <!-- Player Inventory was here -->
-            </div>
-
-            <! -- Available Crafting Recipes Section -- >
-            <div class="crafting-recipes-container action-box-section"> <!-- Reusing action-box-section for some styling -- >
-                <h2>Available Crafting Recipes</h2>
-                {% if available_recipes and available_recipes | length > 0 %}
-                    <ul id="crafting-recipes-list">
-                        {% for recipe_name, details in available_recipes.items() %}
-                        <li>
-                            <strong>{{ recipe_name }}</strong>
-                            <p><em>Produces: {{ details.quantity_produced }}</em></p>
-                            <p>Ingredients:
-                                {% for item, quantity in details.ingredients.items() %}
-                                    {{ item }} ({{ quantity }}){% if not loop.last %}, {% endif %}
-                                {% endfor %}
-                            </p>
-                            <button class="craft-recipe-button" data-item-name="{{ recipe_name }}">Craft</button>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>No crafting recipes available or known.</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="log-action-container">
-            <!-- log-box was here -->
-            <!-- action-box contents were moved into #action-controls-wrapper -->
-
-        </div>
-        -->
     </div>
 
     <script>
@@ -489,11 +440,11 @@
         window.gameConfig = {
             currentTownSubLocationsJson: {{ current_town_sub_locations_json | default('[]') | safe }},
             allTownsDataJson: {{ all_towns_data_json | default('{}') | safe }},
-            hemlockHerbsJson: {{ hemlock_herbs_json | default('"{}"') | safe }}, // Passed as string, to be parsed by JS
-            borinItemsJson: {{ borin_items_json | default('"{}"') | safe }},
+            hemlockHerbsData: {{ hemlock_herbs_json | default({}) | tojson | safe }},
+            borinItemsData: {{ borin_items_json | default({}) | tojson | safe }},
             playerInventory: {{ player_inventory | default('[]') | tojson | safe }},
             awaitingEventChoice: {{ awaiting_event_choice | default('false') | tojson }},
-            pendingEventDataJson: {{ pending_event_data_json | default('null') | safe }},
+            pendingEventDataJson: {{ pending_event_data_json | tojson | safe }}, // Line 260 - Changed to tojson
             lastSkillRollStr: {{ last_skill_roll_str | tojson | safe }},
             popupActionResult: {{ popup_action_result | tojson | safe }},
             shopData: {{ shop_data_json | default('null') | safe }},
