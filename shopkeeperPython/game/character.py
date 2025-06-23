@@ -780,12 +780,13 @@ class Character:
         """
         Retrieves the pre-calculated score for an attribute.
         """
-        base_score = self.attributes.get(attribute_name, 0)
+        base_score = self.attributes.get(attribute_name, 0) # From stat modifier
         background_bonus = self.attribute_bonuses_from_background.get(attribute_name, 0)
-        final_score = base_score + background_bonus
+        feat_bonus = self.feat_attribute_bonuses.get(attribute_name, 0) # Bonus directly to the attribute/skill
+        final_score = base_score + background_bonus + feat_bonus
 
         # This print can be very verbose, consider removing or conditionalizing it
-        # print(f"DEBUG: get_attribute_score for {attribute_name}: Base={base_score}, BgBonus={background_bonus}, Final={final_score}")
+        # print(f"DEBUG: get_attribute_score for {attribute_name}: Base={base_score}, BgBonus={background_bonus}, FeatBonus={feat_bonus}, Final={final_score}")
 
         return final_score
 

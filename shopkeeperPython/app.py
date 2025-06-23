@@ -1023,11 +1023,11 @@ def perform_action():
                     }
                     flash(f"EVENT: {action_result_data.get('event_name')}! Check Journal or Game Log for details.", "info")
                     g.game_manager._print(f"EVENT: {action_result_data.get('event_name')} requires your attention!")
-                else:
-                    session.pop('awaiting_event_choice', None)
-                    session.pop('pending_event_data', None)
-                    # Default success message for actions that don't trigger an event
-                    flash(f"Action '{action_name_display}' performed. Check Journal or Game Log for details.", "info")
+            else:
+                session.pop('awaiting_event_choice', None)
+                session.pop('pending_event_data', None)
+                # Default success message for actions that don't trigger an event
+                flash(f"Action '{action_name_display}' performed. Check Journal or Game Log for details.", "info")
 
         # ---- START SAVE LOGIC (using g.player_char and g.game_manager) ----
         if g.player_char and g.player_char.name and not g.player_char.is_dead:

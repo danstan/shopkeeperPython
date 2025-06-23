@@ -39,12 +39,12 @@
         {
             "name": "UniqueNewName",
             "stats": {
-                "CHA": 12,
-                "CON": 9,
-                "DEX": 15,
-                "INT": 12,
-                "STR": 13,
-                "WIS": 10
+                "CHA": 13,
+                "CON": 7,
+                "DEX": 11,
+                "INT": 13,
+                "STR": 14,
+                "WIS": 11
             },
             "stat_bonuses": {
                 "STR": 0,
@@ -58,12 +58,12 @@
             "level": 1,
             "xp": 0,
             "pending_xp": 0,
-            "base_max_hp": 9,
-            "hp": 9,
+            "base_max_hp": 8,
+            "hp": 8,
             "hit_dice": 1,
             "max_hit_dice": 1,
             "attunement_slots": 3,
-            "attuned_.items": [],
+            "attuned_items": [],
             "exhaustion_level": 0,
             "inventory": [],
             "gold": 50,
@@ -71,7 +71,15 @@
             "speed": 30,
             "is_dead": false,
             "current_town_name": "Starting Village",
-            "journal": []
+            "journal": [],
+            "background_id": null,
+            "appearance_data": {},
+            "attribute_bonuses_from_background": {},
+            "feats": [],
+            "feat_attribute_bonuses": {},
+            "feat_stat_bonuses": {},
+            "faction_reputations": {},
+            "pending_asi_feat_choice": false
         }
     ]
 }
