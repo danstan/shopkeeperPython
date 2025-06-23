@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from .shop import Shop
 
 import datetime # Added for timestamping journal entries
+from typing import Optional # Add this import
 
 # Helper function for stat rolling (4d6 drop lowest)
 def _roll_4d6_drop_lowest():
@@ -29,11 +30,11 @@ EXHAUSTION_EFFECTS = {
 
 
 class JournalEntry:
-    def __init__(self, timestamp: datetime.datetime, action_type: str, summary: str, details: str = None, outcome: str = None):
+    def __init__(self, timestamp: datetime.datetime, action_type: str, summary: str, details: Optional[dict] = None, outcome: Optional[str] = None):
         self.timestamp = timestamp
         self.action_type = action_type
         self.summary = summary
-        self.details = details
+        self.details = details # Now correctly typed as Optional[dict]
         self.outcome = outcome
 
     def to_dict(self) -> dict:
@@ -695,7 +696,7 @@ class Character:
             "hit_dice": self.hit_dice,
             "max_hit_dice": self.max_hit_dice,
             "attunement_slots": self.attunement_slots, # Though fixed, good to save
-            "attuned_.items": [item.to_dict() for item in self.attuned_items],
+            "attuned_items": [item.to_dict() for item in self.attuned_items],
             "exhaustion_level": self.exhaustion_level,
             "inventory": [item.to_dict() for item in self.inventory],
             "gold": self.gold,
