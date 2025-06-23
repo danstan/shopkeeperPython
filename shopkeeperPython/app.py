@@ -1,3 +1,4 @@
+print("DEBUG: Top of app.py", flush=True)
 from flask import Flask, render_template, request, redirect, url_for, session, flash, get_flashed_messages
 import io
 import json
@@ -11,7 +12,7 @@ from shopkeeperPython.game.character import Character
 # Pylint might not see this if no direct instantiation of Item happens in app.py.
 # For now, let's trust Pylint's static analysis; if runtime errors occur, it can be re-added.
 # from shopkeeperPython.game.item import Item
-from shopkeeperPython.game.game_manager import HEMLOCK_HERBS # Added import
+from shopkeeperPython.game.game_manager import HEMLOCK_HERBS, BORIN_ITEMS # Added import
 from shopkeeperPython.game.g_event import GAME_EVENTS
 
 from flask_dance.contrib.google import make_google_blueprint # Removed google
@@ -445,16 +446,16 @@ def register_page():
 
     # For now, as register.html doesn't exist, we'll return a placeholder.
     # In a future step, create templates/register.html
-    return """
-    <h1>Register</h1>
-    <form method="post">
-        Username: <input type="text" name="username" required><br>
-        Password: <input type="password" name="password" required><br>
-        <input type="submit" value="Register">
-    </form>
-    <p><a href="{{ url_for('display_game_output') }}">Back to Login</a></p>
-    """ # Using triple quotes for the multi-line string.
-    # return render_template('register.html') # This would be the ideal line
+    # return """
+    # <h1>Register</h1>
+    # <form method="post">
+    #     Username: <input type="text" name="username" required><br>
+    #     Password: <input type="password" name="password" required><br>
+    #     <input type="submit" value="Register">
+    # </form>
+    # <p><a href="{{ url_for('display_game_output') }}">Back to Login</a></p>
+    # """ # Using triple quotes for the multi-line string.
+    return render_template('register.html') # This would be the ideal line
 
 
 # --- Character Selection and Creation Routes ---
@@ -799,6 +800,7 @@ def display_game_output():
                            player_journal=player_journal_display,
                            popup_action_result=popup_action_result,
                            hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Module global constant
+                           borin_items_json=json.dumps(BORIN_ITEMS), # Added for Borin's items
                            character_creation_stats=character_creation_stats_display,
                            stat_names_ordered=Character.STAT_NAMES, # Class attribute
                            pending_char_name=pending_char_name_display,
@@ -963,30 +965,19 @@ def perform_action():
         # If 'buy_from_npc' is meant to be a standard action processed by perform_hourly_action,
         # it might not need this special handling here. If it's different, its flash messages
         # would need separate consideration. For now, assuming it's not the primary focus for this refactor.
-        if action_name == "buy_from_npc":
-            npc_name = request.form.get('npc_name')
-            item_name = request.form.get('item_name')
-            quantity = request.form.get('quantity', 1)
-            try:
-                quantity = int(quantity)
-            except ValueError:
-                g.game_manager._print(f"Invalid quantity: {quantity}. Defaulting to 1.")
-                quantity = 1
-
-            if npc_name and item_name and quantity > 0:
-                g.game_manager._print(f"Attempting to buy {quantity} of {item_name} from {npc_name}.")
-                # Example: g.game_manager.buy_item_from_npc(npc_name, item_name, quantity)
-            else:
-                g.game_manager._print("Missing details for buying from NPC.")
+        #
+        # Removed special handling for "buy_from_npc" here.
+        # It will now be processed by g.game_manager.perform_hourly_action like other actions.
+        # The details_dict (parsed from action_details_str) should contain npc_name, item_name, quantity.
+        #
+        # Existing actions are handled by perform_hourly_action using g.game_manager
+        if g.player_char is None or g.player_char.name is None or g.player_char.is_dead: # Redundant due to earlier check, but safe
+            flash("No active character or character is dead. Cannot perform action.", "error")
+            return redirect(url_for('display_game_output'))
         else:
-            # Existing actions are handled by perform_hourly_action using g.game_manager
-            if g.player_char is None or g.player_char.name is None or g.player_char.is_dead: # Redundant due to earlier check, but safe
-                flash("No active character or character is dead. Cannot perform action.", "error")
-                return redirect(url_for('display_game_output'))
-            else:
-                action_result_data = g.game_manager.perform_hourly_action(action_name, details_dict)
+            action_result_data = g.game_manager.perform_hourly_action(action_name, details_dict)
 
-                if isinstance(action_result_data, dict) and action_result_data.get('type') == 'event_pending':
+            if isinstance(action_result_data, dict) and action_result_data.get('type') == 'event_pending':
                     session['awaiting_event_choice'] = True
                     session['pending_event_data'] = { # This session storage is fine
                         'name': action_result_data.get('event_name'),
