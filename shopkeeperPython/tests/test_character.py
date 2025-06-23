@@ -559,6 +559,191 @@ class TestCharacter(unittest.TestCase):
         loaded_char = Character.from_dict(char_dict)
         self.assertTrue(loaded_char.pending_asi_feat_choice)
 
+    # --- ASI/Feat Choice Tests ---
+    def _level_char_to_for_asi_test(self, character, target_level): # Renamed to avoid conflict if other tests use a similar helper
+        """Helper to level up character for ASI/Feat choice testing."""
+        # Simplified leveling focusing on XP thresholds and _check_level_up
+        # Assumes Character.LEVEL_XP_THRESHOLDS is populated sufficiently.
+        character.level = 1
+        character.xp = 0
+        character.pending_xp = 0
+        character.pending_asi_feat_choice = False
+        character.skill_points_to_allocate = 0
+
+        # Set base stats for predictability if needed by caller, though not directly here
+        # Example: for stat_name in Character.STAT_NAMES: character.stats[stat_name] = 10
+        # character._recalculate_all_attributes()
+
+
+        for level_to_reach in range(2, target_level + 1):
+            xp_for_next_level = Character.LEVEL_XP_THRESHOLDS.get(level_to_reach)
+            if xp_for_next_level is None:
+                self.fail(f"XP threshold for level {level_to_reach} not defined in Character class.")
+
+            xp_needed = xp_for_next_level - character.xp
+            if xp_needed > 0:
+                character.award_xp(xp_needed)
+            character.commit_pending_xp() # This calls _check_level_up
+
+        self.assertEqual(character.level, target_level, f"Failed to level character to {target_level}.")
+        if target_level in Character.ASI_FEAT_LEVELS:
+            self.assertTrue(character.pending_asi_feat_choice, f"pending_asi_feat_choice should be True at level {target_level}")
+        else:
+            self.assertFalse(character.pending_asi_feat_choice, f"pending_asi_feat_choice should be False at level {target_level}")
+
+
+    def test_pending_asi_feat_flag_activation(self):
+        char = Character(name="ASI Flag Test")
+        # Initialize stats to avoid issues if _check_level_up uses them for HP calc
+        for stat_name in Character.STAT_NAMES:
+            char.stats[stat_name] = 10
+        char.roll_stats() # Sets up HP based on CON
+
+        self._level_char_to_for_asi_test(char, 3)
+        self.assertFalse(char.pending_asi_feat_choice, "Flag should be False at level 3.")
+
+        self._level_char_to_for_asi_test(char, 4) # ASI level
+        self.assertTrue(char.pending_asi_feat_choice, "Flag should be True upon reaching level 4.")
+
+        # Test that flag persists if not used
+        char.award_xp(Character.LEVEL_XP_THRESHOLDS[5] - char.xp)
+        char.commit_pending_xp()
+        self.assertEqual(char.level, 5)
+        self.assertTrue(char.pending_asi_feat_choice, "Flag should persist at level 5 if choice wasn't made at level 4.")
+
+    def test_apply_asi_plus_two_to_one_stat(self):
+        char = Character(name="ASI +2 Test")
+        for stat_name in Character.STAT_NAMES:
+            char.stats[stat_name] = 10
+        char.roll_stats() # Initialize HP etc.
+
+        self._level_char_to_for_asi_test(char, 4)
+        self.assertTrue(char.pending_asi_feat_choice)
+
+        initial_athletics = char.get_attribute_score("Athletics") # STR 10 -> mod 0 -> Ath 0
+        self.assertEqual(initial_athletics, 0)
+
+        self.assertTrue(char.apply_stat_increase_choice(stat_primary="STR", points_primary=2))
+        self.assertEqual(char.stats["STR"], 12)
+        self.assertFalse(char.pending_asi_feat_choice)
+        char._recalculate_all_attributes() # apply_stat_increase_choice calls this, but good practice for clarity
+        self.assertEqual(char.get_attribute_score("Athletics"), 1) # STR 12 -> mod +1 -> Ath +1
+
+        # Test with CON
+        char_con = Character(name="ASI CON Test")
+        for stat_name in Character.STAT_NAMES:
+            char_con.stats[stat_name] = 10
+        char_con.roll_stats() # CON 10 -> mod 0. base_max_hp for L1 = 10 + 0*1 = 10.
+        initial_base_max_hp_l1 = char_con.base_max_hp
+
+        self._level_char_to_for_asi_test(char_con, 4) # CON 10 -> mod 0. base_max_hp for L4 = 10 + 0*4 = 10.
+                                                # Note: _check_level_up updates base_max_hp.
+        initial_base_max_hp_l4 = char_con.base_max_hp
+        expected_base_max_hp_l4_con10 = 10 + (0 * 4) # 10 (base) + CON_mod (0) * level (4)
+        self.assertEqual(initial_base_max_hp_l4, expected_base_max_hp_l4_con10, "Base max HP before CON ASI is incorrect.")
+
+
+        self.assertTrue(char_con.apply_stat_increase_choice(stat_primary="CON", points_primary=2))
+        self.assertEqual(char_con.stats["CON"], 12) # CON 12 -> mod +1
+
+        # apply_stat_increase_choice should have updated base_max_hp
+        # New CON mod is +1. Old was 0. Change is +1. HP gain = +1 * level (4) = +4
+        expected_base_max_hp_l4_con12 = expected_base_max_hp_l4_con10 + (1 * 4)
+        self.assertEqual(char_con.base_max_hp, expected_base_max_hp_l4_con12, "base_max_hp did not increase correctly for CON ASI.")
+
+    def test_apply_asi_plus_one_to_two_stats(self):
+        char = Character(name="ASI +1/+1 Test")
+        char.stats["STR"] = 11
+        char.stats["DEX"] = 11
+        for stat_name in Character.STAT_NAMES: # Set others to 10
+            if stat_name not in ["STR", "DEX"]:
+                char.stats[stat_name] = 10
+        char.roll_stats() # Initialize HP etc.
+        char._recalculate_all_attributes()
+
+        self.assertEqual(char.get_attribute_score("Athletics"), 0) # STR 11 -> mod 0
+        self.assertEqual(char.get_attribute_score("Acrobatics"), 0) # DEX 11 -> mod 0
+
+        self._level_char_to_for_asi_test(char, 4)
+        self.assertTrue(char.pending_asi_feat_choice)
+
+        self.assertTrue(char.apply_stat_increase_choice(stat_primary="STR", points_primary=1, stat_secondary="DEX", points_secondary=1))
+        self.assertEqual(char.stats["STR"], 12)
+        self.assertEqual(char.stats["DEX"], 12)
+        self.assertFalse(char.pending_asi_feat_choice)
+
+        char._recalculate_all_attributes() # apply_stat_increase_choice calls this
+        self.assertEqual(char.get_attribute_score("Athletics"), 1) # STR 12 -> mod +1
+        self.assertEqual(char.get_attribute_score("Acrobatics"), 1) # DEX 12 -> mod +1
+
+    def test_apply_feat_choice_tough(self):
+        char = Character(name="Feat Tough Test")
+        for stat_name in Character.STAT_NAMES:
+            char.stats[stat_name] = 10
+        char.roll_stats() # CON 10 -> mod 0. base_max_hp for L1 = 10.
+
+        self._level_char_to_for_asi_test(char, 4) # Will set level to 4. base_max_hp for L4 = 10 + 0*4 = 10.
+        initial_base_max_hp = char.base_max_hp
+        self.assertTrue(char.pending_asi_feat_choice)
+
+        self.assertTrue(char.apply_feat_choice(feat_id="tough"))
+        self.assertTrue(char.has_feat("tough"))
+        self.assertEqual(char.base_max_hp, initial_base_max_hp + 5) # Tough adds +5
+        self.assertFalse(char.pending_asi_feat_choice)
+
+    def test_apply_feat_choice_skill_novice(self):
+        char = Character(name="Feat Skill Novice Test")
+        for stat_name in Character.STAT_NAMES:
+            char.stats[stat_name] = 10
+        char.roll_stats()
+        char._recalculate_all_attributes()
+        self.assertEqual(char.get_attribute_score("Athletics"), 0) # STR 10 -> mod 0
+
+        self._level_char_to_for_asi_test(char, 4)
+        self.assertTrue(char.pending_asi_feat_choice)
+
+        self.assertTrue(char.apply_feat_choice(feat_id="skill_novice_athletics"))
+        self.assertTrue(char.has_feat("skill_novice_athletics"))
+        # get_attribute_score now includes feat_attribute_bonuses
+        self.assertEqual(char.get_attribute_score("Athletics"), 1) # 0 from STR 10 + 1 from feat
+        self.assertFalse(char.pending_asi_feat_choice)
+
+    def test_invalid_asi_applications(self):
+        char = Character(name="Invalid ASI Test")
+        char.pending_asi_feat_choice = False
+        self.assertFalse(char.apply_stat_increase_choice(stat_primary="STR", points_primary=2), "Should fail if no ASI pending.")
+
+        char.pending_asi_feat_choice = True
+        self.assertFalse(char.apply_stat_increase_choice(stat_primary="STR", points_primary=3), "+3 to one stat.")
+        self.assertFalse(char.apply_stat_increase_choice(stat_primary="STR", points_primary=1, stat_secondary="STR", points_secondary=1), "+1 to same stat twice.")
+        self.assertFalse(char.apply_stat_increase_choice(stat_primary="INVALID_STAT", points_primary=2), "Invalid stat name.")
+
+        char.stats["STR"] = 19
+        self.assertFalse(char.apply_stat_increase_choice(stat_primary="STR", points_primary=2), "Exceeds 20 cap.")
+        self.assertEqual(char.stats["STR"], 19)
+
+        char.stats["STR"] = 20
+        self.assertFalse(char.apply_stat_increase_choice(stat_primary="STR", points_primary=1), "Exceeds 20 cap (already at 20).")
+        self.assertEqual(char.stats["STR"], 20)
+        self.assertTrue(char.pending_asi_feat_choice, "Flag should remain true after invalid choices.")
+
+
+    def test_invalid_feat_applications(self):
+        char = Character(name="Invalid Feat Test")
+        char.pending_asi_feat_choice = False
+        self.assertFalse(char.apply_feat_choice("tough"), "Should fail if no ASI pending.")
+
+        char.pending_asi_feat_choice = True
+        self.assertFalse(char.apply_feat_choice("invalid_feat_id"), "Invalid feat ID.")
+
+        self.assertTrue(char.apply_feat_choice("tough")) # First time should succeed
+        self.assertTrue(char.has_feat("tough"))
+        self.assertFalse(char.pending_asi_feat_choice) # Flag cleared
+
+        char.pending_asi_feat_choice = True # Set flag again for next test
+        self.assertFalse(char.apply_feat_choice("tough"), "Already has feat.")
+        self.assertTrue(char.pending_asi_feat_choice, "Flag should remain true if feat choice was invalid (already has).")
+
 
 class TestCharacterPerformSkillCheck(unittest.TestCase):
     def setUp(self):
