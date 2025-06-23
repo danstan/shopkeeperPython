@@ -39,12 +39,12 @@
         {
             "name": "UniqueNewName",
             "stats": {
-                "CHA": 13,
+                "CHA": 10,
                 "CON": 15,
-                "DEX": 10,
-                "INT": 14,
-                "STR": 12,
-                "WIS": 15
+                "DEX": 17,
+                "INT": 13,
+                "STR": 14,
+                "WIS": 14
             },
             "stat_bonuses": {
                 "STR": 0,

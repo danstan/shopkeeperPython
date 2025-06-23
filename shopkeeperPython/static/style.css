@@ -339,9 +339,11 @@ body {
 
 .panel-content { /* Common styling for #actions-panel-content and #log-panel-content */
     width: 100%;
+
     background-color: var(--color-parchment-bg);
     /* padding: 10px; /* Padding moved to #bottom-panel-content-area */
     display: none;
+
 }
 .panel-content.panel-visible { display: block; }
 

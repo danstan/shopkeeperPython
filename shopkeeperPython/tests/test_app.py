@@ -202,7 +202,7 @@ class TestApp(unittest.TestCase):
         response_data_str = response.data.decode('utf-8')
 
         # Check for the informational "Stats rolled..." message
-        self.assertIn("Initial stats rolled and saved to session.", response_data_str) # Updated expected message
+        self.assertIn("Your initial stats have been rolled. You can reroll one stat once.", response_data_str)
         # Check that no common error messages are present
         self.assertNotIn("issue with character creator", response_data_str.lower()) # Generic check
         self.assertNotIn("Failed to initialize game", response_data_str)
