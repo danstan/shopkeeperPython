@@ -573,6 +573,7 @@ class GameManager:
                         else:
                             self.add_journal_entry(action_type="Joined Faction", summary=f"Attempted to join {faction_def['name']}", details=log_entry_details, outcome="Requirements not met")
             elif action_name == "research_market":
+
                 possible_insights = []
 
                 # 1. Town Demand-Based Insights
@@ -619,6 +620,7 @@ class GameManager:
 
                 self._print(f"  Market Research: {insight}")
                 action_xp_reward = 5
+
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)

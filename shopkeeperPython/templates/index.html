@@ -522,7 +522,9 @@
             currentTownSubLocationsJson: {{ current_town_sub_locations_json | default('[]') | safe }},
             allTownsDataJson: {{ all_towns_data_json | default('{}') | safe }},
             hemlockHerbsJson: {{ hemlock_herbs_json | default('"{}"') | safe }}, // Passed as string, to be parsed by JS
+
             borinItemsJson: {{ borin_items_json | default('"{}"') | safe }},
+
             playerInventory: {{ player_inventory | default('[]') | tojson | safe }},
             awaitingEventChoice: {{ awaiting_event_choice | default('false') | tojson }},
             pendingEventDataJson: {{ pending_event_data_json | default('null') | safe }},
