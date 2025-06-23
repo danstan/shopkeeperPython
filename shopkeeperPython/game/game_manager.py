@@ -74,6 +74,12 @@ EXPLORATION_FINDS = [
     {"type": "item", "name": "Apple", "description": "A slightly bruised apple.", "base_value": 1, "item_type": "food", "quality": "Common", "quantity": 1, "is_consumable": True, "effects": {"healing": 1}}
 ]
 
+BORIN_ITEMS = {
+    "Iron Ingot": {"name": "Iron Ingot", "description": "A bar of refined iron.", "base_value": 10, "item_type": "component", "quality": "Common", "price": 15},
+    "Scrap Metal": {"name": "Scrap Metal", "description": "A piece of discarded metal, useful for basic smithing.", "base_value": 1, "item_type": "component", "quality": "Common", "price": 2},
+    "Simple Mace": {"name": "Simple Mace", "description": "A basic but sturdy mace.", "base_value": 8, "item_type": "weapon", "quality": "Common", "price": 12, "effects": {"damage": "1d6"}}
+}
+
 class GameManager:
     ACTION_SKILL_MAP = {
         "gather_resources": "Survival",
@@ -317,6 +323,35 @@ class GameManager:
             self._print(f"  {self.character.name} {outcome_msg}")
             self.add_journal_entry(action_type="Purchase (NPC)", summary=f"Bought {quantity_to_buy}x {item_name_to_buy} from {npc_name}", outcome=outcome_msg, details={"item": item_name_to_buy, "quantity": quantity_to_buy, "cost": total_cost, "npc": npc_name})
             self.daily_gold_spent_on_purchases_by_player += total_cost; return 1
+        elif npc_name == "Borin Stonebeard":
+            if item_name_to_buy not in BORIN_ITEMS:
+                self._print(f"  Borin Stonebeard doesn't stock '{item_name_to_buy}'. He offers: {', '.join(BORIN_ITEMS.keys())}.")
+                return 0
+
+            item_info = BORIN_ITEMS[item_name_to_buy]
+            total_cost = item_info["price"] * quantity_to_buy
+
+            if self.character.gold < total_cost:
+                self._print(f"  {self.character.name} doesn't have enough gold. (Needs {total_cost}g, Has {self.character.gold}g).")
+                return 0
+
+            self.character.gold -= total_cost
+            new_item = Item(
+                name=item_info["name"],
+                description=item_info["description"],
+                base_value=item_info["base_value"],
+                item_type=item_info["item_type"],
+                quality=item_info["quality"],
+                quantity=quantity_to_buy,
+                effects=item_info.get("effects", {})
+            )
+            self.character.add_item_to_inventory(new_item)
+
+            outcome_msg = f"Bought {quantity_to_buy}x {item_name_to_buy} from Borin for {total_cost}g. Gold: {self.character.gold}."
+            self._print(f"  {self.character.name} {outcome_msg}")
+            self.add_journal_entry(action_type="Purchase (NPC)", summary=f"Bought {quantity_to_buy}x {item_name_to_buy} from Borin Stonebeard", outcome=outcome_msg, details={"item": item_name_to_buy, "quantity": quantity_to_buy, "cost": total_cost, "npc": "Borin Stonebeard"})
+            self.daily_gold_spent_on_purchases_by_player += total_cost
+            return 1 # XP for successful purchase
         else: self._print(f"  Buying items from '{npc_name}' is not implemented yet."); self.add_journal_entry(action_type="Purchase (NPC)", summary=f"Attempted to buy from {npc_name}", outcome="Purchase not implemented for this NPC.", details={"npc": npc_name, "item": item_name_to_buy}); return 0
 
     def _handle_customer_interaction(self, is_sale_or_purchase_by_player_shop:bool = False):
@@ -538,16 +573,54 @@ class GameManager:
                         else:
                             self.add_journal_entry(action_type="Joined Faction", summary=f"Attempted to join {faction_def['name']}", details=log_entry_details, outcome="Requirements not met")
             elif action_name == "research_market":
-                market_insights = [
-                    "You hear whispers that potions are in high demand.",
-                    f"A local merchant mentions that weapons are selling well in {self.current_town.name}.",
-                    "It seems there's a shortage of quality tools.",
-                    "Customers have been asking for more variety in food items.",
-                    "The market for basic crafting components is currently saturated."
-                ]
-                insight = random.choice(market_insights)
+
+                possible_insights = []
+
+                # 1. Town Demand-Based Insights
+                if self.current_town and hasattr(self.current_town, 'market_demand_modifiers'):
+                    for item_name, modifier in self.current_town.market_demand_modifiers.items():
+                        if modifier >= 1.3:
+                            possible_insights.append(f"You sense a strong demand for {item_name} in {self.current_town.name}.")
+                        elif modifier <= 0.7:
+                            possible_insights.append(f"The market for {item_name} seems saturated in {self.current_town.name} right now.")
+
+                # 2. Player Shop Stock-Based Insights (if shop exists)
+                if self.shop:
+                    # Check for Minor Healing Potion
+                    mhp_stock = 0
+                    for item_in_shop in self.shop.inventory:
+                        if item_in_shop.name == "Minor Healing Potion":
+                            mhp_stock += item_in_shop.quantity
+                    if mhp_stock == 0:
+                        possible_insights.append("You notice your own stock of Minor Healing Potions is out; customers might be searching for them.")
+
+                    # Check for Simple Dagger (example of another common item)
+                    dagger_stock = 0
+                    for item_in_shop in self.shop.inventory:
+                        if item_in_shop.name == "Simple Dagger":
+                            dagger_stock += item_in_shop.quantity
+                    if dagger_stock == 0:
+                        possible_insights.append("A passerby mentions they couldn't find a basic weapon like a Simple Dagger anywhere.")
+
+                # 3. Generic Insights (Fallback)
+                possible_insights.extend([
+                    "Locals are discussing the recent price of grain.",
+                    "Travelers seem to be looking for basic supplies.",
+                    "You overhear a conversation about the quality of goods from nearby towns.",
+                    f"The general mood in {self.current_town.name}'s market seems cautious today.",
+                    "It's a typical day at the market, with usual hustle and bustle."
+                ])
+
+                # 4. Selection
+                if possible_insights:
+                    insight = random.choice(possible_insights)
+                else:
+                    # This case should ideally not be reached if generic insights are always added.
+                    insight = "You spend an hour observing the market but learn nothing particularly new."
+
                 self._print(f"  Market Research: {insight}")
-                action_xp_reward = 5 # Standard XP for a simple research action
+                action_xp_reward = 5
+
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)

@@ -405,6 +405,14 @@
                                     <input type="number" id="hemlock_quantity_dynamic" value="1" min="1">
                                     <button type="button" id="submit_buy_hemlock_herb_button">Buy Selected Herb</button>
                                 </div>
+
+                                <div id="div_borin_items_details" class="hidden-details details-section">
+                                    <h4>Buy from Borin Stonebeard</h4>
+                                    <div id="borin-items-list"></div>
+                                    <label for="borin_quantity_dynamic">Quantity:</label>
+                                    <input type="number" id="borin_quantity_dynamic" value="1" min="1">
+                                    <button type="button" id="submit_buy_borin_item_button" class="submit-details-button">Buy Selected Item</button>
+                                </div>
                             </div>
 
                             <!-- Gather Resources Button -->
@@ -455,7 +463,7 @@
             <ul>
                 <li id="settings-option">Settings</li>
                 <li><a href="{{ url_for('logout_route') }}" id="logout-option">Logout</a></li>
-                <li id="save-game-option">Save Game</li>
+                <li><button type="button" id="save-game-button" class="popup-menu-button">Save Game</button></li>
             </ul>
         </div>
 
@@ -514,6 +522,9 @@
             currentTownSubLocationsJson: {{ current_town_sub_locations_json | default('[]') | safe }},
             allTownsDataJson: {{ all_towns_data_json | default('{}') | safe }},
             hemlockHerbsJson: {{ hemlock_herbs_json | default('"{}"') | safe }}, // Passed as string, to be parsed by JS
+
+            borinItemsJson: {{ borin_items_json | default('"{}"') | safe }},
+
             playerInventory: {{ player_inventory | default('[]') | tojson | safe }},
             awaitingEventChoice: {{ awaiting_event_choice | default('false') | tojson }},
             pendingEventDataJson: {{ pending_event_data_json | default('null') | safe }},

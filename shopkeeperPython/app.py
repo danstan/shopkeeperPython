@@ -12,7 +12,7 @@ from shopkeeperPython.game.character import Character
 # Pylint might not see this if no direct instantiation of Item happens in app.py.
 # For now, let's trust Pylint's static analysis; if runtime errors occur, it can be re-added.
 # from shopkeeperPython.game.item import Item
-from shopkeeperPython.game.game_manager import HEMLOCK_HERBS # Added import
+from shopkeeperPython.game.game_manager import HEMLOCK_HERBS, BORIN_ITEMS # Added import
 from shopkeeperPython.game.g_event import GAME_EVENTS
 
 from flask_dance.contrib.google import make_google_blueprint # Removed google
@@ -800,6 +800,7 @@ def display_game_output():
                            player_journal=player_journal_display,
                            popup_action_result=popup_action_result,
                            hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Module global constant
+                           borin_items_json=json.dumps(BORIN_ITEMS), # Added for Borin's items
                            character_creation_stats=character_creation_stats_display,
                            stat_names_ordered=Character.STAT_NAMES, # Class attribute
                            pending_char_name=pending_char_name_display,
