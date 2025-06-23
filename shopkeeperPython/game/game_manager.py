@@ -85,7 +85,7 @@ class GameManager:
     }
     ACTIONS_ALLOWING_GENERIC_EVENTS = {
         "wait": True, "explore_town": True, "travel_to_town": True,
-        "gather_resources": True, "talk_to_villager": True,
+        "gather_resources": True, "talk_to_villager": True, "research_market": True,
         "set_shop_specialization": False, "upgrade_shop": False, "craft": False,
     }
     SKILL_EVENT_CHANCE_PER_HOUR = 0.15
@@ -537,6 +537,17 @@ class GameManager:
                                 self.add_journal_entry(action_type="Joined Faction", summary=f"Failed to join {faction_def['name']}", details=log_entry_details, outcome="Unexpected Failure")
                         else:
                             self.add_journal_entry(action_type="Joined Faction", summary=f"Attempted to join {faction_def['name']}", details=log_entry_details, outcome="Requirements not met")
+            elif action_name == "research_market":
+                market_insights = [
+                    "You hear whispers that potions are in high demand.",
+                    f"A local merchant mentions that weapons are selling well in {self.current_town.name}.",
+                    "It seems there's a shortage of quality tools.",
+                    "Customers have been asking for more variety in food items.",
+                    "The market for basic crafting components is currently saturated."
+                ]
+                insight = random.choice(market_insights)
+                self._print(f"  Market Research: {insight}")
+                action_xp_reward = 5 # Standard XP for a simple research action
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)
