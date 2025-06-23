@@ -834,8 +834,10 @@ def display_game_output():
                            popup_action_result=popup_action_result,
                            hemlock_herbs_json=json.dumps(HEMLOCK_HERBS), # Module global constant
                            borin_items_json=json.dumps(BORIN_ITEMS), # Added for Borin's items
+
                            shop_data_json=json.dumps(shop_data_for_ui),
                            shop_config_json=json.dumps(shop_config_for_ui),
+
                            character_creation_stats=character_creation_stats_display,
                            stat_names_ordered=Character.STAT_NAMES, # Class attribute
                            pending_char_name=pending_char_name_display,

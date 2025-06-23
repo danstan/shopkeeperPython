@@ -12,6 +12,7 @@
         console.error("Error parsing Hemlock's herbs JSON from gameConfig:", e);
         // hemlockHerbsData remains {}
     }
+
     var borinItemsData = {};
     if (window.gameConfig && window.gameConfig.borinItemsJson) {
         try {
@@ -21,11 +22,13 @@
         }
     }
 
+
     document.addEventListener('DOMContentLoaded', function() {
         const shopData = window.gameConfig.shopData;
         const shopConfig = window.gameConfig.shopConfig;
         const shopManagementDetailsDiv = document.getElementById('shop-management-details');
         // actionForm, hiddenActionNameInput, hiddenDetailsInput are typically fetched inside the 'actionForm' check block later
+
         var playerInventoryForSellDropdown = window.gameConfig.playerInventory;
 
         // Function to display toast messages
@@ -145,14 +148,17 @@
             const sellItemNameInput = document.getElementById('sell_item_name');
             const hemlockHerbsDetailsDiv = document.getElementById('div_hemlock_herbs_details');
             const hemlockHerbsListDiv = document.getElementById('hemlock-herbs-list'); // New div for list
+
             const borinItemsDetailsDiv = document.getElementById('div_borin_items_details');
             const borinRepairDetailsDiv = document.getElementById('div_borin_repair_details');
 
             const allDetailDivs = [craftDetailsDiv, buyDetailsDiv, sellDetailsDiv, hemlockHerbsDetailsDiv, borinItemsDetailsDiv, borinRepairDetailsDiv];
+
             let currentActionRequiringDetails = null;
             let currentSubLocationName = null;
             let selectedHemlockHerbName = null; // To store the selected Hemlock herb
             let selectedBorinItemName = null; // To store the selected Borin item
+
 
             function hideAllDetailForms() {
                 if (actionDetailsContainer) actionDetailsContainer.style.display = 'none';
@@ -326,12 +332,15 @@
                         } else if (actionName === 'buy_from_npc' && currentSubLocationName === "Old Man Hemlock's Hut") {
                             if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
                             if (hemlockHerbsDetailsDiv) hemlockHerbsDetailsDiv.style.display = 'block';
+
                             currentActionRequiringDetails = actionName; // Could be 'buy_from_hemlock_ui' or similar if more distinction needed
+
                             selectedHemlockHerbName = null; // Reset selection when showing the list
                             if (hemlockHerbsListDiv) {
                                 hemlockHerbsListDiv.innerHTML = ''; // Clear previous list
                                 if (hemlockHerbsData && Object.keys(hemlockHerbsData).length > 0) {
                                     const ul = document.createElement('ul');
+
                                     ul.style.listStyleType = 'none'; ul.style.paddingLeft = '0';
                                     for (const herbKey in hemlockHerbsData) {
                                         const herb = hemlockHerbsData[herbKey];
@@ -341,6 +350,7 @@
                                             <strong>${herb.name}</strong> - ${herb.price}G<br>
                                             <em>${herb.description}</em><br>
                                             <button type="button" class="select-hemlock-herb-button popup-menu-button" data-herb-name="${herb.name}">Select</button>
+
                                         `;
                                         ul.appendChild(li);
                                     }
@@ -349,6 +359,7 @@
                                     hemlockHerbsListDiv.innerHTML = '<p>No herbs available from Hemlock at this time.</p>';
                                 }
                             }
+
                         } else if (actionName === 'talk_to_borin' && currentSubLocationName === "Borin Stonebeard's Smithy") {
                             if (actionDetailsContainer) actionDetailsContainer.style.display = 'block';
                             if (borinItemsDetailsDiv) borinItemsDetailsDiv.style.display = 'block'; // Show Borin's item sale UI
@@ -357,6 +368,7 @@
                             const localBorinItemsListDiv = document.getElementById('borin-items-list');
                             if (localBorinItemsListDiv) {
                                 localBorinItemsListDiv.innerHTML = '';
+
                                 if (borinItemsData && Object.keys(borinItemsData).length > 0) {
                                     const ul = document.createElement('ul');
                                     ul.style.listStyleType = 'none'; ul.style.paddingLeft = '0';
@@ -404,6 +416,7 @@
                                 };
                                 if(repairCostDisplay) repairCostDisplay.textContent = "N/A";
                             }
+
                         } else if (!event.target.classList.contains('craft-recipe-button')) {
                             // For actions not needing details from the dynamic list
                             if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({});
@@ -561,7 +574,9 @@
             const submitBuyHemlockHerbButton = document.getElementById('submit_buy_hemlock_herb_button');
             const hemlockQuantityInput = document.getElementById('hemlock_quantity_dynamic');
 
+
             if (submitBuyHemlockHerbButton && hemlockQuantityInput && hiddenActionNameInput && hiddenDetailsInput && actionForm) { // Added guards
+
                 submitBuyHemlockHerbButton.addEventListener('click', function() {
                     if (!selectedHemlockHerbName) {
                         alert("Please select an herb to buy.");
@@ -598,6 +613,7 @@
             const borinItemsListDivLocal = document.getElementById('borin-items-list'); // Use local const for clarity
             if (borinItemsListDivLocal) {
                 borinItemsListDivLocal.addEventListener('click', function(event) {
+
                     if (event.target.classList.contains('select-borin-item-button')) {
                         selectedBorinItemName = event.target.dataset.itemName;
                         document.querySelectorAll('.select-borin-item-button').forEach(btn => {
@@ -685,7 +701,6 @@
                 if(shopManagementDetailsDiv) shopManagementDetailsDiv.innerHTML = '<p>Shop data not available.</p>';
                 return;
             }
-
             let html = `<h3>${shopData.name}</h3>`;
             html += `<p>Level: ${shopData.level} (Quality Bonus: +${shopData.current_quality_bonus})</p>`;
             html += `<p>Specialization: ${shopData.specialization}</p>`;
@@ -740,6 +755,7 @@
             }
         }
         populateShopManagementUI(); // Call it to build the UI
+
 
             // JavaScript for Shop Item "Buy" button functionality
             const inventoryContent = document.getElementById('inventory-content'); // Parent container for shop items
@@ -819,7 +835,6 @@
             const settingsPopup = document.getElementById('settings-popup');
             const settingsOption = document.getElementById('settings-option');
             // const saveGameOption = document.getElementById('save-game-option'); // This was the <li>, now it's a button
-
             // REMOVED JavaScript hover listeners for statsTab, inventoryTab, and infoTab
             // CSS :hover will now handle their visibility and animation.
 
@@ -863,7 +878,6 @@
                     settingsPopup.style.display = 'none'; // Hide popup after click
                 });
             }
-
             if (saveGameOption) { // This ID no longer exists on an <li>
                 // saveGameOption.addEventListener('click', () => { // Commenting out old listener
                 //     console.log("Save Game clicked");
