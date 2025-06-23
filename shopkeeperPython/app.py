@@ -495,11 +495,13 @@ def create_character_route():
 
     if not char_name or not char_name.strip():
         flash('Character name cannot be empty or just whitespace.', 'error')
+        session['character_creation_name'] = char_name # Persist name
         return redirect(url_for('display_game_output', action='create_new_char'))
 
     # --- Global Character Name Uniqueness Check ---
     if is_character_name_taken(char_name, user_characters, graveyard):
         flash(f"Character name '{char_name}' is already taken. Please choose another.", 'error')
+        session['character_creation_name'] = char_name # Persist name
         return redirect(url_for('display_game_output', action='create_new_char'))
     # --- End of Uniqueness Check ---
 
@@ -518,6 +520,7 @@ def create_character_route():
 
     if 'character_creation_stats' not in session or 'stats' not in session['character_creation_stats']:
         flash('Character creation session data not found. Please try starting over.', 'error')
+        session['character_creation_name'] = char_name # Persist name
         return redirect(url_for('display_game_output', action='create_new_char'))
 
     creation_data = session['character_creation_stats']
@@ -632,6 +635,7 @@ def display_game_output():
                 player_char_loaded_or_selected = False
                 show_character_creation_form = True
                 show_character_selection = False
+                flash("DEBUG: In display_game_output for create_new_char action. show_character_creation_form set to true.", "debug")
 
                 # Ensure g.player_char is the default, and g.output_stream is clear for creation.
                 # before_request_setup should have set g.player_char to default if selected_character_slot is None.
@@ -647,10 +651,13 @@ def display_game_output():
                 # g.player_char.gold is already 50 for default char.
                 # g.game_manager is already using this g.player_char.
 
-                if 'character_creation_stats' not in session:
-                    initial_stats = Character.roll_all_stats() # This class method call is fine
+                # Ensure character_creation_stats are initialized if missing or invalid
+                character_creation_data = session.get('character_creation_stats')
+                if not character_creation_data or 'stats' not in character_creation_data:
+                    initial_stats = Character.roll_all_stats()  # This class method call is fine
                     session['character_creation_stats'] = {'stats': initial_stats, 'reroll_used': False}
-                    flash("Stats rolled for new character! You can reroll one stat if you wish.", "info")
+                    flash("Initial stats rolled and saved to session.", "debug") # Or use app.logger.debug
+                    # print("DEBUG: Initial stats rolled and saved to session due to missing/invalid data.", flush=True)
 
                 character_creation_stats_display = session['character_creation_stats']
                 pending_char_name_display = session.get('character_creation_name')

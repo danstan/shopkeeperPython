@@ -27,6 +27,9 @@
         const shopData = window.gameConfig.shopData;
         const shopConfig = window.gameConfig.shopConfig;
         const shopManagementDetailsDiv = document.getElementById('shop-management-details');
+        if (!shopManagementDetailsDiv) {
+            console.warn("Shop management details div not found on page load.");
+        }
         // actionForm, hiddenActionNameInput, hiddenDetailsInput are typically fetched inside the 'actionForm' check block later
 
         var playerInventoryForSellDropdown = window.gameConfig.playerInventory;
@@ -126,15 +129,22 @@
             const hiddenDetailsInput = document.getElementById('action_details');
 
             const mapDestinationsDiv = document.getElementById('map-destinations');
+            if (!mapDestinationsDiv) console.warn("mapDestinationsDiv not found");
             const subLocationsListDiv = document.getElementById('sub-locations-list');
+            if (!subLocationsListDiv) console.warn("subLocationsListDiv not found");
             // const currentActionsListDiv = document.getElementById('current-actions-list'); // No longer primary target for displayActions
             let currentActionsListDiv = document.getElementById('current-actions-list'); // Keep for event listener for now
+            if (!currentActionsListDiv) console.warn("currentActionsListDiv not found initially");
             const currentTownDisplay = document.getElementById('current-town-display');
+            if (!currentTownDisplay) console.warn("currentTownDisplay not found");
 
             // Modal elements
             const subLocationActionsModal = document.getElementById('subLocationActionsModal');
+            if (!subLocationActionsModal) console.warn("subLocationActionsModal not found");
             const modalActionsListDiv = document.getElementById('modal-actions-list');
+            if (!modalActionsListDiv) console.warn("modalActionsListDiv not found");
             const modalCloseButton = subLocationActionsModal ? subLocationActionsModal.querySelector('.close-button') : null;
+            if (subLocationActionsModal && !modalCloseButton) console.warn("modalCloseButton not found within subLocationActionsModal");
 
 
             // Action Detail Divs and Inputs
@@ -759,14 +769,31 @@
 
             // JavaScript for Shop Item "Buy" button functionality
             const inventoryContent = document.getElementById('inventory-content'); // Parent container for shop items
+            if (!inventoryContent) console.warn("inventoryContent div not found for buy buttons.");
             // const buyDetailsDiv = document.getElementById('div_buy_details'); // Already declared above
             // const buyItemNameInput = document.getElementById('buy_item_name'); // Already declared above
             // const actionsTabButton = document.getElementById('actions-tab-button'); // Already declared below
             // const actionsPanelContent = document.getElementById('actions-panel-content'); // Already declared below
 
-            if (inventoryContent && buyItemNameInput && buyDetailsDiv) {
+            if (inventoryContent && document.getElementById('buy_item_name') && document.getElementById('div_buy_details')) { // Re-check dependent elements
                 inventoryContent.addEventListener('click', function(event) {
                     if (event.target.classList.contains('buy-item-button')) {
+                        // Fetch these inside the handler to ensure they are available if this runs late
+                        const buyItemNameInput = document.getElementById('buy_item_name');
+                        const buyDetailsDiv = document.getElementById('div_buy_details');
+                        const actionDetailsContainer = document.getElementById('action-details-container'); // Needed for showing
+                        const allDetailDivs = [ // Re-declare for safety, or ensure it's in broader scope
+                            document.getElementById('div_craft_details'), document.getElementById('div_buy_details'),
+                            document.getElementById('div_sell_details'), document.getElementById('div_hemlock_herbs_details'),
+                            document.getElementById('div_borin_items_details'), document.getElementById('div_borin_repair_details')
+                        ];
+
+
+                        if (!buyItemNameInput || !buyDetailsDiv || !actionDetailsContainer) {
+                            console.error("Required elements for buy button (buyItemNameInput, buyDetailsDiv, actionDetailsContainer) not found.");
+                            return;
+                        }
+
                         const itemName = event.target.dataset.itemName;
 
                         // Set the item name in the buy form
@@ -794,6 +821,8 @@
 
                         if (localActionsTabButton && localActionsPanelContent) {
                             localActionsTabButton.click(); // Simulate click to make Actions tab active
+                        } else {
+                            console.warn("Actions tab button or panel not found for buy button.");
                         }
 
                         // Show the buy details section (actionDetailsContainer and allDetailDivs are from the script above)
@@ -810,6 +839,10 @@
                         buyItemNameInput.focus();
                     }
                 });
+            } else {
+                if (!inventoryContent) console.warn("Inventory content not found, cannot attach buy button listener.");
+                if (!document.getElementById('buy_item_name')) console.warn("Buy item name input not found for buy button listener dependency.");
+                if (!document.getElementById('div_buy_details')) console.warn("Buy details div not found for buy button listener dependency.");
             }
 
         // New UI interaction script
