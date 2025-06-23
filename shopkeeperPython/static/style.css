@@ -1290,4 +1290,103 @@ em, i {
     outline: none;
 }
 
+/* Migrated head styles & Inline Styles */
+/* From head */
+/* General modal styling is largely covered by existing .modal and .modal-content rules.
+   The themed version in style.css is more complete.
+   Adding specific overrides or missing parts from the head styles. */
+
+.modal-content {
+    text-align: left; /* Ensure text is aligned left by default, from head style. */
+}
+
+/* Specific text alignment for h3 and p inside any modal-content, from head style */
+.modal-content h3, .modal-content p {
+    text-align: center;
+}
+
+#event-popup-choices { /* From head */
+    text-align: center;
+}
+#event-popup-choices button { /* From head */
+    margin: 5px;
+    padding: 10px 15px;
+    border: 1px solid #ccc; /* TODO: Consider theming this button */
+    background-color: #f0f0f0; /* TODO: Consider theming this button */
+    cursor: pointer;
+    font-family: var(--font-secondary); /* Ensure consistent font */
+}
+#event-popup-choices button:hover { /* From head */
+    background-color: #e0e0e0; /* TODO: Consider theming this button */
+}
+
+/* .action-buttons-container rule for margin-top: 15px already exists from head styles, no change needed */
+
+#skill-roll-result-display-container { /* From head */
+    text-align: center;
+    font-weight: bold;
+    color: var(--color-dark-ink); /* Themed */
+    /* display: none; /* Visibility should be controlled by JavaScript if it's dynamic */
+    /* Example positioning styles from comments in HTML are not applied by default */
+}
+
+/* From inline styles */
+.google-auth-container-modifiers {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.status-deceased {
+    color: var(--color-highlight-red);
+    font-weight: bold;
+}
+
+.logout-paragraph-modifiers {
+    margin-top: 20px;
+}
+
+.inline-form {
+    display: inline;
+}
+
+.character-creation-submit-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.flashes-container { /* This class is used in index.html for the container of flash messages */
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000; /* Below modals (1050) but above most other content */
+    width: 80%;
+    max-width: 600px; /* Added max-width for larger screens */
+    text-align: center;
+}
+
+/* A default styling for flash messages themselves, if specific categories like .flash-success aren't used */
+.flash-message-default {
+    background-color: #f0f0f0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+#shop-management-details { /* Existing ID, ensuring padding is applied via CSS */
+    padding: 10px;
+}
+
+#action-details-container { /* Existing ID */
+    flex-basis: 100%;
+    /* display: none; /* JS controls visibility, often by adding/removing a 'hidden' class or direct style */
+}
+
+/* #settings-popup and #event-choice-popup visibility is controlled by JS or Jinja conditional rendering.
+   Their base styles are already defined (.modal for #event-choice-popup, #settings-popup for the other).
+   No additional CSS for `display: none` or `display: block` needed here from inline styles,
+   as those are dynamic/conditional. */
+
 [end of shopkeeperPython/static/style.css]

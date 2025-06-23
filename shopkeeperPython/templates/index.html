@@ -5,56 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shopkeeper Adventure UI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        /* Basic Modal Styling */
-        .modal {
-            display: none; /* Hidden by default, shown by JS or inline style if data present */
-            position: fixed; z-index: 1001; /* Higher than flashes */
-            left: 0; top: 0; width: 100%; height: 100%;
-            overflow: auto; background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #fefefe; margin: 15% auto; padding: 20px;
-            border: 1px solid #888; width: 80%; max-width: 500px;
-            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
-            text-align: left; /* Ensure text is aligned left by default */
-        }
-        .modal-content h3, .modal-content p {
-            text-align: center; /* Center title and description if desired */
-        }
-        #event-popup-choices {
-            text-align: center; /* Center buttons if they are inline-block */
-        }
-        #event-popup-choices button {
-            margin: 5px;
-            padding: 10px 15px; /* Make buttons a bit larger */
-            border: 1px solid #ccc;
-            background-color: #f0f0f0;
-            cursor: pointer;
-        }
-        #event-popup-choices button:hover {
-            background-color: #e0e0e0;
-        }
-        /* Ensure .action-buttons-container provides some spacing if needed, though #event-popup-choices can handle it */
-        .action-buttons-container {
-            margin-top: 15px;
-        }
-
-        #skill-roll-result-display-container {
-            /* Styles can be defined here or inline in HTML */
-            text-align: center;
-            font-weight: bold;
-            color: #333;
-            /* Example:
-            position: fixed; top: 10px; left: 50%;
-            transform: translateX(-50%); z-index: 1005;
-            background-color: #fff; border: 1px solid #777;
-            padding: 10px; border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            display: none;
-            */
-        }
-    </style>
 </head>
 <body>
     {% if not user_logged_in %}
@@ -62,10 +12,12 @@
         <h2>Login</h2>
         <form action="{{ url_for('login_route') }}" method="post">
             <div>
-                <input type="text" name="username" placeholder="Username" required>
+                <label for="login_username">Username:</label>
+                <input type="text" id="login_username" name="username" placeholder="Username" required>
             </div>
             <div>
-                <input type="password" name="password" placeholder="Password" required>
+                <label for="login_password">Password:</label>
+                <input type="password" id="login_password" name="password" placeholder="Password" required>
             </div>
             <button type="submit">Login</button>
         </form>
@@ -80,7 +32,7 @@
         {% endwith %}
 
         {% if google_auth_is_configured %}
-        <div style="margin-top: 20px; text-align: center;">
+        <div class="google-auth-container-modifiers">
             <p>OR</p>
             <a href="{{ url_for('google_initiate_login_route') }}" class="google-login-button">
                 <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
@@ -105,7 +57,7 @@
             <li>
                 <span>{{ char_info.name }} (Level {{ char_info.level }})</span>
                 {% if char_info.is_dead %}
-                    <span style="color: red; font-weight: bold;">DECEASED</span>
+                    <span class="status-deceased">DECEASED</span>
                 {% else %}
                     <a href="{{ url_for('select_character_route', slot_index=char_info.slot_index) }}">Select</a>
                 {% endif %}
@@ -142,7 +94,7 @@
         </div>
         {% endif %}
 
-         <p style="margin-top: 20px;"><a href="{{ url_for('logout_route') }}">Logout</a></p>
+         <p class="logout-paragraph-modifiers"><a href="{{ url_for('logout_route') }}">Logout</a></p>
     </div>
 
     {% elif show_character_creation_form %}
@@ -162,7 +114,6 @@
             </div>
 
             <h3>Character Stats:</h3>
-            <h3>Character Stats:</h3>
             {% if character_creation_stats %}
                 <p>
                     Your rolled stats are below.
@@ -179,7 +130,8 @@
                         <div>
                             <span>{{ stat_key }}: {{ stat_value }}</span>
                             {% if not character_creation_stats.reroll_used %}
-                            <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" style="display: inline;">
+                            <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" class="inline-form">
+                            <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" class="inline-form">
                                 <button type="submit">Reroll {{ stat_key }}</button>
                             </form>
                             {% endif %}
@@ -202,7 +154,7 @@
                 <p>Stats not available. Please try starting character creation again.</p>
             {% endif %}
 
-            <div style="text-align: center; margin-top: 20px;">
+            <div class="character-creation-submit-container">
                 <button type="submit" id="createCharacterButton">Create Character</button>
             </div>
         </form>
@@ -240,15 +192,15 @@
     {# Display ALL flash messages #}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <div class="flashes-container" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 80%; text-align: center;">
+            <div class="flashes-container">
             {% for category, message in messages %}
-                <p class="flash-{{ category }}" style="background-color: #f0f0f0; padding: 10px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 5px;">{{ message }}</p>
+                <p class="flash-{{ category }} flash-message-default">{{ message }}</p>
             {% endfor %}
             </div>
         {% endif %}
     {% endwith %}
     <div class="game-container">
-        <div id="top-right-menu-button">Menu</div>
+        <div id="top-right-menu-button" aria-haspopup="true" aria-expanded="false" aria-controls="settings-popup">Menu</div>
 
         <div id="left-tabs-container">
             <div id="stats-tab">
@@ -277,7 +229,7 @@
             <div id="shop-mgt-tab" class="left-tab"> <!-- Use existing class for left panel tabs -->
                 <div id="shop-mgt-content" class="tab-content">
                     <div class="tab-title-bar">Shop Management</div>
-                    <div id="shop-management-details" style="padding: 10px;">
+                    <div id="shop-management-details">
                         <!-- Content will be populated by JS -->
                     </div>
                 </div>
@@ -333,13 +285,13 @@
             </div>
         </div>
         <div id="actions-tab">
-            <div class="actions-log-tab-buttons">
-                <div id="actions-tab-button">Actions</div>
-                <div id="log-tab-button">Log</div>
+            <div class="actions-log-tab-buttons" role="tablist">
+                <div id="actions-tab-button" role="tab" aria-controls="actions-panel-content" aria-selected="true">Actions</div>
+                <div id="log-tab-button" role="tab" aria-controls="log-panel-content" aria-selected="false">Log</div>
             </div>
             <div id="actions-content" class="tab-content">
 
-                <div id="actions-panel-content"> <!-- Panel for Actions -->
+                <div id="actions-panel-content" role="tabpanel" aria-labelledby="actions-tab-button"> <!-- Panel for Actions -->
                     <div id="action-controls-wrapper">
                         <!-- All original form elements and action sections MUST be HERE -->
                         <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
@@ -375,7 +327,7 @@
                             </div>
 
                             <!-- Container for Action Detail Forms -->
-                            <div id="action-details-container" class="action-box-section" style="flex-basis: 100%; display: none;"> <!-- Initially hidden, spans full width if flex items wrap -->
+                            <div id="action-details-container" class="action-box-section"> <!-- Initially hidden, spans full width if flex items wrap -->
                                 <h3>Action Details</h3>
 
                                 <div id="div_craft_details" class="hidden-details details-section">
@@ -441,7 +393,7 @@
                     </div> <!-- Close action-controls-wrapper -->
                 </div> <!-- Close actions-panel-content -->
 
-                <div id="log-panel-content"> <!-- Panel for Log -->
+                <div id="log-panel-content" role="tabpanel" aria-labelledby="log-tab-button"> <!-- Panel for Log -->
                     <div class="log-box">
                         <h2>Journal</h2>
                         {% if player_journal %}
@@ -475,11 +427,11 @@
             </div> <!-- Close actions-content -->
         </div> <!-- Close actions-tab -->
 
-        <div id="settings-popup" style="display: none;">
+        <div id="settings-popup" role="menu">
             <ul>
-                <li id="settings-option">Settings</li>
-                <li><a href="{{ url_for('logout_route') }}" id="logout-option">Logout</a></li>
-                <li><button type="button" id="save-game-button" class="popup-menu-button">Save Game</button></li>
+                <li id="settings-option" role="menuitem">Settings</li>
+                <li role="menuitem"><a href="{{ url_for('logout_route') }}" id="logout-option">Logout</a></li>
+                <li role="menuitem"><button type="button" id="save-game-button" class="popup-menu-button">Save Game</button></li>
             </ul>
         </div>
 
@@ -554,10 +506,10 @@
     <script src="{{ url_for('static', filename='js/main_ui.js') }}" defer></script>
     {% endif %}
 
-    <div id="subLocationActionsModal" class="modal">
+    <div id="subLocationActionsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="subLocationActionsModalTitle">
         <div class="modal-content">
             <span class="close-button">&times;</span>
-            <h3>Actions</h3>
+            <h3 id="subLocationActionsModalTitle">Actions</h3>
             <div id="modal-actions-list">
                 <!-- Action buttons will be dynamically inserted here -->
             </div>
@@ -565,9 +517,9 @@
     </div>
 
     {% if awaiting_event_choice and pending_event_data_json %}
-    <div id="event-choice-popup" class="modal" style="display: block;"> <!-- Start visible if data present -->
+    <div id="event-choice-popup" class="modal" role="dialog" aria-modal="true" aria-labelledby="event-popup-name"> <!-- Start visible if data present -->
         <div class="modal-content">
-            <h3 id="event-popup-name"></h3>
+            <h3 id="event-popup-name">Event Title</h3> <!-- Title will be set by JS -->
             <p id="event-popup-description"></p>
             <div id="event-popup-choices" class="action-buttons-container">
                 <!-- Choices will be populated by JavaScript -->
