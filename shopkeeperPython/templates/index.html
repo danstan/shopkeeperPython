@@ -206,6 +206,21 @@
                         <li role="listitem"><strong>{{ stat }}:</strong> {{ value }}</li>
                         {% endfor %}
                     </ul>
+                    <p><strong>Skill Points to Allocate:</strong> <span id="skill-points-to-allocate-display">{{ player_skill_points_to_allocate | default(0) }}</span></p>
+                    {% if player_skill_points_to_allocate and player_skill_points_to_allocate > 0 %}
+                    <button type="button" id="allocate-skill-points-button" class="action-button">Allocate Skill Points</button>
+                    {% endif %}
+                    {# Placeholder for displaying chosen skill bonuses if needed in future #}
+                    {# <p><strong>Chosen Skill Bonuses:</strong></p>
+                    <ul role="list" id="chosen-skill-bonuses-display">
+                        {% if player_chosen_skill_bonuses %}
+                            {% for skill, bonus in player_chosen_skill_bonuses.items() %}
+                            <li role="listitem">{{ skill }}: +{{ bonus }}</li>
+                            {% endfor %}
+                        {% else %}
+                            <li role="listitem">None</li>
+                        {% endif %}
+                    </ul> #}
                 </div>
             </div>
 
@@ -460,6 +475,9 @@
             shopData: {{ shop_data_json | default('null') | safe }},
             shopConfig: {{ shop_config_json | default('null') | safe }},
             playerGold: {{ player_gold | default(0) | tojson }},
+            playerSkillPointsToAllocate: {{ player_skill_points_to_allocate | default(0) | tojson }},
+            playerChosenSkillBonuses: {{ player_chosen_skill_bonuses | default({}) | tojson | safe }},
+            characterAttributeDefinitions: {{ character_attribute_definitions_json | default('{}') | safe }},
             performActionUrl: "{{ url_for('perform_action') }}",
             submitEventChoiceUrl: "{{ url_for('submit_event_choice_route') }}"
         };
@@ -494,5 +512,19 @@
 
     <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
+    {# Skill Allocation Modal #}
+    <div id="skill-allocation-popup-wrapper" class="hidden"> {# Wrapper to control visibility via JS if needed, initially hidden #}
+        <div id="skill-allocation-popup" class="modal" role="dialog" aria-modal="true" aria-labelledby="skill-allocation-popup-name">
+            <div class="modal-content">
+                <button class="close-button" id="close-skill-allocation-popup" aria-label="Close Skill Allocation">&times;</button>
+                <h3 id="skill-allocation-popup-name">Allocate Skill Point</h3>
+                <p>You have <span id="skill-points-available-modal-display">0</span> point(s) to spend.</p>
+                <p>Choose a skill to improve by +1:</p>
+                <div id="skill-allocation-choices" class="action-buttons-container button-list" role="list">
+                    <!-- Skill buttons will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
