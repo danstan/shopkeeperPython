@@ -1037,14 +1037,17 @@ def perform_action():
             action_result_data = g.game_manager.perform_hourly_action(action_name, details_dict)
 
             if isinstance(action_result_data, dict) and action_result_data.get('type') == 'event_pending':
+                    event_details = action_result_data.get('event_data', {}) # Get the nested dict, default to empty dict
                     session['awaiting_event_choice'] = True
-                    session['pending_event_data'] = { # This session storage is fine
-                        'name': action_result_data.get('event_name'),
-                        'description': action_result_data.get('event_description'),
-                        'choices': action_result_data.get('choices')
+                    session['pending_event_data'] = {
+                        'name': event_details.get('name'), # Access from event_details
+                        'description': event_details.get('description'), # Access from event_details
+                        'choices': event_details.get('choices') # Access from event_details
                     }
-                    flash(f"EVENT: {action_result_data.get('event_name')}! Check Journal or Game Log for details.", "info")
-                    g.game_manager._print(f"EVENT: {action_result_data.get('event_name')} requires your attention!")
+                    # Use event_details for flash and print as well
+                    event_name_for_flash = event_details.get('name', 'An event') # Fallback name
+                    flash(f"EVENT: {event_name_for_flash}! Check Journal or Game Log for details.", "info")
+                    g.game_manager._print(f"EVENT: {event_name_for_flash} requires your attention!")
             else:
                 session.pop('awaiting_event_choice', None)
                 session.pop('pending_event_data', None)
