@@ -759,6 +759,39 @@ class GameManager:
                 action_xp_reward = 5
                 time_advanced_by_action_hours = 1
 
+            elif action_name == "study_local_history":
+                self._print(f"  {self.character.name} spends an hour studying local history in {self.current_town.name}.")
+                # Example outcome: Gain XP, chance for a small discovery
+                action_xp_reward = 10
+                discovery_message = "Learned some interesting historical facts about the area."
+                if random.random() < 0.1: # 10% chance of a minor discovery
+                    action_xp_reward += 5
+                    discovery_message = "Uncovered a minor local secret or a piece of forgotten lore!"
+                self._print(f"  {discovery_message}")
+                self.add_journal_entry(action_type="Study History", summary=f"Studied local history in {self.current_town.name}.", outcome=discovery_message)
+                time_advanced_by_action_hours = 1
+
+            elif action_name == "organize_inventory":
+                self._print(f"  {self.character.name} meticulously organizes their personal inventory and shop stock if applicable.")
+                # Flavor action, could have minor non-numeric benefits in a more complex system
+                action_xp_reward = 3
+                self.add_journal_entry(action_type="Organize Inventory", summary="Spent time organizing inventory.", outcome="Everything is neat and tidy.")
+                time_advanced_by_action_hours = 1
+
+            elif action_name == "post_advertisements":
+                self._print(f"  {self.character.name} posts advertisements for '{self.shop.name if self.shop else 'their shop'}' around {self.current_town.name}.")
+                # Example outcome: Small temporary boost to customer traffic (not implemented mechanically yet)
+                action_xp_reward = 7
+                # In a more complex system, this might set a temporary buff on the shop or player
+                outcome_message = "Hopefully, this will attract more customers!"
+                if self.shop:
+                    self.shop.temporary_customer_boost += 0.05 # Example: 5% boost, needs to be used by NPC sale logic
+                    self._print(f"  Applied a small temporary boost to customer attraction for {self.shop.name}.")
+                    outcome_message += " A small boost to customer attraction has been applied."
+
+                self.add_journal_entry(action_type="Post Advertisements", summary=f"Posted advertisements in {self.current_town.name}.", outcome=outcome_message)
+                time_advanced_by_action_hours = 1
+
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)

@@ -79,6 +79,7 @@ class Shop:
         # self.MIN_REPUTATION = -20 # Moved to class level
         self.markup_percentage = 1.2 # Default markup (e.g., 20% over value for player)
         self.buyback_percentage = 0.5 # Default buyback (e.g., 50% of value for player)
+        self.temporary_customer_boost = 0.0 # For 'Post Advertisements' action
 
     def __repr__(self):
         return (f"Shop(name='{self.name}', owner='{self.owner_name}', town='{self.town.name if self.town else 'None'}', "
@@ -471,6 +472,7 @@ class Shop:
             "reputation": self.reputation,
             "markup_percentage": self.markup_percentage,
             "buyback_percentage": self.buyback_percentage,
+            "temporary_customer_boost": self.temporary_customer_boost, # Save the boost
         }
 
     @classmethod
@@ -496,6 +498,7 @@ class Shop:
 
         shop.markup_percentage = data.get("markup_percentage", 1.2)
         shop.buyback_percentage = data.get("buyback_percentage", 0.5)
+        shop.temporary_customer_boost = data.get("temporary_customer_boost", 0.0) # Load the boost
         return shop
 
 if __name__ == "__main__":

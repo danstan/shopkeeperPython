@@ -395,6 +395,60 @@ class TestGameManager(unittest.TestCase):
         # For simplicity, we'll just check if the output indicates XP gain if applicable.
         # The action itself awards XP, so self.player.xp should have increased.
 
+    def test_action_study_local_history(self):
+        initial_xp = self.player.xp
+        initial_journal_len = len(self.player.journal)
+
+        with patch('random.random', return_value=0.5) as mock_random: # Not triggering the 10% discovery
+            self.gm.perform_hourly_action("study_local_history")
+
+        self.assertIn(f"{self.player.name} spends an hour studying local history", self.test_output_stream.getvalue())
+        self.assertIn("Learned some interesting historical facts", self.test_output_stream.getvalue())
+        self.assertEqual(self.player.xp, initial_xp + 10)
+        self.assertEqual(len(self.player.journal), initial_journal_len + 1)
+        last_entry = self.player.journal[-1]
+        self.assertEqual(last_entry.action_type, "Study History")
+        self.assertEqual(last_entry.outcome, "Learned some interesting historical facts about the area.")
+
+        # Test the discovery case
+        initial_xp = self.player.xp # Reset for this part of the test
+        with patch('random.random', return_value=0.05) as mock_random: # Triggering the 10% discovery
+            self.gm.perform_hourly_action("study_local_history")
+        self.assertIn("Uncovered a minor local secret", self.test_output_stream.getvalue())
+        self.assertEqual(self.player.xp, initial_xp + 10 + 5) # 10 base + 5 discovery
+        last_entry_discovery = self.player.journal[-1]
+        self.assertEqual(last_entry_discovery.outcome, "Uncovered a minor local secret or a piece of forgotten lore!")
+
+
+    def test_action_organize_inventory(self):
+        initial_xp = self.player.xp
+        initial_journal_len = len(self.player.journal)
+
+        self.gm.perform_hourly_action("organize_inventory")
+
+        self.assertIn(f"{self.player.name} meticulously organizes their personal inventory", self.test_output_stream.getvalue())
+        self.assertEqual(self.player.xp, initial_xp + 3)
+        self.assertEqual(len(self.player.journal), initial_journal_len + 1)
+        last_entry = self.player.journal[-1]
+        self.assertEqual(last_entry.action_type, "Organize Inventory")
+        self.assertEqual(last_entry.outcome, "Everything is neat and tidy.")
+
+    def test_action_post_advertisements(self):
+        initial_xp = self.player.xp
+        initial_journal_len = len(self.player.journal)
+        initial_boost = self.gm.shop.temporary_customer_boost
+
+        self.gm.perform_hourly_action("post_advertisements")
+
+        self.assertIn(f"{self.player.name} posts advertisements for '{self.gm.shop.name}'", self.test_output_stream.getvalue())
+        self.assertIn("Hopefully, this will attract more customers!", self.test_output_stream.getvalue())
+        self.assertEqual(self.player.xp, initial_xp + 7)
+        self.assertEqual(len(self.player.journal), initial_journal_len + 1)
+        last_entry = self.player.journal[-1]
+        self.assertEqual(last_entry.action_type, "Post Advertisements")
+        self.assertTrue(last_entry.outcome.startswith("Hopefully, this will attract more customers!"))
+        self.assertAlmostEqual(self.gm.shop.temporary_customer_boost, initial_boost + 0.05)
+
 
 if __name__ == '__main__':
     unittest.main()
