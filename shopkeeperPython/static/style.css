@@ -753,6 +753,16 @@ body, .full-panel-content, #bottom-panel-content-area, #left-info-column, #right
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-primary); color: var(--color-dark-ink); }
 strong, b { font-weight: bold; color: var(--color-highlight-red); }
 em, i { font-family: var(--font-secondary); font-style: italic; color: var(--color-deep-brown-border); }
+
+/* Utility class to hide elements */
+.hidden {
+    display: none !important; /* Using !important to ensure it takes precedence */
+}
+/* .hidden-details was present, let's ensure it's the same or consolidate if it was different.
+   Assuming .hidden is the primary class used by JS for panel visibility.
+   If .hidden-details was used for other specific cases, it can remain.
+   For now, focusing on the .hidden class used by panel JS.
+*/
 .hidden-details { display: none !important; } /* Ensure this utility class works */
 .inline-form { display: inline; }
 

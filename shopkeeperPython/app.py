@@ -517,13 +517,13 @@ def create_character_route():
         user_characters[username] = [] # Should have been created at registration, but good safeguard
         app.logger.info(f"CREATE_CHARACTER_ROUTE: Initialized empty character list for user '{username}'.")
 
-    active_characters_list = user_characters.get(username, [])
-    # The prompt asks to change the limit check to active characters.
-    # The previous logic (len(user_characters[username])) checked total slots.
-    # Now, it should be len(active_characters_list) because dead chars are moved out.
-    if len(active_characters_list) >= MAX_CHARS_PER_USER:
+    # Filter for active (not dead) characters to check against the limit
+    all_chars_for_user = user_characters.get(username, [])
+    current_active_characters = [char_data for char_data in all_chars_for_user if not char_data.get('is_dead', False)]
+
+    if len(current_active_characters) >= MAX_CHARS_PER_USER:
         flash(f'You have reached the maximum of {MAX_CHARS_PER_USER} active characters. A dead character frees up their slot.', 'error')
-        app.logger.warning(f"CREATE_CHARACTER_ROUTE: User '{username}' at character limit ({MAX_CHARS_PER_USER}).")
+        app.logger.warning(f"CREATE_CHARACTER_ROUTE: User '{username}' at character limit ({MAX_CHARS_PER_USER}). Current active: {len(current_active_characters)}")
         # Ensure creation stats are cleared if they somehow reach here at limit
         session.pop('character_creation_stats', None)
         return redirect(url_for('display_game_output'))

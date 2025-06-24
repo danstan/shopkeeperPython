@@ -510,9 +510,8 @@ const UIBottomTabs = {
         if (!DOM.actionsTabButton || !DOM.logTabButton || !DOM.actionsPanelContent || !DOM.logPanelContent) return;
 
         const switchTab = (activeTab, inactiveTab, activePanel, inactivePanel) => {
-            activePanel.style.display = 'block';
+            // Rely on CSS classes for visibility: .panel-content is display:none, .panel-visible is display:block
             activePanel.classList.add('panel-visible');
-            inactivePanel.style.display = 'none';
             inactivePanel.classList.remove('panel-visible');
 
             activeTab.classList.add('active-tab-button');
