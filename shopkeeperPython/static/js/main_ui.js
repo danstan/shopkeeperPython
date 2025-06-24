@@ -211,11 +211,13 @@ function showDynamicForm(formElement) {
 }
 
 
+
 // --- INITIALIZATION MODULES ---
 
 const UIPanels = {
     init() {
         if (!DOM.miniPanels || !DOM.closeFullPanelButtons || !DOM.fullPanelContainers) return;
+
 
         DOM.miniPanels.forEach(miniPanel => {
             const fullPanelId = miniPanel.getAttribute('aria-controls');
@@ -741,6 +743,7 @@ const UIActionsAndEvents = {
 };
 
 
+
 const UITopMenu = {
     init() {
         if (DOM.topRightMenuButton && DOM.settingsPopup) {
@@ -894,6 +897,7 @@ function main() {
         });
     }
 }
+
 
 // --- STARTUP ---
 document.addEventListener('DOMContentLoaded', main);
