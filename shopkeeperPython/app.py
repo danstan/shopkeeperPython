@@ -883,11 +883,18 @@ def display_game_output():
         haggling_data_for_template = None
 
     # --- Temporary Debugging for Haggling ---
-    app.logger.info(f"DEBUG_DISPLAY_OUTPUT: g.game_manager.active_haggling_session = {g.game_manager.active_haggling_session if hasattr(g, 'game_manager') and g.game_manager else 'GM_NOT_AVAILABLE'}")
-    temp_haggling_pending = bool(haggling_data_for_template)
-    temp_pending_haggling_json = json.dumps(haggling_data_for_template) if haggling_data_for_template else None
-    app.logger.info(f"DEBUG_DISPLAY_OUTPUT: Values for template -> haggling_pending: {temp_haggling_pending}, pending_haggling_data_json: {temp_pending_haggling_json}")
+    # app.logger.info(f"DEBUG_DISPLAY_OUTPUT: g.game_manager.active_haggling_session = {g.game_manager.active_haggling_session if hasattr(g, 'game_manager') and g.game_manager else 'GM_NOT_AVAILABLE'}")
+    # temp_haggling_pending = bool(haggling_data_for_template)
+    # temp_pending_haggling_json = json.dumps(haggling_data_for_template) if haggling_data_for_template else None
+    # app.logger.info(f"DEBUG_DISPLAY_OUTPUT: Values for template -> haggling_pending: {temp_haggling_pending}, pending_haggling_data_json: {temp_pending_haggling_json}")
     # --- End Temporary Debugging ---
+
+    # Retrieve haggling state from session for this render
+    haggling_pending_for_template = session.pop('haggling_pending_flag', False)
+    pending_haggling_data_for_template = session.pop('pending_haggling_data', None)
+
+    app.logger.info(f"DEBUG_DISPLAY_OUTPUT (SESSION): Values for template -> haggling_pending: {haggling_pending_for_template}, pending_haggling_data_json: {json.dumps(pending_haggling_data_for_template) if pending_haggling_data_for_template else None}")
+
 
     return render_template('index.html',
                            user_logged_in=user_logged_in,
@@ -936,9 +943,9 @@ def display_game_output():
                            player_pending_asi_feat_choice=player_pending_asi_feat_choice_display,
                            feat_definitions_json=json.dumps(feat_definitions_for_template),
                            player_stats_json=json.dumps(player_stats_for_template),
-                           # Haggling data passed to template
-                           haggling_pending=bool(haggling_data_for_template),
-                           pending_haggling_data_json=json.dumps(haggling_data_for_template) if haggling_data_for_template else None
+                           # Haggling data passed to template now from session
+                           haggling_pending=haggling_pending_for_template,
+                           pending_haggling_data_json=json.dumps(pending_haggling_data_for_template) if pending_haggling_data_for_template else None
                            )
 
 # --- Reroll Stat Route ---
@@ -1113,13 +1120,18 @@ def perform_action():
             if isinstance(action_result_data, dict):
                 result_type = action_result_data.get('type')
                 if result_type == 'haggling_pending':
-                    # Haggling takes precedence. Clear any generic event session flags.
-                    # GameManager has already set g.game_manager.active_haggling_session.
-                    # display_game_output will pick up active_haggling_session.
+                    haggling_data = action_result_data.get('haggling_data')
+                    session['pending_haggling_data'] = haggling_data
+                    session['haggling_pending_flag'] = True
+                    # Clear any generic event session flags as haggling takes precedence
                     session.pop('awaiting_event_choice', None)
                     session.pop('pending_event_data', None)
                     flash("A potential transaction requires your attention!", "info")
                 elif result_type == 'event_pending':
+                    # If a generic event occurs, ensure any prior haggling session flags are cleared
+                    # as the generic event popup will now take precedence for this render.
+                    session.pop('pending_haggling_data', None)
+                    session.pop('haggling_pending_flag', None)
                     event_details = action_result_data.get('event_data', {})
                     session['awaiting_event_choice'] = True
                     session['pending_event_data'] = {
