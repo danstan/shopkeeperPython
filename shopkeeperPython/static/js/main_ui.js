@@ -211,11 +211,13 @@ function showDynamicForm(formElement) {
 }
 
 
+
 // --- INITIALIZATION MODULES ---
 
 const UIPanels = {
     init() {
         if (!DOM.miniPanels || !DOM.closeFullPanelButtons || !DOM.fullPanelContainers) return;
+
 
         DOM.miniPanels.forEach(miniPanel => {
             const fullPanelId = miniPanel.getAttribute('aria-controls');
@@ -223,7 +225,17 @@ const UIPanels = {
 
             if (fullPanelContainer) {
                 const openPanel = () => {
-                    fullPanelContainer.style.display = 'flex';
+                    // Hide all other full panels first
+                    DOM.fullPanelContainers.forEach(p => {
+                        if (p !== fullPanelContainer) {
+                            p.classList.add('hidden');
+                            const correspondingMiniPanel = document.querySelector(`[aria-controls="${p.id}"]`);
+                            if (correspondingMiniPanel) {
+                                correspondingMiniPanel.setAttribute('aria-expanded', 'false');
+                            }
+                        }
+                    });
+                    fullPanelContainer.classList.remove('hidden');
                     miniPanel.setAttribute('aria-expanded', 'true');
                 };
                 miniPanel.addEventListener('click', openPanel);
@@ -240,7 +252,7 @@ const UIPanels = {
             button.addEventListener('click', () => {
                 const fullPanelContainer = button.closest('.full-panel-container');
                 if (fullPanelContainer) {
-                    fullPanelContainer.style.display = 'none';
+                    fullPanelContainer.classList.add('hidden');
                     const miniPanel = document.querySelector(`[aria-controls="${fullPanelContainer.id}"]`);
                     if (miniPanel) miniPanel.setAttribute('aria-expanded', 'false');
                 }
@@ -249,8 +261,8 @@ const UIPanels = {
 
         DOM.fullPanelContainers.forEach(container => {
             container.addEventListener('click', function(event) {
-                if (event.target === container) {
-                    container.style.display = 'none';
+                if (event.target === container) { // Click on overlay, not content
+                    container.classList.add('hidden');
                     const miniPanel = document.querySelector(`[aria-controls="${container.id}"]`);
                     if (miniPanel) miniPanel.setAttribute('aria-expanded', 'false');
                 }
@@ -731,6 +743,7 @@ const UIActionsAndEvents = {
 };
 
 
+
 const UITopMenu = {
     init() {
         if (DOM.topRightMenuButton && DOM.settingsPopup) {
@@ -871,7 +884,20 @@ function main() {
     }
 
     UIInitialPopups.init();
+
+    // Ensure all full panels are initially hidden after all JS setup
+    if (DOM.fullPanelContainers) {
+        DOM.fullPanelContainers.forEach(panel => {
+            panel.classList.add('hidden');
+            // Also ensure their corresponding mini-panels are not marked as expanded
+            const miniPanel = document.querySelector(`[aria-controls="${panel.id}"]`);
+            if (miniPanel) {
+                miniPanel.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
 }
+
 
 // --- STARTUP ---
 document.addEventListener('DOMContentLoaded', main);
