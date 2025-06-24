@@ -283,7 +283,7 @@ class Shop:
         # Ensure it's not below min_offer_actual due to negative rep
         initial_offer_value_float = max(initial_offer_value_float, min_offer_actual)
 
-        initial_npc_offer = int(initial_offer_value_float)
+        initial_npc_offer = int(initial_offer_value_float) if initial_offer_value_float >= 1.0 else (1 if initial_offer_value_float > 0 else 0)
 
         # Ensure item_to_sell has a quantity attribute, defaulting to 1 if missing (though it should always exist)
         quantity_for_sale = getattr(item_to_sell, 'quantity', 1)
