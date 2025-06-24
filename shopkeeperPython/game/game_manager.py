@@ -176,6 +176,7 @@ class GameManager:
         self.skill_check_events = GAME_EVENTS.copy()
         # self._print(f"Base event chance: {self.BASE_EVENT_CHANCE_PER_HOUR}, Skill check event chance: {self.SKILL_EVENT_CHANCE_PER_HOUR}. Loaded {len(self.skill_check_events)} skill check events.")
 
+        self.active_haggling_session = None # Initialize active haggling session tracker
 
         self._reset_daily_trackers()
         self._print("Daily trackers reset initially.")
@@ -541,7 +542,60 @@ class GameManager:
                 )
             elif action_name == "wait": self._print(f"  {self.character.name} waits."); action_xp_reward = 1
             elif action_name == "buy_from_npc":
-                action_xp_reward = self._handle_buy_from_npc(action_details) # Returns 1 if successful, 0 otherwise
+                # This action now initiates haggling instead of direct purchase.
+                # The actual purchase happens via PROCESS_PLAYER_HAGGLE_CHOICE_BUY.
+                # We need to get item details and NPC's initial price.
+                npc_name = action_details.get("npc_name")
+                item_name_to_buy = action_details.get("item_name")
+                quantity_to_buy = int(action_details.get("quantity", 1))
+
+                if not npc_name or not item_name_to_buy or quantity_to_buy <= 0:
+                    self._print("  Invalid details for buying from NPC.")
+                    return {"type": "action_failed", "reason": "Invalid NPC buy details."}
+
+                item_info = None
+                npc_vendor_inventory = None
+                if npc_name == "Old Man Hemlock":
+                    npc_vendor_inventory = HEMLOCK_HERBS
+                elif npc_name == "Borin Stonebeard":
+                    npc_vendor_inventory = BORIN_ITEMS
+
+                if npc_vendor_inventory and item_name_to_buy in npc_vendor_inventory:
+                    item_info = npc_vendor_inventory[item_name_to_buy]
+
+                if not item_info:
+                    self._print(f"  {npc_name} does not seem to have '{item_name_to_buy}'.")
+                    return {"type": "action_complete"} # Or action_failed
+
+                initial_npc_price_per_unit = item_info["price"]
+                initial_total_price = initial_npc_price_per_unit * quantity_to_buy
+
+                # Player wants the price to be lower, ideally towards item_info["base_value"] * quantity
+                player_target_price = item_info["base_value"] * quantity_to_buy
+
+                haggling_data = {
+                    "item_name": item_name_to_buy,
+                    "item_quality": item_info.get("quality", "Common"), # Assuming common if not specified
+                    "item_base_value": item_info["base_value"],
+                    "quantity": quantity_to_buy,
+                    "npc_name": npc_name,
+                    "initial_offer": initial_total_price, # NPC's selling price is their "offer"
+                    "current_offer": initial_total_price,
+                    "player_target_price": player_target_price,
+                    "npc_mood": "Neutral",
+                    "haggle_rounds_attempted": 0,
+                    "max_haggle_rounds": 3,
+                    "context": "player_buying",
+                    "can_still_haggle": True
+                }
+                self.active_haggling_session = haggling_data
+                self._print(f"  You want to buy {quantity_to_buy}x {item_name_to_buy} from {npc_name}. They ask for {initial_total_price}g.")
+                # This action itself (initiating the buy) advances time by 1 hour.
+                # The subsequent haggle choices (accept/decline/persuade) will not advance further time.
+                time_advanced_by_action_hours = 1
+                action_xp_reward = 1 # Small XP for initiating interaction
+                return {"type": "haggling_pending", "haggling_data": haggling_data}
+
             elif action_name == "talk_to_hemlock": # Example specific NPC interaction
                 action_xp_reward = self._handle_npc_dialogue("Old Man Hemlock")
             elif action_name == "talk_to_borin":
@@ -846,123 +900,329 @@ class GameManager:
                 action_xp_reward = 0
                 time_advanced_by_action_hours = 0
 
+            elif action_name == "PROCESS_PLAYER_HAGGLE_CHOICE_SELL":
+                if not self.active_haggling_session or self.active_haggling_session.get("context") != "player_selling":
+                    self._print("  Error: No active player selling haggling session found or context mismatch.")
+                    self.active_haggling_session = None # Clear invalid session
+                    return {"type": "action_failed", "reason": "Invalid haggling session."}
+
+                player_choice = action_details.get("haggle_choice") # e.g., "accept", "decline", "persuade"
+                current_haggle_state = self.active_haggling_session
+
+                item_in_shop_inventory_idx = current_haggle_state.get("item_id_in_shop_inventory")
+                try:
+                    item_instance_to_sell = self.shop.inventory[item_in_shop_inventory_idx]
+                    if item_instance_to_sell.name != current_haggle_state.get("item_name"): # Sanity check
+                        raise IndexError
+                except (IndexError, TypeError):
+                    self._print(f"  Error: Item for haggling (id: {item_in_shop_inventory_idx}) not found in shop inventory or mismatch. Aborting haggle.")
+                    self.add_journal_entry("Haggle (Sell)", f"Error finding item {current_haggle_state.get('item_name')} for haggling.", outcome="Haggle Aborted")
+                    self.active_haggling_session = None
+                    return {"type": "action_complete"}
+
+
+                if player_choice == "accept":
+                    final_price = current_haggle_state["current_offer"]
+                    if self.shop.finalize_haggled_sale(item_instance_to_sell, final_price):
+                        self._print(f"  Sale of {item_instance_to_sell.name} to {current_haggle_state['npc_name']} accepted at {final_price}g.")
+                        self.daily_items_sold_by_shop_to_npcs.append((item_instance_to_sell.name, final_price))
+                        self.daily_gold_earned_from_sales += final_price
+                        self.add_journal_entry("Haggle (Sell)", f"Accepted offer for {item_instance_to_sell.name} from {current_haggle_state['npc_name']}.", outcome=f"Sold for {final_price}g.")
+                        action_xp_reward = 5 # XP for successful sale after haggle
+                    else:
+                        self._print(f"  Error finalizing sale of {item_instance_to_sell.name} after accepting haggle.")
+                        self.add_journal_entry("Haggle (Sell)", f"Error finalizing sale of {item_instance_to_sell.name}.", outcome="Sale Failed")
+                    self.active_haggling_session = None
+                    return {"type": "action_complete"}
+
+                elif player_choice == "decline":
+                    self._print(f"  Sale of {item_instance_to_sell.name} to {current_haggle_state['npc_name']} declined at {current_haggle_state['current_offer']}g.")
+                    self.add_journal_entry("Haggle (Sell)", f"Declined offer for {item_instance_to_sell.name} from {current_haggle_state['npc_name']}.", outcome="Sale Declined")
+                    self.active_haggling_session = None
+                    return {"type": "action_complete"}
+
+                elif player_choice == "persuade":
+                    if current_haggle_state["haggle_rounds_attempted"] >= current_haggle_state["max_haggle_rounds"]:
+                        self._print(f"  {current_haggle_state['npc_name']} is firm on the price of {current_haggle_state['current_offer']}g. No more haggling possible.")
+                        current_haggle_state["can_still_haggle"] = False
+                        self.add_journal_entry("Haggle (Sell)", f"Attempted persuasion for {item_instance_to_sell.name}, but NPC is firm.", outcome="Final Offer")
+                        return {"type": "haggling_pending", "haggling_data": current_haggle_state}
+
+                    # Simplified DC calculation for now
+                    base_dc = 12
+                    dc = base_dc + current_haggle_state["haggle_rounds_attempted"] # Harder each round
+                    # TODO: Add NPC mood, item value, reputation modifiers to DC
+
+                    skill_check_result = self.character.perform_skill_check("Persuasion", dc)
+                    self.add_journal_entry("Haggle (Sell) - Persuasion", skill_check_result["formatted_string"], details=skill_check_result)
+                    current_haggle_state["haggle_rounds_attempted"] += 1
+
+                    if skill_check_result["success"]:
+                        # Successful persuasion: NPC offers more (closer to shop_target_price)
+                        price_improvement_percentage = random.uniform(0.05, 0.15) # NPC offers 5-15% more
+                        current_gap = current_haggle_state["shop_target_price"] - current_haggle_state["current_offer"]
+                        price_increase = int(current_gap * price_improvement_percentage)
+
+                        new_offer = current_haggle_state["current_offer"] + price_increase
+                        # Ensure new offer doesn't exceed the shop's target price (or a reasonable cap)
+                        new_offer = min(new_offer, current_haggle_state["shop_target_price"])
+
+                        if new_offer > current_haggle_state["current_offer"]:
+                           self._print(f"  Persuasion successful! {current_haggle_state['npc_name']} increases their offer for {item_instance_to_sell.name} to {new_offer}g.")
+                           current_haggle_state["current_offer"] = new_offer
+                        else:
+                            self._print(f"  Persuasion successful, but {current_haggle_state['npc_name']} won't budge further on {item_instance_to_sell.name}. Offer remains {current_haggle_state['current_offer']}g.")
+                            current_haggle_state["can_still_haggle"] = False # NPC hit their limit
+                        current_haggle_state["npc_mood"] = "Pleased"
+                        action_xp_reward = 3
+                    else:
+                        self._print(f"  Persuasion failed. {current_haggle_state['npc_name']} is not convinced. Offer for {item_instance_to_sell.name} remains {current_haggle_state['current_offer']}g.")
+                        current_haggle_state["npc_mood"] = "Neutral" # Or "Annoyed" if multiple fails
+                        if current_haggle_state["haggle_rounds_attempted"] >= current_haggle_state["max_haggle_rounds"]:
+                            current_haggle_state["can_still_haggle"] = False
+
+                    if not current_haggle_state["can_still_haggle"]:
+                         self._print(f"  {current_haggle_state['npc_name']} states this is their final offer.")
+
+                    return {"type": "haggling_pending", "haggling_data": current_haggle_state}
+
+                else:
+                    self._print(f"  Invalid haggle choice: {player_choice}")
+                    self.add_journal_entry("Haggle (Sell)", f"Invalid haggle choice '{player_choice}' for {item_instance_to_sell.name}.", outcome="Error")
+                    # Return current state without changes if choice is invalid
+                    return {"type": "haggling_pending", "haggling_data": current_haggle_state}
+
+                # This action does not advance game hour by itself, it's a sub-part of NPC interaction
+                time_advanced_by_action_hours = 0
+
+            elif action_name == "PROCESS_PLAYER_HAGGLE_CHOICE_BUY":
+                if not self.active_haggling_session or self.active_haggling_session.get("context") != "player_buying":
+                    self._print("  Error: No active player buying haggling session found or context mismatch.")
+                    self.active_haggling_session = None
+                    return {"type": "action_failed", "reason": "Invalid haggling session."}
+
+                player_choice = action_details.get("haggle_choice")
+                current_haggle_state = self.active_haggling_session
+                item_name = current_haggle_state["item_name"]
+                quantity = current_haggle_state["quantity"]
+                npc_name = current_haggle_state["npc_name"]
+
+                if player_choice == "accept":
+                    final_price = current_haggle_state["current_offer"]
+                    if self.character.gold < final_price:
+                        self._print(f"  {self.character.name} doesn't have enough gold. (Needs {final_price}g, Has {self.character.gold}g). Purchase failed.")
+                        self.add_journal_entry("Haggle (Buy)", f"Attempted to buy {quantity}x {item_name} from {npc_name}, not enough gold.", outcome="Purchase Failed")
+                        self.active_haggling_session = None
+                        return {"type": "action_complete"}
+
+                    self.character.gold -= final_price
+
+                    item_info_source = None
+                    if npc_name == "Old Man Hemlock": item_info_source = HEMLOCK_HERBS
+                    elif npc_name == "Borin Stonebeard": item_info_source = BORIN_ITEMS
+
+                    item_data_from_source = item_info_source.get(item_name) if item_info_source else None
+
+                    if not item_data_from_source: # Should not happen if haggle session was valid
+                        self._print(f"  CRITICAL ERROR: Item data for {item_name} not found from NPC {npc_name} during purchase finalization. Transaction cancelled.")
+                        self.character.gold += final_price # Refund
+                        self.active_haggling_session = None
+                        return {"type": "action_complete"}
+
+                    purchased_item = Item(
+                        name=item_name,
+                        description=item_data_from_source["description"],
+                        base_value=item_data_from_source["base_value"],
+                        item_type=item_data_from_source["item_type"],
+                        quality=item_data_from_source.get("quality", "Common"),
+                        quantity=quantity,
+                        effects=item_data_from_source.get("effects", {})
+                    )
+                    self.character.add_item_to_inventory(purchased_item)
+
+                    self._print(f"  Purchase of {quantity}x {item_name} from {npc_name} accepted at {final_price}g.")
+                    self.daily_gold_spent_on_purchases_by_player += final_price
+                    self.add_journal_entry("Haggle (Buy)", f"Accepted offer to buy {quantity}x {item_name} from {npc_name}.", outcome=f"Bought for {final_price}g.")
+                    action_xp_reward = 5
+                    self.active_haggling_session = None
+                    return {"type": "action_complete"}
+
+                elif player_choice == "decline":
+                    self._print(f"  Purchase of {quantity}x {item_name} from {npc_name} declined at {current_haggle_state['current_offer']}g.")
+                    self.add_journal_entry("Haggle (Buy)", f"Declined offer to buy {quantity}x {item_name} from {npc_name}.", outcome="Purchase Declined")
+                    self.active_haggling_session = None
+                    return {"type": "action_complete"}
+
+                elif player_choice == "persuade":
+                    if current_haggle_state["haggle_rounds_attempted"] >= current_haggle_state["max_haggle_rounds"]:
+                        self._print(f"  {npc_name} is firm on the price of {current_haggle_state['current_offer']}g. No more haggling.")
+                        current_haggle_state["can_still_haggle"] = False
+                        self.add_journal_entry("Haggle (Buy)", f"Attempted persuasion for {item_name}, but {npc_name} is firm.", outcome="Final Offer")
+                        return {"type": "haggling_pending", "haggling_data": current_haggle_state}
+
+                    base_dc = 12
+                    dc = base_dc + current_haggle_state["haggle_rounds_attempted"]
+
+                    skill_check_result = self.character.perform_skill_check("Persuasion", dc)
+                    self.add_journal_entry("Haggle (Buy) - Persuasion", skill_check_result["formatted_string"], details=skill_check_result)
+                    current_haggle_state["haggle_rounds_attempted"] += 1
+
+                    if skill_check_result["success"]:
+                        price_reduction_percentage = random.uniform(0.05, 0.15) # NPC reduces price by 5-15%
+                        current_gap = current_haggle_state["current_offer"] - current_haggle_state["player_target_price"]
+                        price_decrease = int(current_gap * price_reduction_percentage)
+
+                        new_price = current_haggle_state["current_offer"] - price_decrease
+                        new_price = max(new_price, current_haggle_state["player_target_price"]) # Don't go below player's ideal target
+
+                        if new_price < current_haggle_state["current_offer"]:
+                           self._print(f"  Persuasion successful! {npc_name} reduces their price for {quantity}x {item_name} to {new_price}g.")
+                           current_haggle_state["current_offer"] = new_price
+                        else:
+                           self._print(f"  Persuasion successful, but {npc_name} won't lower the price for {item_name} further. Price remains {current_haggle_state['current_offer']}g.")
+                           current_haggle_state["can_still_haggle"] = False
+                        current_haggle_state["npc_mood"] = "Pleased"
+                        action_xp_reward = 3
+                    else:
+                        self._print(f"  Persuasion failed. {npc_name} is not swayed. Price for {item_name} remains {current_haggle_state['current_offer']}g.")
+                        current_haggle_state["npc_mood"] = "Neutral"
+                        if current_haggle_state["haggle_rounds_attempted"] >= current_haggle_state["max_haggle_rounds"]:
+                            current_haggle_state["can_still_haggle"] = False
+
+                    if not current_haggle_state["can_still_haggle"]:
+                        self._print(f"  {npc_name} states this is their final price.")
+
+                    return {"type": "haggling_pending", "haggling_data": current_haggle_state}
+                else:
+                    self._print(f"  Invalid haggle choice: {player_choice}")
+                    self.add_journal_entry("Haggle (Buy)", f"Invalid haggle choice '{player_choice}' for {item_name}.", outcome="Error")
+                    return {"type": "haggling_pending", "haggling_data": current_haggle_state}
+
+                time_advanced_by_action_hours = 0
+
+
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)
 
         # --- Time Advancement ---
         # This section is now processed BEFORE events that might return early.
-        hours_to_advance = time_advanced_by_action_hours if time_advanced_by_action_hours > 0 else 1
-        if self.character.is_dead and time_advanced_by_action_hours == 0:
-            hours_to_advance = 1 # Ensure time passes if dead, even if action didn't specify hours
+        # Haggling actions (PROCESS_PLAYER_HAGGLE_CHOICE_SELL/BUY) do not advance time by default.
+        # If an action explicitly sets time_advanced_by_action_hours, that's used.
+        # Otherwise, it's 1 hour, unless it's a zero-time action like skill allocation.
+        if action_name not in ["PROCESS_PLAYER_HAGGLE_CHOICE_SELL", "PROCESS_PLAYER_HAGGLE_CHOICE_BUY", "ALLOCATE_SKILL_POINT", "PROCESS_ASI_FEAT_CHOICE"]:
+            hours_to_advance = time_advanced_by_action_hours if time_advanced_by_action_hours > 0 else 1
+            if self.character.is_dead and time_advanced_by_action_hours == 0 : # Ensure time passes if dead
+                hours_to_advance = 1
+        else: # For zero-time actions or haggle responses
+            hours_to_advance = 0 # Explicitly set to 0 for these specific actions
 
-        self._print(f"  DEBUG: Time Advancement for action '{action_name}':")
-        self._print(f"    - Initial time_advanced_by_action_hours: {time_advanced_by_action_hours}")
-        self._print(f"    - Calculated hours_to_advance: {hours_to_advance}")
-        self._print(f"    - Time before advance_hour: {self.time.get_time_string()}")
+        if hours_to_advance > 0:
+            self._print(f"  DEBUG: Time Advancement for action '{action_name}':")
+            self._print(f"    - Initial time_advanced_by_action_hours: {time_advanced_by_action_hours}")
+            self._print(f"    - Calculated hours_to_advance: {hours_to_advance}")
+            self._print(f"    - Time before advance_hour: {self.time.get_time_string()}")
 
-        day_before_advancing_time = self.time.current_day
-        self.time.advance_hour(hours_to_advance)
+            day_before_advancing_time = self.time.current_day
+            self.time.advance_hour(hours_to_advance)
 
-        self._print(f"    - Time after advance_hour: {self.time.get_time_string()}")
+            self._print(f"    - Time after advance_hour: {self.time.get_time_string()}")
 
-        # End of day summary check also moved up, if time advancement causes day to change.
-        if self.time.current_day != day_before_advancing_time and self.tracking_day == day_before_advancing_time:
-            self._print(f"  DEBUG: Day changed. Running end of day summary for day {self.tracking_day}.")
-            self._run_end_of_day_summary(self.tracking_day)
+            if self.time.current_day != day_before_advancing_time and self.tracking_day == day_before_advancing_time:
+                self._print(f"  DEBUG: Day changed. Running end of day summary for day {self.tracking_day}.")
+                self._run_end_of_day_summary(self.tracking_day)
+        else:
+            self._print(f"  DEBUG: Action '{action_name}' does not advance game time this turn.")
 
-        # --- Event System (Post Time-Advancement) ---
-        if not self.character.is_dead: # Events only if character is not dead
+
+        # --- Event System (Post Time-Advancement, if time advanced) ---
+        # Events should only trigger if time actually passed and it's not a sub-action like haggling response.
+        if not self.character.is_dead and hours_to_advance > 0:
             skill_for_action = self.ACTION_SKILL_MAP.get(action_name)
             action_allows_generic_event = self.ACTIONS_ALLOWING_GENERIC_EVENTS.get(action_name, True)
-
             event_to_process_name = None
-            # event_choices_for_ui = None # Not needed at this scope
-            # event_object_to_process = None # Not needed at this scope
 
-            # Determine if a skill-specific event is attempted
             if skill_for_action and random.random() < self.SKILL_EVENT_CHANCE_PER_HOUR:
-                possible_skill_events = [
-                    ev for ev in self.skill_check_events
-                    if any(choice.get('skill') == skill_for_action for choice in ev.skill_check_options)
-                ]
+                possible_skill_events = [ev for ev in self.skill_check_events if any(choice.get('skill') == skill_for_action for choice in ev.skill_check_options)]
                 if possible_skill_events:
-                    self._print(f"  Considering {len(possible_skill_events)} skill-related events for '{skill_for_action}'.")
                     event_to_process_name = self.event_manager.trigger_random_event(possible_events=possible_skill_events)
 
-            # If no skill event was triggered, try a generic event
             if not event_to_process_name and action_allows_generic_event and random.random() < self.BASE_EVENT_CHANCE_PER_HOUR:
                 possible_generic_events = [ev for ev in self.skill_check_events if ev.event_type == "generic"]
                 if possible_generic_events:
-                    self._print(f"  Considering {len(possible_generic_events)} generic events.")
                     event_to_process_name = self.event_manager.trigger_random_event(possible_events=possible_generic_events)
 
-            # Process the triggered event, if any
             if event_to_process_name:
                 current_event_object = next((ev for ev in self.skill_check_events if ev.name == event_to_process_name), None)
                 if current_event_object:
                     current_event_choices = self.event_manager.resolve_event(current_event_object)
-                    if current_event_choices: # Event has choices, so it's pending for UI
+                    if current_event_choices:
                         self._print(f"  Event '{event_to_process_name}' is pending player choice.")
-                        # IMPORTANT: Time has already advanced. Journal entry for the action is already made (if applicable).
-                        # Now we return to UI for event choice.
-                        return {
-                            "type": "event_pending",
-                            "event_data": {
-                                "name": event_to_process_name,
-                                "description": current_event_object.description,
-                                "choices": current_event_choices
-                            }
-                        }
-                    else: # Event has no choices (direct outcome)
+                        self.active_haggling_session = None # Clear any haggling session if an event interrupts
+                        return {"type": "event_pending", "event_data": {"name": event_to_process_name, "description": current_event_object.description, "choices": current_event_choices}}
+                    else:
                         self._print(f"  Event '{event_to_process_name}' triggered with no UI choices. Attempting direct execution.")
                         self.event_manager.execute_skill_choice(current_event_object, 0)
-                        # Direct event effects applied. Flow continues to NPC sales, etc.
+                        # No early return here, flow continues to NPC sales logic if applicable
 
-            # --- NPC Sales Logic (Post Events) ---
-            # This runs if no event caused an early return (i.e., event was direct outcome or no event occurred)
-            if self.shop and self.shop.inventory and action_name not in ["buy_from_own_shop", "sell_to_own_shop", "buy_from_npc", "set_shop_specialization", "upgrade_shop", "craft"]:
+            # --- NPC Sales Logic (Post Events, if time advanced and no event/haggle pending) ---
+            if self.shop and self.shop.inventory and action_name not in [
+                "buy_from_own_shop", "sell_to_own_shop", "buy_from_npc",
+                "set_shop_specialization", "upgrade_shop", "craft",
+                "PROCESS_PLAYER_HAGGLE_CHOICE_SELL", "PROCESS_PLAYER_HAGGLE_CHOICE_BUY" # Exclude haggle actions
+            ] and not event_to_process_name: # Also ensure no event is about to be processed by the UI
                 current_base_npc_buy_chance = Shop.BASE_NPC_BUY_CHANCE
                 current_reputation_buy_chance_multiplier = Shop.REPUTATION_BUY_CHANCE_MULTIPLIER
                 current_max_npc_buy_chance_bonus = Shop.MAX_NPC_BUY_CHANCE_BONUS
                 npc_buy_chance_bonus_from_reputation = self.shop.reputation * current_reputation_buy_chance_multiplier
                 capped_bonus = min(npc_buy_chance_bonus_from_reputation, current_max_npc_buy_chance_bonus)
-                final_npc_buy_chance = current_base_npc_buy_chance + capped_bonus
+                final_npc_buy_chance = current_base_npc_buy_chance + capped_bonus + self.shop.temporary_customer_boost
+                self.shop.temporary_customer_boost = 0 # Reset boost
 
                 if random.random() < final_npc_buy_chance:
                     eligible_items_for_npc_purchase = [item for item in self.shop.inventory if item.item_type not in ["quest_item", "special_currency"] and item.quantity > 0]
                     if eligible_items_for_npc_purchase:
-                        item_to_sell_to_npc = random.choice(eligible_items_for_npc_purchase)
-                        npc_name_for_log = "a passing traveler" # Generic NPC name
-                        current_npc_min_offer_percentage = Shop.NPC_MIN_OFFER_PERCENTAGE
-                        current_npc_max_offer_percentage = Shop.NPC_MAX_OFFER_PERCENTAGE
-                        npc_offer_percentage = random.uniform(current_npc_min_offer_percentage, current_npc_max_offer_percentage)
+                        item_to_sell_to_npc_instance = random.choice(eligible_items_for_npc_purchase)
+                        npc_buyer_name = "Wandering Customer"
 
-                        sale_price = self.shop.complete_sale_to_npc(
-                            item_name=item_to_sell_to_npc.name,
-                            quality_to_sell=item_to_sell_to_npc.quality,
-                            npc_offer_percentage=npc_offer_percentage
-                        )
-                        if sale_price > 0: # complete_sale_to_npc returns price or 0
-                            self._print(f"  [NPC Sale] {self.shop.name} sold {item_to_sell_to_npc.name} ({item_to_sell_to_npc.quality}) to {npc_name_for_log} for {sale_price}g.")
-                            self.daily_items_sold_by_shop_to_npcs.append((item_to_sell_to_npc.name, sale_price))
-                            self.daily_gold_earned_from_sales += sale_price
-                            self._handle_customer_interaction(is_sale_or_purchase_by_player_shop=True)
-                else:
+                        haggling_data = self.shop.initiate_haggling_for_item_sale(item_to_sell_to_npc_instance, npc_name=npc_buyer_name)
+                        if haggling_data:
+                            self._print(f"  A {npc_buyer_name} is interested in buying {item_to_sell_to_npc_instance.name}. They offer {haggling_data['initial_offer']}g.")
+                            self.active_haggling_session = haggling_data
+                            return {"type": "haggling_pending", "haggling_data": haggling_data}
+                        else:
+                            self._print(f"  DEBUG: Failed to initiate haggling for {item_to_sell_to_npc_instance.name}")
+                else: # No NPC buy attempt this hour
                     if random.random() < self.CUSTOMER_INTERACTION_CHANCE_PER_HOUR / 2:
                          self._handle_customer_interaction()
-            elif self.current_town and not self.character.is_dead and self.shop: # Fallback customer interaction
+            elif self.current_town and not self.character.is_dead and self.shop and hours_to_advance > 0 and not event_to_process_name:
                  if random.random() < self.CUSTOMER_INTERACTION_CHANCE_PER_HOUR:
                     self._handle_customer_interaction()
-        # else: character is dead, already handled time advancement, skip events and NPC sales.
+        # else: character is dead or no time advanced, skip events and NPC sales.
 
-        # After all actions and time advancement, check for pending ASI/Feat choice
+        # After all actions, clear any stale haggling session if the action wasn't a haggle response
+        # and no new haggling session was initiated by NPC Sales Logic.
+        # This check ensures that if a haggling_pending was returned above, active_haggling_session is NOT cleared here.
+        if action_name not in ["PROCESS_PLAYER_HAGGLE_CHOICE_SELL", "PROCESS_PLAYER_HAGGLE_CHOICE_BUY"]:
+            # Check if a new haggling session was just started by NPC sales logic
+            # If `perform_hourly_action` is about to return `haggling_pending`, `self.active_haggling_session` would be set.
+            # We only clear if it's truly stale from a *previous* turn and this turn didn't involve haggling.
+            # This logic is tricky. A simpler way: if the return type ISN'T haggling_pending, clear it.
+            # This is implicitly handled: if a haggle action returns "haggling_pending", it returns early.
+            # If it's action_complete, then we check.
+            if hasattr(self, 'active_haggling_session') and self.active_haggling_session is not None:
+                # Check if the current action_name should have cleared it or if it's a new one
+                # This is getting complex. The most important thing is that PROCESS_PLAYER_HAGGLE_CHOICE actions
+                # correctly use and then clear self.active_haggling_session.
+                # And that NPC sales logic correctly sets it up.
+                # For other actions, if a session was somehow stuck, it should be cleared.
+                # Let's assume that if an action completes and it wasn't a haggle continuation, the session is over.
+                # This is now done at the end of PROCESS_PLAYER_HAGGLE_CHOICE_SELL/BUY when they complete/decline.
+                pass # Rely on specific actions to clear it.
+
         if self.character and hasattr(self.character, 'pending_asi_feat_choice') and self.character.pending_asi_feat_choice:
             self._print(f"  ATTENTION: {self.character.name} has an Ability Score Improvement or Feat choice pending!")
-            # In a full UI, this might trigger a different game state or modal for the player to make their choice.
 
-        # The event_data_for_return variable is no longer used to pass event pending status.
-        # That is handled by the direct return of the event_pending dictionary from the event block.
         return {"type": "action_complete"}
 
     # ... (rest of the GameManager class)

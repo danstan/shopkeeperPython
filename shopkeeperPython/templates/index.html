@@ -482,6 +482,11 @@
             submitEventChoiceUrl: "{{ url_for('submit_event_choice_route') }}"
         };
     </script>
+    <script>
+        // Add new config for haggling pending status
+        window.gameConfig.hagglingPending = {{ haggling_pending | default('false') | tojson }};
+        window.gameConfig.pendingHagglingDataJson = {{ pending_haggling_data_json | default('null') | tojson | safe }};
+    </script>
     <script src="{{ url_for('static', filename='js/main_ui.js') }}" defer></script>
     {% endif %}
 
@@ -491,6 +496,35 @@
             <h3 id="subLocationActionsModalTitle">Actions</h3>
             <div id="modal-actions-list" class="button-list">
                 <!-- Action buttons will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    {# Haggling Modal #}
+    <div id="haggling-popup-wrapper" class="hidden">
+        <div id="haggling-popup" class="modal" role="dialog" aria-modal="true" aria-labelledby="haggling-popup-title">
+            <div class="modal-content">
+                <h3 id="haggling-popup-title">Haggling</h3>
+                <div id="haggling-item-info">
+                    <p>Item: <span id="haggle-item-name">Item Name</span> (<span id="haggle-item-quality">Quality</span>)</p>
+                    <p>Quantity: <span id="haggle-item-quantity">1</span></p>
+                </div>
+                <p>NPC: <span id="haggle-npc-name">NPC Name</span> (<span id="haggle-npc-mood">Mood</span>)</p>
+                <p>Current Offer: <strong id="haggle-current-offer">100g</strong></p>
+                <p id="haggle-target-price-info" class="hidden">Your Target: <span id="haggle-player-target-price">Xg</span> | Shop's Target: <span id="haggle-shop-target-price">Yg</span></p>
+
+                <div id="haggle-last-check-result" class="skill-check-result-display hidden">
+                    <p>Last Check: <span id="haggle-last-check-text"></span></p>
+                </div>
+
+                <div id="haggling-choices-container" class="action-buttons-container button-list">
+                    <button type="button" id="haggle-accept-button" class="action-button haggle-choice-button" data-choice="accept">Accept Offer</button>
+                    <button type="button" id="haggle-decline-button" class="action-button haggle-choice-button" data-choice="decline">Decline & End</button>
+                    <button type="button" id="haggle-persuade-button" class="action-button haggle-choice-button" data-choice="persuade">Attempt Persuasion</button>
+                    {# Add Insight/Intimidate buttons here if implemented #}
+                </div>
+                <p id="haggle-rounds-info">Round <span id="haggle-current-round">1</span>/<span id="haggle-max-rounds">3</span></p>
+                <p id="haggle-final-offer-notice" class="hidden">This is their final offer.</p>
             </div>
         </div>
     </div>
