@@ -1030,6 +1030,42 @@ const UIActionsAndEvents = {
                 });
             });
         }
+
+        // Event listeners for item actions (Use, Attune, Unattune)
+        // Delegated from a higher-level container for dynamically added items.
+        const fullInventoryPanelContent = document.querySelector('#full-inventory-panel-container .full-panel-content');
+        if (fullInventoryPanelContent) {
+            fullInventoryPanelContent.addEventListener('click', (event) => {
+                const target = event.target;
+                let actionName = null;
+                let details = {};
+
+                if (target.classList.contains('use-item-button')) {
+                    actionName = 'USE_ITEM';
+                    details.item_name = target.dataset.itemName;
+                } else if (target.classList.contains('attune-item-button')) {
+                    actionName = 'ATTUNE_ITEM';
+                    details.item_name = target.dataset.itemName;
+                }
+                // Unattune is handled by a different panel, see below.
+
+                if (actionName) {
+                    this.handleDirectActionSubmit(actionName, details, target);
+                }
+            });
+        }
+
+        const fullStatsPanelContent = document.querySelector('#full-stats-panel-container .full-panel-content');
+        if (fullStatsPanelContent) {
+            fullStatsPanelContent.addEventListener('click', (event) => {
+                const target = event.target;
+                if (target.classList.contains('unattune-item-button')) {
+                    const actionName = 'UNATTUNE_ITEM';
+                    const details = { item_name: target.dataset.itemName };
+                    this.handleDirectActionSubmit(actionName, details, target);
+                }
+            });
+        }
     },
 
     init() {

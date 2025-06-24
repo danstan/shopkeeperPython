@@ -249,6 +249,47 @@ This report details the analysis of the current game codebase and UI/UX against 
             *   Handles submission of haggling choices to the new backend actions.
     *   **Impact:** This feature significantly enhances NPC interactions related to buying and selling, adding a layer of player agency and skill-based negotiation as outlined in the GDD.
 
+*   **Update (2025-06-26 by Agent Jules): Integrated Long Rest Interruptions with Event System**
+    *   Successfully integrated long rest interruptions with the main event system, making them more thematic and dynamic.
+    *   **Event Definitions (`g_event.py`):**
+        *   Added three new `Event` objects specifically for long rest interruptions: "Night Prowler," "Sudden Sickness During Rest," and "Troubled Nightmares."
+        *   These events have an `event_type` of "rest_interruption" for filtering.
+        *   They include thematic choices, skill checks (Perception, Intimidation, CON save, WIS save), and varied outcomes that can affect `rest_quality`.
+    *   **Character Mechanics (`character.py`):**
+        *   `attempt_long_rest()`: Modified to only check prerequisites (time >= 8 hours, food/drink availability). It no longer handles interruption chance or applies benefits directly. It returns `conditions_met: True` if prerequisites are met.
+        *   `apply_long_rest_benefits(rest_quality: str)`: New method added. This applies varying degrees of HP/HD recovery and exhaustion relief based on the `rest_quality` string ("successful", "mostly_successful", "partial", "poor", "failed") determined by event outcomes or default success.
+    *   **Event Management (`g_event.py`):**
+        *   `EventManager.trigger_long_rest_interruption_event()`: New method. Has a base chance (e.g., 20%) to trigger a "rest_interruption" event suitable for the character's level. It returns the selected `Event` object if an interruption occurs.
+        *   `EventManager.execute_skill_choice()`: Modified to check for a `rest_quality` key in an event's outcome effects. If found, it calls `character.apply_long_rest_benefits()` with the specified quality.
+    *   **Game Flow (`game_manager.py`):**
+        *   `perform_hourly_action("rest_long")`:
+            *   Calls `character.attempt_long_rest()` to check prerequisites.
+            *   If conditions are met, it calls `event_manager.trigger_long_rest_interruption_event()`.
+            *   If an event is triggered, `GameManager` sets up the event for UI interaction (returning `event_pending`). Rest benefits are deferred.
+            *   If no event is triggered, `GameManager` calls `character.apply_long_rest_benefits(rest_quality="successful")` for a full rest.
+    *   **Impact:** Long rest interruptions are no longer generic. They are now driven by specific, thematic events that offer player choices and can lead to a range of outcomes affecting rest success and character state, aligning better with the GDD.
+
+*   **Update (2025-06-26 by Agent Jules): Implemented UI for Attunement & Consumable Use**
+    *   Successfully implemented UI elements for item attunement and consumable usage, and fixed consumable quantity handling.
+    *   **Consumable Quantity (`character.py`):**
+        *   `use_consumable_item()`: Modified to correctly decrement item quantity. It removes the item from inventory only if its quantity becomes zero.
+    *   **HTML (`index.html`):**
+        *   **Player Inventory:** Item cards in the player's inventory grid now conditionally display:
+            *   A "Use" button if `item.is_consumable`.
+            *   An "Attune" button if `item.is_attunement` and the item is not currently attuned.
+            *   Item quantity is also displayed next to the item name if greater than 1 (e.g., "Potion (x3)").
+        *   **Stats Panel:** The "Attuned Items" list within the full stats panel now displays an "Unattune" button next to each attuned item. Attunement slot usage (e.g., "1/3") is also shown.
+    *   **JavaScript (`main_ui.js`):**
+        *   `UIActionsAndEvents.initEventListeners()`: Added delegated event listeners for the new ".use-item-button", ".attune-item-button" (in inventory panel), and ".unattune-item-button" (in stats panel).
+        *   These listeners call `handleDirectActionSubmit()` with new action names: `USE_ITEM`, `ATTUNE_ITEM`, or `UNATTUNE_ITEM`, along with the `item_name`.
+    *   **Backend (`game_manager.py`):**
+        *   `perform_hourly_action()`: Added handlers for `USE_ITEM`, `ATTUNE_ITEM`, and `UNATTUNE_ITEM`.
+        *   These handlers call the respective methods on the `Character` object (`use_consumable_item`, `attune_item`, `unattune_item`).
+        *   These actions do not advance game time or award XP. Journal entries are created.
+    *   **Backend (`app.py`):**
+        *   `display_game_output()`: Modified to pass `player_attuned_items` (list of item dicts), `player_attuned_item_names` (list of names for conditional logic in template), `player_attunement_slots_used`, and `player_attunement_slots_max` to the `index.html` template.
+    *   **Impact:** Players can now directly interact with their items for core D&D actions like using consumables and managing attunement via the UI, significantly improving gameplay. The consumable quantity bug is also fixed.
+
 ## Overall Conclusion & Prioritized Recommendations
 
 The game has a solid foundational implementation for many core GDD features. Key areas requiring attention are:

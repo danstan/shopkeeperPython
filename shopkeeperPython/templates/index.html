@@ -221,6 +221,21 @@
                             <li role="listitem">None</li>
                         {% endif %}
                     </ul> #}
+
+                    <p><strong>Attunement Slots Used:</strong> {{ player_attunement_slots_used | default(0) }}/{{ player_attunement_slots_max | default(3) }}</p>
+                    {% if player_attuned_items %}
+                    <p><strong>Attuned Items:</strong></p>
+                    <ul role="list" class="attuned-items-list">
+                        {% for item in player_attuned_items %}
+                        <li role="listitem">
+                            {{ item.name }} ({{ item.quality }})
+                            <button type="button" class="action-button unattune-item-button" data-item-name="{{ item.name }}">Unattune</button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p><strong>Attuned Items:</strong> None</p>
+                    {% endif %}
                 </div>
             </div>
 
@@ -311,6 +326,17 @@
                                 <div class="item-icon-placeholder" aria-hidden="true"></div>
                                 <div class="item-name">
                                     {{ item.name if item is mapping and item.name else item }}
+                                    {% if item.quantity and item.quantity > 1 %}
+                                        (x{{ item.quantity }})
+                                    {% endif %}
+                                </div>
+                                <div class="item-actions">
+                                    {% if item.is_consumable %}
+                                        <button type="button" class="action-button use-item-button" data-item-name="{{ item.name if item is mapping and item.name else item }}">Use</button>
+                                    {% endif %}
+                                    {% if item.is_attunement and (item.name if item is mapping and item.name else item) not in player_attuned_item_names %}
+                                        <button type="button" class="action-button attune-item-button" data-item-name="{{ item.name if item is mapping and item.name else item }}">Attune</button>
+                                    {% endif %}
                                 </div>
                             </div>
                             {% endfor %}

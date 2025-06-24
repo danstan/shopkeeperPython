@@ -898,6 +898,10 @@ def display_game_output():
                            player_skill_points_to_allocate=player_skill_points_to_allocate_display, # New
                            player_chosen_skill_bonuses=player_chosen_skill_bonuses_display, # New
                            character_attribute_definitions_json=json.dumps(Character.ATTRIBUTE_DEFINITIONS), # New
+                           player_attuned_items=[item.to_dict() for item in g.player_char.attuned_items] if g.player_char and g.player_char.attuned_items else [],
+                           player_attuned_item_names=[item.name for item in g.player_char.attuned_items] if g.player_char and g.player_char.attuned_items else [],
+                           player_attunement_slots_used=len(g.player_char.attuned_items) if g.player_char and g.player_char.attuned_items else 0,
+                           player_attunement_slots_max=g.player_char.attunement_slots if g.player_char else 3,
                            current_time=current_time_display,
                            current_town_name=current_town_display,
                            shop_inventory=shop_inventory_display,
