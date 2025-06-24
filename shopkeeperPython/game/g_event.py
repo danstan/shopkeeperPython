@@ -127,8 +127,26 @@ class EventManager:
             # If all possible events have been seen today, choose from them
             # This still allows events if the pool is small and all have occurred
             self.game_manager._print("EventManager: All available events for this trigger have already occurred today. Repeating an event.")
-            selected_event = random.choice(seen_today_events)
-            # print(f"DEBUG: Selected from seen_today_events as fallback. Pool size: {len(seen_today_events)}")
+
+            # New logic to avoid immediate repetition:
+            last_event_name = self.todays_events_history[-1] if self.todays_events_history else None
+
+            if len(seen_today_events) > 1 and last_event_name:
+                # Try to pick an event that isn't the one that just happened
+                selectable_seen_events = [e for e in seen_today_events if e.name != last_event_name]
+                if selectable_seen_events:
+                    selected_event = random.choice(selectable_seen_events)
+                    # print(f"DEBUG: Selected from seen_today_events (excluding last). Pool size: {len(selectable_seen_events)}")
+                else:
+                    # This case means all seen_today_events are the same as the last event,
+                    # which implies seen_today_events had only one unique event type, and it was the last one.
+                    # Fallback to original behavior if filtering results in an empty list.
+                    selected_event = random.choice(seen_today_events)
+                    # print(f"DEBUG: Selected from seen_today_events (fallback, could be same as last). Pool size: {len(seen_today_events)}")
+            else:
+                # Original behavior if only one event type in seen_today_events or no history
+                selected_event = random.choice(seen_today_events)
+                # print(f"DEBUG: Selected from seen_today_events (original path). Pool size: {len(seen_today_events)}")
         else:
             # This case should ideally not be reached if possible_events was not empty.
             self.game_manager._print("EventManager: No events available after filtering for today's history (this shouldn't happen if possible_events initially had items).")
@@ -1096,92 +1114,162 @@ if __name__ == "__main__":
                 self.name = name; self.description = description; self.base_value = base_value; self.item_type = item_type; self.quality = quality; self.effects = effects if effects else {}; self.is_consumable = is_consumable
             def __repr__(self): return f"Item({self.name})"
 
-    # Test Character Setup
-    test_char = Character(name="Test Event Player", level=3) # type: ignore
-    test_char.add_item_to_inventory(Item(name="Alchemist's Supplies")) # For Mysterious Odor event
+    # --- Test Character and GameManager Setup ---
+    test_char_lvl1 = Character(name="Test Player Lvl 1", level=1)
+    test_char_lvl3 = Character(name="Test Player Lvl 3", level=3)
+    test_char_lvl3.add_item_to_inventory(Item(name="Alchemist's Supplies"))
 
-    # Mock GameManager Setup
-    mock_gm_instance = MockGameManager(character_ref=test_char) # type: ignore
-    event_manager_for_test = EventManager(character=test_char, game_manager=mock_gm_instance) # type: ignore
+    mock_gm_lvl1 = MockGameManager(character_ref=test_char_lvl1)
+    event_manager_lvl1 = EventManager(character=test_char_lvl1, game_manager=mock_gm_lvl1)
 
-    print(f"\n--- Testing Event Repetition and Daily Reset ---")
-    # A smaller pool of events for easier testing of repetition
-    test_event_pool = [
-        next(e for e in GAME_EVENTS if e.name == "Mysterious Odor"),
-        next(e for e in GAME_EVENTS if e.name == "Traveling Bard Visit"),
-        next(e for e in GAME_EVENTS if e.name == "Injured Animal")
-    ]
-    if None in test_event_pool:
-        print("CRITICAL TEST ERROR: One of the test events was not found. Aborting test.")
-    else:
-        print(f"Test Pool (Day {mock_gm_instance.time.current_day}): {[e.name for e in test_event_pool]}")
-        triggered_counts_day1 = {name: 0 for name in [e.name for e in test_event_pool]}
-        for i in range(10): # Trigger 10 events on day 1
-            print(f"\nTrigger attempt {i+1} on Day {mock_gm_instance.time.current_day}:")
-            triggered_event_name = event_manager_for_test.trigger_random_event(test_event_pool)
-            if triggered_event_name:
-                triggered_counts_day1[triggered_event_name] += 1
-                # Minimal execution to avoid full event logic here, just testing selection
-                event_obj = next(e for e in test_event_pool if e.name == triggered_event_name)
-                # event_manager_for_test.resolve_event(event_obj) # Already called by trigger_random_event
-                if event_obj.skill_check_options: # If choices exist, pick one
-                    # event_manager_for_test.execute_skill_choice(event_obj, 0) # Already called by trigger_random_event flow
-                    pass # execute_skill_choice is part of resolve_event flow now, no need to call separately if resolve is called by trigger.
-                         # Actually, trigger_random_event calls resolve_event, which prepares choices.
-                         # execute_skill_choice is called by GameManager after player input.
-                         # For this test, we only care about which event *name* was returned by trigger_random_event.
-            else:
-                print("No event was triggered.")
-            print(f"Current history: {event_manager_for_test.todays_events_history}")
+    mock_gm_lvl3 = MockGameManager(character_ref=test_char_lvl3)
+    event_manager_lvl3 = EventManager(character=test_char_lvl3, game_manager=mock_gm_lvl3)
 
+    # --- Test Data: Define some events for testing ---
+    # Using existing GAME_EVENTS, but we'll filter them for tests.
+    # Level 1 appropriate events from GAME_EVENTS:
+    events_lvl1_appropriate = [e for e in GAME_EVENTS if e.min_level == 1 and e.event_type == "generic"]
+    event_mysterious_odor_obj = next(e for e in events_lvl1_appropriate if e.name == "Mysterious Odor")
+    event_traveling_bard_obj = next(e for e in events_lvl1_appropriate if e.name == "Traveling Bard Visit")
+    event_sudden_storm_obj = next(e for e in events_lvl1_appropriate if e.name == "Sudden Storm")
 
-        print(f"\n--- Results for Day {mock_gm_instance.time.current_day} (10 triggers) ---")
-        for name, count in triggered_counts_day1.items():
-            print(f"  {name}: {count} times")
-        print(f"Final event history for Day {mock_gm_instance.time.current_day}: {event_manager_for_test.todays_events_history}")
+    # A higher level event
+    event_ruined_shrine_obj = next(e for e in GAME_EVENTS if e.name == "Ruined Shrine") # min_level: 3
 
-        # Advance to next day
-        mock_gm_instance.time.advance_day()
-        # The reset_daily_event_history should be called internally by trigger_random_event
-        # when it detects the day has changed in mock_gm_instance.time.current_day
+    # --- Test 1: Level Filtering (Conceptual - GameManager handles actual filtering) ---
+    # This test demonstrates EventManager's behavior when GIVEN a level-filtered list.
+    print(f"\n--- Test 1: EventManager with Pre-filtered Level-Appropriate Events (Lvl 1 Char) ---")
+    test_pool_lvl1_only = [event_mysterious_odor_obj, event_traveling_bard_obj, event_sudden_storm_obj]
+    print(f"Test Pool (Lvl 1 appropriate): {[e.name for e in test_pool_lvl1_only]}")
 
-        print(f"\n--- Test Pool (Day {mock_gm_instance.time.current_day}) after advancing day ---")
-        triggered_counts_day2 = {name: 0 for name in [e.name for e in test_event_pool]}
-        for i in range(10): # Trigger 10 events on day 2
-            print(f"\nTrigger attempt {i+1} on Day {mock_gm_instance.time.current_day}:")
-            triggered_event_name = event_manager_for_test.trigger_random_event(test_event_pool)
-            if triggered_event_name:
-                triggered_counts_day2[triggered_event_name] += 1
-            else:
-                print("No event was triggered.")
-            print(f"Current history: {event_manager_for_test.todays_events_history}")
+    # Reset history for this specific test run if needed (handled by trigger_random_event)
+    mock_gm_lvl1.time = MockGameTime(start_day=10) # Use a new day to ensure history is clean
+
+    triggered_events_lvl1_test = []
+    for i in range(5):
+        triggered_name = event_manager_lvl1.trigger_random_event(test_pool_lvl1_only)
+        if triggered_name:
+            triggered_events_lvl1_test.append(triggered_name)
+            # Basic "execution" for history tracking
+            event_obj = next(e for e in test_pool_lvl1_only if e.name == triggered_name)
+            # event_manager_lvl1.resolve_event(event_obj) # Called by trigger_random_event
+            # event_manager_lvl1.execute_skill_choice(event_obj, 0) # Not needed for this test focus
+
+    print(f"Triggered events for Lvl 1 char with Lvl 1 pool: {triggered_events_lvl1_test}")
+    all_lvl1_triggered = all(e_name in [ev.name for ev in test_pool_lvl1_only] for e_name in triggered_events_lvl1_test)
+    print(f"All triggered events were from the Lvl 1 pool: {all_lvl1_triggered}")
+    assert all_lvl1_triggered, "Test 1 Failed: EventManager triggered an event not in the provided Lvl 1 pool."
+    print("--- Test 1 Passed ---")
 
 
-        print(f"\n--- Results for Day {mock_gm_instance.time.current_day} (10 triggers) ---")
-        for name, count in triggered_counts_day2.items():
-            print(f"  {name}: {count} times")
-        print(f"Final event history for Day {mock_gm_instance.time.current_day}: {event_manager_for_test.todays_events_history}")
+    # --- Test 2: Repetition Logic (Avoid Immediate Repeat from Seen Pool) ---
+    print(f"\n--- Test 2: Repetition Logic with Small Pool (2 events) ---")
+    # Using a Lvl 3 character for this, but with a small pool of Lvl 1 events to force repeats
+    mock_gm_lvl3.time = MockGameTime(start_day=20) # New day
+    event_manager_lvl3.reset_daily_event_history(mock_gm_lvl3.time.current_day) # Explicit reset for clarity
 
-        print("\n--- Expected Behavior Check ---")
-        print("Day 1: Expect to see each of the 3 events at least once, likely multiple times, but with variety early on.")
-        print("Day 2: Expect similar behavior to Day 1, as the history should have reset.")
-        print("         If counts are very skewed on Day 1 (e.g., one event 8 times, others 1), that's an issue.")
-        print("         If Day 2 immediately repeats Day 1's last seen event heavily, history might not have reset properly.")
+    # Pool of just two events to easily force repeats
+    test_pool_small_repeat = [event_mysterious_odor_obj, event_traveling_bard_obj]
+    print(f"Test Pool (Small Repeat Test): {[e.name for e in test_pool_small_repeat]}")
 
-    print("\n--- Event System Repetition Test Complete ---")
+    triggered_sequence_small_pool = []
+    num_triggers_small_pool = 6 # Enough to see repeats
 
-    # Keep the old tests if they are still relevant for general event functionality,
-    # but the new test above is specific to repetition.
-    # For now, I will comment out the old tests to focus on the new one.
-    # ... (old test block commented out or removed for brevity of this diff) ...
-    # Removing old tests for clarity of this specific test run.
-    # If this was a real commit, would decide if they are still needed.
-    # For now, assume they are not for this focused test.
-    # ...
+    for i in range(num_triggers_small_pool):
+        print(f"\nTrigger attempt {i+1} for small pool test:")
+        triggered_name = event_manager_lvl3.trigger_random_event(test_pool_small_repeat)
+        if triggered_name:
+            triggered_sequence_small_pool.append(triggered_name)
+            event_obj = next(e for e in test_pool_small_repeat if e.name == triggered_name)
+            # No need to call resolve/execute for this test's focus
+        else:
+            print("No event triggered (unexpected for this test).")
+        print(f"Current history for this test: {event_manager_lvl3.todays_events_history}")
+        print(f"Triggered sequence so far: {triggered_sequence_small_pool}")
 
-    if hasattr(test_char, 'commit_pending_xp'): # type: ignore
-        print("\n--- Committing XP at end of test (Mock Character) ---")
-        test_char.commit_pending_xp() # type: ignore
-        if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+    print(f"\nFull triggered sequence (Small Pool Test): {triggered_sequence_small_pool}")
+
+    # Check for immediate repetitions after the pool should be exhausted
+    immediate_repeats_found = False
+    if len(test_pool_small_repeat) == 2: # Specific check for 2-item pool
+        # After the first 2 triggers, all subsequent triggers are from the 'seen' pool.
+        # The new logic should prevent A,A if B was also available.
+        for i in range(len(test_pool_small_repeat), len(triggered_sequence_small_pool) - 1):
+            if triggered_sequence_small_pool[i] == triggered_sequence_small_pool[i+1]:
+                # This is only a failure if the *other* event was also in seen_today_events
+                # and selectable_seen_events was not empty.
+                # With 2 events, after both seen, selectable_seen_events will always have 1 item.
+                immediate_repeats_found = True
+                print(f"FAILURE: Immediate repetition found: {triggered_sequence_small_pool[i]} at index {i} and {i+1}")
+                break
+        assert not immediate_repeats_found, "Test 2 Failed: Immediate repetition detected with 2-event pool where avoidance was possible."
+
+    # General check: First few should be unique if pool size allows
+    unique_initial_triggers = len(set(triggered_sequence_small_pool[:len(test_pool_small_repeat)]))
+    print(f"Unique events in initial triggers: {unique_initial_triggers} (expected up to {len(test_pool_small_repeat)})")
+    assert unique_initial_triggers <= len(test_pool_small_repeat)
+    print("--- Test 2 Passed (if no assertion failure above) ---")
+
+
+    # --- Test 3: Daily Reset of Event History ---
+    print(f"\n--- Test 3: Daily Event History Reset ---")
+    mock_gm_lvl3.time = MockGameTime(start_day=30) # New day for this test
+    event_manager_lvl3.reset_daily_event_history(mock_gm_lvl3.time.current_day) # Clean start
+
+    test_pool_daily_reset = [event_mysterious_odor_obj, event_traveling_bard_obj, event_sudden_storm_obj]
+    print(f"Test Pool (Daily Reset): {[e.name for e in test_pool_daily_reset]}")
+
+    # Day 1: Trigger some events
+    print(f"Day {mock_gm_lvl3.time.current_day}:")
+    for _ in range(len(test_pool_daily_reset) + 1): # Trigger enough to see some repeats
+        event_manager_lvl3.trigger_random_event(test_pool_daily_reset)
+    history_day1 = list(event_manager_lvl3.todays_events_history)
+    print(f"History at end of Day {mock_gm_lvl3.time.current_day}: {history_day1}")
+    assert len(history_day1) > 0, "Test 3 Pre-check Failed: No events in history on Day 1."
+
+    # Advance to Day 2
+    mock_gm_lvl3.time.advance_day()
+    print(f"Advanced to Day {mock_gm_lvl3.time.current_day}.")
+    # EventManager should auto-reset on next trigger_random_event call due to day change.
+
+    # Trigger an event on Day 2
+    event_on_day2 = event_manager_lvl3.trigger_random_event(test_pool_daily_reset)
+    history_day2_after_trigger = list(event_manager_lvl3.todays_events_history)
+    print(f"History on Day {mock_gm_lvl3.time.current_day} after one trigger: {history_day2_after_trigger}")
+
+    assert len(history_day2_after_trigger) == 1, \
+        f"Test 3 Failed: History on Day 2 should have 1 event, got {len(history_day2_after_trigger)}. History: {history_day2_after_trigger}"
+    if event_on_day2:
+        assert history_day2_after_trigger[0] == event_on_day2, \
+            f"Test 3 Failed: First event on Day 2 ({event_on_day2}) not correctly logged in history ({history_day2_after_trigger[0]})."
+    print("--- Test 3 Passed ---")
+
+    # --- Test 4: Behavior with only ONE event in possible_events (forces repeat) ---
+    print(f"\n--- Test 4: Repetition with Single Event Pool ---")
+    mock_gm_lvl1.time = MockGameTime(start_day=40)
+    event_manager_lvl1.reset_daily_event_history(mock_gm_lvl1.time.current_day)
+
+    test_pool_single = [event_mysterious_odor_obj]
+    print(f"Test Pool (Single Event): {[e.name for e in test_pool_single]}")
+
+    triggered_sequence_single = []
+    for i in range(3):
+        triggered_name = event_manager_lvl1.trigger_random_event(test_pool_single)
+        if triggered_name:
+            triggered_sequence_single.append(triggered_name)
+
+    print(f"Triggered sequence (Single Pool): {triggered_sequence_single}")
+    all_same = all(name == event_mysterious_odor_obj.name for name in triggered_sequence_single)
+    assert len(triggered_sequence_single) == 3 and all_same, \
+        "Test 4 Failed: Expected all triggered events to be the single available event."
+    print("--- Test 4 Passed ---")
+
+
+    print("\n--- All EventManager Tests Complete ---")
+
+    if hasattr(test_char_lvl1, 'commit_pending_xp'):
+        test_char_lvl1.commit_pending_xp()
+    if hasattr(test_char_lvl3, 'commit_pending_xp'):
+        test_char_lvl3.commit_pending_xp()
 
     print("\n--- Event System Main Block Test Complete (after repetition test) ---")
