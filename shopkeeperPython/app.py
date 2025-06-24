@@ -875,6 +875,13 @@ def display_game_output():
         "max_shop_level": Shop.MAX_SHOP_LEVEL
     }
 
+    haggling_data_for_template = g.game_manager.active_haggling_session if g.game_manager else None
+
+    # SAFEGUARD: Ensure active_haggling_session is either None or a dictionary
+    if haggling_data_for_template is not None and not isinstance(haggling_data_for_template, dict):
+        app.logger.warning(f"CRITICAL WARNING: active_haggling_session was not None and not a dict. Type: {type(haggling_data_for_template)}, Value: {haggling_data_for_template}. Forcing to None for template.")
+        haggling_data_for_template = None
+
     return render_template('index.html',
                            user_logged_in=user_logged_in,
                            show_character_selection=show_character_selection,
@@ -917,7 +924,10 @@ def display_game_output():
                            # ASI/Feat Choice Data for JS
                            player_pending_asi_feat_choice=player_pending_asi_feat_choice_display,
                            feat_definitions_json=json.dumps(feat_definitions_for_template),
-                           player_stats_json=json.dumps(player_stats_for_template)
+                           player_stats_json=json.dumps(player_stats_for_template),
+                           # Haggling data passed to template
+                           haggling_pending=bool(haggling_data_for_template),
+                           pending_haggling_data_json=json.dumps(haggling_data_for_template) if haggling_data_for_template else None
                            )
 
 # --- Reroll Stat Route ---
