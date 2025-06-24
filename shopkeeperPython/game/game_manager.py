@@ -88,11 +88,15 @@ class GameManager:
         "haggle_sell": "Persuasion",
         "persuade_npc": "Persuasion",
         "intimidate_npc": "Intimidation",
+        "gather_rumors_tavern": "Persuasion", # Added
     }
     ACTIONS_ALLOWING_GENERIC_EVENTS = {
         "wait": True, "explore_town": True, "travel_to_town": True,
         "gather_resources": True, "talk_to_villager": True, "research_market": True,
         "set_shop_specialization": False, "upgrade_shop": False, "craft": False,
+        "rest_short": True, # Added
+        "rest_long": True, # Added
+        "gather_rumors_tavern": True, # Added
     }
     SKILL_EVENT_CHANCE_PER_HOUR = 0.15
     BASE_EVENT_CHANCE_PER_HOUR = 0.05
@@ -135,7 +139,8 @@ class GameManager:
             sub_locations=[
                 {"name": "Village Shop", "description": "Your humble shop.", "actions": ["buy_from_own_shop", "sell_to_own_shop", "check_shop_inventory", "craft"]},
                 {"name": "Village Square", "description": "The central gathering point of the village.", "actions": ["explore_town", "talk_to_villager", "research_market"]},
-                {"name": "Old Man Hemlock's Hut", "description": "A small, smoky hut belonging to the local herbalist.", "actions": ["talk_to_hemlock", "buy_from_npc"]}
+                {"name": "Old Man Hemlock's Hut", "description": "A small, smoky hut belonging to the local herbalist.", "actions": ["talk_to_hemlock", "buy_from_npc"]},
+                {"name": "The Sleeping Dragon Inn", "description": "A small, quiet inn. Not much happens here, but it's a place to rest or hear a whisper.", "actions": ["buy_drink_tavern", "gather_rumors_tavern"]} # Added Tavern to Starting Village
             ]
         )
         town_steel_flow = Town(
@@ -668,6 +673,91 @@ class GameManager:
                             )
                             self.daily_gold_spent_on_purchases_by_player += repair_cost # Track as a gold sink
                             action_xp_reward = 5
+
+            elif action_name == "rest_short":
+                if self.character.hit_dice > 0:
+                    roll = random.randint(1, self.character.hit_die_type)
+                    con_modifier = self.character.get_ability_modifier("CON")
+                    hp_recovered = max(1, roll + con_modifier) # Ensure at least 1 HP recovered
+
+                    self.character.current_hp = min(self.character.max_hp, self.character.current_hp + hp_recovered)
+                    self.character.hit_dice -= 1
+
+                    outcome_summary = f"Spent 1 Hit Die, recovered {hp_recovered} HP. Current HP: {self.character.current_hp}/{self.character.max_hp}. Hit Dice remaining: {self.character.hit_dice}."
+                    self._print(f"  {self.character.name} takes a short rest. {outcome_summary}")
+                    self.add_journal_entry(action_type="Short Rest", summary="Took a short rest.", outcome=outcome_summary, details={"hp_recovered": hp_recovered, "hit_dice_spent": 1})
+                    action_xp_reward = 1
+                else:
+                    self._print(f"  {self.character.name} attempts a short rest but has no Hit Dice remaining.")
+                    self.add_journal_entry(action_type="Short Rest", summary="Attempted short rest.", outcome="No Hit Dice remaining.")
+                time_advanced_by_action_hours = 1
+
+            elif action_name == "rest_long":
+                food_needed = {"Food": 1} # Using generic "Food" item name
+                drink_needed = {"Drink": 1} # Using generic "Drink" item name
+
+                has_food, _ = self.character.has_items(food_needed)
+                has_drink, _ = self.character.has_items(drink_needed)
+
+                if has_food and has_drink:
+                    self.character.consume_items(food_needed)
+                    self.character.consume_items(drink_needed)
+
+                    self.character.current_hp = self.character.max_hp
+                    self.character.hit_dice = self.character.level # Recover all hit dice
+
+                    exhaustion_removed = 0
+                    if self.character.exhaustion_level > 0:
+                        self.character.exhaustion_level -= 1
+                        exhaustion_removed = 1
+
+                    outcome_summary = f"HP fully restored. All Hit Dice recovered. Exhaustion reduced by {exhaustion_removed} (Current: {self.character.exhaustion_level}). Consumed 1 Food and 1 Drink."
+                    self._print(f"  {self.character.name} completes a long rest. {outcome_summary}")
+                    self.add_journal_entry(action_type="Long Rest", summary="Completed a long rest.", outcome=outcome_summary, details={"food_consumed": 1, "drink_consumed": 1, "exhaustion_removed": exhaustion_removed})
+                    action_xp_reward = 5
+                else:
+                    missing_supplies = []
+                    if not has_food: missing_supplies.append("Food")
+                    if not has_drink: missing_supplies.append("Drink")
+
+                    # GDD: Failed long rest can lead to exhaustion
+                    self.character.exhaustion_level = min(6, self.character.exhaustion_level + 1)
+                    outcome_summary = f"Failed to complete long rest. Missing: {', '.join(missing_supplies)}. Gained 1 level of exhaustion (Current: {self.character.exhaustion_level})."
+                    self._print(f"  {self.character.name} attempts a long rest but fails. {outcome_summary}")
+                    self.add_journal_entry(action_type="Long Rest", summary="Attempted long rest.", outcome=outcome_summary, details={"missing_supplies": missing_supplies})
+                    action_xp_reward = 0 # No XP for failed rest
+                time_advanced_by_action_hours = 8
+
+            elif action_name == "gather_rumors_tavern":
+                # This action's availability should ideally be checked by the UI based on current sub-location.
+                # For backend, we assume if called, it's valid, or add a check if sub_location info is passed in action_details.
+
+                # Simple list of generic rumors for now.
+                possible_rumors = [
+                    "Heard Old Man Hemlock has a new brew that can cure warts... or cause them, not sure.",
+                    "They say Borin Stonebeard once arm-wrestled a hill giant and won.",
+                    "Word is, a new caravan with exotic goods is expected in Steel Flow City soon.",
+                    "Someone saw strange lights over the old ruins last night.",
+                    "The price of ale is going up again, wouldn't you know it.",
+                    "Watch out for pickpockets in the market, especially on busy days.",
+                    f"The guards in {self.current_town.name} seem more on edge lately."
+                ]
+                if self.current_town.name == "Steel Flow City":
+                    possible_rumors.extend([
+                        "Miners in Steel Flow are grumbling about something stirring in the deeper tunnels.",
+                        "The Rusty Pickaxe is looking for a new bouncer. Again."
+                    ])
+                elif self.current_town.name == "Starting Village":
+                     possible_rumors.extend([
+                        "The crops are looking good this season in Starting Village.",
+                        "Someone's chickens have gone missing. Probably foxes."
+                    ])
+
+                rumor_heard = random.choice(possible_rumors)
+                self._print(f"  {self.character.name} spends time in the tavern and overhears: \"{rumor_heard}\"")
+                self.add_journal_entry(action_type="Gather Rumors", summary="Gathered rumors in a tavern.", outcome=f"Heard: {rumor_heard}", details={"rumor": rumor_heard})
+                action_xp_reward = 5
+                time_advanced_by_action_hours = 1
 
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 
