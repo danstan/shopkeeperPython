@@ -766,6 +766,26 @@ em, i { font-family: var(--font-secondary); font-style: italic; color: var(--col
 .hidden-details { display: none !important; } /* Ensure this utility class works */
 .inline-form { display: inline; }
 
+/* Event Active State - makes background non-interactive */
+body.event-active .game-container,
+body.event-active #top-right-menu-button,
+body.event-active #settings-popup,
+body.event-active #skill-allocation-popup-wrapper, /* Add other top-level popups if any */
+body.event-active #asi-feat-choice-popup-wrapper,
+body.event-active #haggling-popup-wrapper {
+    pointer-events: none !important;
+    /* Optional: Dim background further, but modal backdrop might be enough */
+    /* opacity: 0.5; */
+}
+
+/* Ensure the event popup itself and toasts remain fully interactive and visible */
+body.event-active #event-choice-popup-wrapper,
+body.event-active #toast-container {
+    pointer-events: auto !important;
+    opacity: 1 !important; /* In case a parent was dimmed */
+}
+
+
 /* Cleanup of old/redundant styles from previous structure */
 /* Removed: #left-tabs-container, #stats-tab, #info-tab, #shop-mgt-tab, #inventory-tab */
 /* Removed: #actions-tab (old bottom bar) and its direct content if not covered by new structure */
