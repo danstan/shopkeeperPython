@@ -504,6 +504,467 @@ GAME_EVENTS = [
     event_merchant_distress
 ]
 
+# --- More New Event Definitions ---
+
+event_mysterious_odor = Event.from_dict({
+    "name": "Mysterious Odor",
+    "description": "A strange, pungent odor wafts through your shop. What could it be?",
+    "min_level": 1,
+    "dc_scaling_factor": 0.2,
+    "skill_check_options": [
+        {
+            "choice_text": "Investigate the source thoroughly (INVESTIGATION DC 11).",
+            "skill": "Investigation",
+            "base_dc": 11,
+            "success_outcome_key": "investigate_odor_success",
+            "failure_outcome_key": "investigate_odor_failure"
+        },
+        {
+            "choice_text": "Assume it's a pest and try to track it (SURVIVAL DC 13).",
+            "skill": "Survival",
+            "base_dc": 13,
+            "success_outcome_key": "track_pest_success",
+            "failure_outcome_key": "track_pest_failure"
+        },
+        {
+            "choice_text": "It smells chemical... try to neutralize it (ALCHEMY DC 14 - requires Alchemist's Supplies).",
+            "skill": "Arcana", # Placeholder for Alchemy if not distinct skill, Arcana often covers chemical knowledge
+            "base_dc": 14,
+            "item_requirement": {"name": "Alchemist's Supplies", "effect": "enable_choice_or_auto_fail"},
+            "success_outcome_key": "neutralize_chemical_success",
+            "failure_outcome_key": "neutralize_chemical_failure"
+        },
+        {
+            "choice_text": "Ignore it and hope it goes away.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "ignore_odor",
+            "failure_outcome_key": "ignore_odor"
+        }
+    ],
+    "outcomes": {
+        "investigate_odor_success": {"message": "You trace the smell to a rotten piece of fruit hidden by a previous customer. Easily disposed of.", "effects": {"character_xp_gain": 10}},
+        "investigate_odor_failure": {"message": "You can't pinpoint the source, and the smell lingers, deterring a customer.", "effects": {"character_xp_gain": 2, "gold_change": -5}}, # Lost sale
+        "track_pest_success": {"message": "You find a scared skunk hiding in a crate! You carefully guide it out.", "effects": {"character_xp_gain": 15, "item_reward": {"name": "Skunk Musk Gland (Sealed)", "quantity": 1, "description": "Potent, if handled correctly.", "base_value": 20, "item_type": "ingredient", "quality": "Uncommon"}}},
+        "track_pest_failure": {"message": "Whatever it was, it eludes you, but not before spraying near your entrance. Customers avoid your shop for an hour.", "effects": {"character_xp_gain": 5, "shop_penalty": "minor_customer_deterrent_1hr"}},
+        "neutralize_chemical_success": {"message": "With your alchemical knowledge, you identify and neutralize a spilled potion sample. All clear!", "effects": {"character_xp_gain": 20}},
+        "neutralize_chemical_failure": {"message": "Your attempt to neutralize the smell backfires, creating a harmless but even fouler odor. Some goods are slightly damaged.", "effects": {"character_xp_gain": 5, "item_loss": {"name": "Random Low-Value Goods", "quantity":1, "value_max": 10}}}, # Conceptual item loss
+        "ignore_odor": {"message": "You ignore the smell. Eventually, it fades, but not before a few customers wrinkle their noses.", "effects": {"character_xp_gain": 1}}
+    }
+})
+
+event_traveling_bard = Event.from_dict({
+    "name": "Traveling Bard Visit",
+    "description": "A cheerful bard with a lute strolls into your shop, offering a song for some coin or hospitality.",
+    "min_level": 1,
+    "dc_scaling_factor": 0.1,
+    "skill_check_options": [
+        {
+            "choice_text": "Offer 5 gold for a song (PERSUASION DC 10 to get a good deal).",
+            "skill": "Persuasion",
+            "base_dc": 10,
+            "success_outcome_key": "bard_persuade_good_deal",
+            "failure_outcome_key": "bard_persuade_fair_deal"
+        },
+        {
+            "choice_text": "Offer food and drink for a performance.",
+            "skill": None, # No check, direct outcome
+            "base_dc": 0,
+            "success_outcome_key": "bard_hospitality",
+            "failure_outcome_key": "bard_hospitality"
+        },
+        {
+            "choice_text": "After they play, offer a tune of your own (PERFORMANCE DC 13).",
+            "skill": "Performance",
+            "base_dc": 13,
+            "success_outcome_key": "player_perform_success",
+            "failure_outcome_key": "player_perform_failure"
+        },
+        {
+            "choice_text": "Politely decline their offer to play.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "bard_decline",
+            "failure_outcome_key": "bard_decline"
+        }
+    ],
+    "outcomes": {
+        "bard_persuade_good_deal": {"message": "The bard accepts 3 gold after some friendly haggling and plays a lively tune, attracting a small crowd!", "effects": {"gold_change": -3, "character_xp_gain": 10, "shop_buff": "minor_customer_attraction_1hr"}},
+        "bard_persuade_fair_deal": {"message": "The bard agrees to 5 gold and plays a decent song. A few patrons seem to enjoy it.", "effects": {"gold_change": -5, "character_xp_gain": 5}},
+        "bard_hospitality": {"message": "The bard gratefully accepts your offer, plays a heartfelt song, and shares a local rumor.", "effects": {"character_xp_gain": 10, "information_gain": "local_rumor_generic"}}, # Conceptual info gain
+        "player_perform_success": {"message": "The bard is impressed by your talent! They teach you a new, rare song snippet which seems to briefly lift everyone's spirits.", "effects": {"character_xp_gain": 15, "shop_buff": "minor_ambiance_boost_30min"}},
+        "player_perform_failure": {"message": "Your performance is... enthusiastic. The bard offers polite but forced applause.", "effects": {"character_xp_gain": 3}},
+        "bard_decline": {"message": "The bard nods understandingly and heads on their way.", "effects": {"character_xp_gain": 2}}
+    }
+})
+
+event_injured_animal = Event.from_dict({
+    "name": "Injured Animal",
+    "description": "You find a small, whimpering animal (a fox with a thorn in its paw) near your shop's back door.",
+    "min_level": 2,
+    "dc_scaling_factor": 0.25,
+    "skill_check_options": [
+        {
+            "choice_text": "Attempt to calm it and remove the thorn (ANIMAL HANDLING DC 12).",
+            "skill": "Animal Handling", # Assuming Animal Handling is a skill
+            "base_dc": 12,
+            "success_outcome_key": "animal_calm_success",
+            "failure_outcome_key": "animal_calm_failure"
+        },
+        {
+            "choice_text": "Use basic first aid (MEDICINE DC 14 - requires Bandages).",
+            "skill": "Medicine", # Assuming Medicine is a skill
+            "base_dc": 14,
+            "item_requirement": {"name": "Bandages", "effect": "enable_choice_or_auto_fail"},
+            "success_outcome_key": "animal_medicine_success",
+            "failure_outcome_key": "animal_medicine_failure"
+        },
+        {
+            "choice_text": "Leave it. Nature will take its course.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "animal_leave",
+            "failure_outcome_key": "animal_leave"
+        }
+    ],
+    "outcomes": {
+        "animal_calm_success": {"message": "You gently remove the thorn. The fox looks at you thankfully before darting off. You feel good.", "effects": {"character_xp_gain": 20, "reputation_gain": 3}},
+        "animal_calm_failure": {"message": "The animal gets scared, nips your hand lightly, and runs away with the thorn still in.", "effects": {"character_xp_gain": 5, "hp_loss": 1}},
+        "animal_medicine_success": {"message": "Your deft bandaging helps the creature. It rests a bit then disappears, leaving behind a shiny button.", "effects": {"character_xp_gain": 25, "item_reward": {"name": "Shiny Button", "quantity": 1, "description":"A small, oddly shiny button.", "base_value":5, "item_type":"trinket", "quality":"Common"}}},
+        "animal_medicine_failure": {"message": "You try your best, but the animal is too agitated. It escapes your grasp.", "effects": {"character_xp_gain": 10}},
+        "animal_leave": {"message": "You decide to let nature run its course. The animal eventually limps away.", "effects": {"character_xp_gain": 2}}
+    }
+})
+
+event_sudden_storm = Event.from_dict({
+    "name": "Sudden Storm",
+    "description": "Dark clouds gather rapidly, and a fierce storm breaks out! Rain lashes down, and the wind howls.",
+    "min_level": 1,
+    "dc_scaling_factor": 0.0,
+    "skill_check_options": [
+        {
+            "choice_text": "Quickly secure your shop's windows and doors.",
+            "skill": None, # Auto-success, but item could improve it
+            "item_requirement": {"name": "Sturdy Shutters", "effect": "custom_success_bonus", "details": "Prevents minor damage"}, # Conceptual bonus
+            "base_dc": 0,
+            "success_outcome_key": "storm_secure_shop",
+            "failure_outcome_key": "storm_secure_shop" # Same outcome, item might mitigate negative parts
+        },
+        {
+            "choice_text": "Help your elderly neighbor secure their loose awning (ATHLETICS DC 13).",
+            "skill": "Athletics",
+            "base_dc": 13,
+            "success_outcome_key": "storm_help_neighbor_success",
+            "failure_outcome_key": "storm_help_neighbor_failure"
+        },
+        {
+            "choice_text": "Do nothing and wait for it to pass.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "storm_do_nothing",
+            "failure_outcome_key": "storm_do_nothing"
+        }
+    ],
+    "outcomes": {
+        "storm_secure_shop": {"message": "You manage to secure your shop just in time. It weathers the storm well, though some minor leaks appear.", "effects": {"character_xp_gain": 10, "item_if_shutters": {"name":"Minor Repair Kit", "description":"Shutters bonus: prevented damage, found kit!"}}}, # Item logic handled by outcome
+        "storm_help_neighbor_success": {"message": "You wrestle the awning into place! Your neighbor is immensely grateful and gives you some baked goods.", "effects": {"character_xp_gain": 20, "reputation_gain": 5, "item_reward": {"name": "Warm Pie", "quantity": 1, "description":"A delicious homemade pie.", "base_value":10, "item_type":"food", "quality":"Uncommon"}}},
+        "storm_help_neighbor_failure": {"message": "Despite your efforts, the awning is torn away by the wind. Your neighbor is safe but upset.", "effects": {"character_xp_gain": 5, "reputation_loss": 2}},
+        "storm_do_nothing": {"message": "You wait out the storm. Your shop sustains some minor damage (broken sign, a few leaks).", "effects": {"character_xp_gain": 2, "gold_change": -15}} # Repair costs
+    }
+})
+
+event_ancient_map_fragment = Event.from_dict({
+    "name": "Ancient Map Fragment",
+    "description": "Tucked inside a recently acquired old book, you find a fragment of a hand-drawn map.",
+    "min_level": 3,
+    "dc_scaling_factor": 0.3,
+    "skill_check_options": [
+        {
+            "choice_text": "Study the map for recognizable landmarks or clues (HISTORY DC 14).",
+            "skill": "History",
+            "base_dc": 14,
+            "success_outcome_key": "map_history_success",
+            "failure_outcome_key": "map_history_failure"
+        },
+        {
+            "choice_text": "Examine the fragment closely for hidden details (PERCEPTION DC 15).",
+            "skill": "Perception",
+            "base_dc": 15,
+            "item_requirement": {"name": "Magnifying Glass", "effect": "dc_reduction", "value": 2},
+            "success_outcome_key": "map_perception_success",
+            "failure_outcome_key": "map_perception_failure"
+        },
+        {
+            "choice_text": "Assume it's worthless and discard it.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "map_discard",
+            "failure_outcome_key": "map_discard"
+        }
+    ],
+    "outcomes": {
+        "map_history_success": {"message": "You recognize symbols indicating an old smuggler's cache nearby! You mark the location.", "effects": {"character_xp_gain": 25, "item_reward": {"name": "Annotated Local Map", "quantity": 1, "description":"Your map, now with a promising X.", "base_value":50, "item_type":"misc", "quality":"Uncommon"}}},
+        "map_history_failure": {"message": "The symbols are unfamiliar, and the map fragment seems to lead nowhere specific.", "effects": {"character_xp_gain": 5}},
+        "map_perception_success": {"message": "Faint markings on the map's edge, almost invisible, reveal a hidden compartment in the book it came from! Inside is a small pouch of old coins.", "effects": {"character_xp_gain": 30, "gold_change": 25}},
+        "map_perception_failure": {"message": "You scrutinize the map but find nothing beyond what's obvious. It remains a mystery.", "effects": {"character_xp_gain": 10}},
+        "map_discard": {"message": "You toss the old fragment away. Just another piece of parchment.", "effects": {"character_xp_gain": 1}}
+    }
+})
+
+event_urchins_plea = Event.from_dict({
+    "name": "Urchin's Plea",
+    "description": "A scruffy-looking urchin approaches you, eyes wide, asking for a bit of coin or some food.",
+    "min_level": 1,
+    "dc_scaling_factor": 0.1,
+    "skill_check_options": [
+        {
+            "choice_text": "Give the urchin 5 gold.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "urchin_give_gold",
+            "failure_outcome_key": "urchin_give_gold"
+        },
+        {
+            "choice_text": "Offer some leftover bread.",
+            "skill": None,
+            "base_dc": 0,
+            # "item_requirement": {"name": "Bread", "effect": "consume_and_enable"}, # If bread is a specific item
+            "success_outcome_key": "urchin_give_bread",
+            "failure_outcome_key": "urchin_give_bread"
+        },
+        {
+            "choice_text": "Try to discern if their story is true (INSIGHT DC 11).",
+            "skill": "Insight",
+            "base_dc": 11,
+            "success_outcome_key": "urchin_insight_true",
+            "failure_outcome_key": "urchin_insight_false_or_unclear"
+        },
+        {
+            "choice_text": "Sternly tell them to leave.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "urchin_stern_refusal",
+            "failure_outcome_key": "urchin_stern_refusal"
+        }
+    ],
+    "outcomes": {
+        "urchin_give_gold": {"message": "The urchin's eyes light up. 'Thank ye, kind sir/madam!' They scamper off.", "effects": {"gold_change": -5, "character_xp_gain": 10, "reputation_gain": 2}},
+        "urchin_give_bread": {"message": "The urchin gratefully accepts the bread and quickly eats it. 'Bless ye!'", "effects": {"character_xp_gain": 10, "reputation_gain": 3}}, # Assuming bread has negligible cost or is "flavor"
+        "urchin_insight_true": {"message": "You sense genuine hardship in their eyes. Helping them feels right.", "effects": {"character_xp_gain": 5, "prompt_player_choice_again": ["urchin_give_gold", "urchin_give_bread"]}}, # Special outcome: re-prompt
+        "urchin_insight_false_or_unclear": {"message": "It's hard to tell if they're truly desperate or just a good actor. You remain wary.", "effects": {"character_xp_gain": 5}},
+        "urchin_stern_refusal": {"message": "The urchin flinches and quickly disappears into the alleys. You notice a small item missing from a low shelf later.", "effects": {"character_xp_gain": 2, "reputation_loss": 2, "item_loss": {"name": "Trinket", "quantity": 1, "value_max": 5}}}
+    }
+})
+
+event_tax_collectors_audit = Event.from_dict({
+    "name": "Tax Collector's Audit",
+    "description": "A stern-faced official in town livery arrives, announcing a surprise tax audit for your shop.",
+    "min_level": 4, # More impactful event
+    "dc_scaling_factor": 0.5,
+    "skill_check_options": [
+        {
+            "choice_text": "Cooperate fully and present your records (Passive Check - Honesty/Record Quality).",
+            "skill": "Investigation", # Representing quality of records, GM might make flat check
+            "base_dc": 13, # DC for "good" records
+            "success_outcome_key": "tax_audit_cooperate_good",
+            "failure_outcome_key": "tax_audit_cooperate_bad"
+        },
+        {
+            "choice_text": "Attempt to persuade them that your modest earnings barely cover costs (PERSUASION DC 16).",
+            "skill": "Persuasion",
+            "base_dc": 16,
+            "success_outcome_key": "tax_audit_persuade_success",
+            "failure_outcome_key": "tax_audit_persuade_failure"
+        },
+        {
+            "choice_text": "Subtly try to offer a 'processing fee' to expedite things (DECEPTION DC 15 or SLEIGHT OF HAND DC 15).",
+            "skill": "Deception", # Could also be Sleight of Hand if it's about palming coin
+            "base_dc": 15,
+            "success_outcome_key": "tax_audit_bribe_success",
+            "failure_outcome_key": "tax_audit_bribe_failure"
+        }
+    ],
+    "outcomes": {
+        "tax_audit_cooperate_good": {"message": "The auditor reviews your meticulous records and nods. 'Everything seems in order. A small tax is due.'", "effects": {"character_xp_gain": 25, "gold_change": -50}}, # Nominal tax
+        "tax_audit_cooperate_bad": {"message": "Your records are a mess! The auditor frowns. 'This will require a more thorough look, and a fine for poor bookkeeping.'", "effects": {"character_xp_gain": 10, "gold_change": -100}}, # Tax + fine
+        "tax_audit_persuade_success": {"message": "After some convincing, the auditor agrees to a slightly lower assessment. 'Times are tough, I suppose.'", "effects": {"character_xp_gain": 30, "gold_change": -35}},
+        "tax_audit_persuade_failure": {"message": "Your pleas fall on deaf ears. The auditor proceeds by the book, and it's not cheap.", "effects": {"character_xp_gain": 5, "gold_change": -75}},
+        "tax_audit_bribe_success": {"message": "The 'fee' is discreetly accepted. The auditor gives your books a cursory glance. 'Looks acceptable. Standard tax applies.'", "effects": {"character_xp_gain": 15, "gold_change": -60}}, # Bribe + standard tax
+        "tax_audit_bribe_failure": {"message": "The auditor glares at your poorly concealed attempt. 'Are you trying to bribe an official? That's a serious offense! Expect a hefty fine on top of your taxes!'", "effects": {"character_xp_gain": 5, "gold_change": -150, "reputation_loss": 10}}
+    }
+})
+
+
+GAME_EVENTS.extend([
+    event_mysterious_odor,
+    event_traveling_bard,
+    event_injured_animal,
+    event_sudden_storm,
+    event_ancient_map_fragment,
+    event_urchins_plea,
+    event_tax_collectors_audit
+])
+
+# --- Events for previously missing skills ---
+
+event_precarious_delivery = Event.from_dict({
+    "name": "Precarious Delivery",
+    "description": "A courier trips outside your shop, and a valuable-looking, fragile package tumbles into the air! It's heading towards a muddy puddle.",
+    "min_level": 1,
+    "dc_scaling_factor": 0.1,
+    "skill_check_options": [
+        {
+            "choice_text": "Try to deftly catch the package (ACROBATICS DC 13).",
+            "skill": "Acrobatics",
+            "base_dc": 13,
+            "success_outcome_key": "catch_success",
+            "failure_outcome_key": "catch_failure"
+        },
+        {
+            "choice_text": "Let it fall. Not your problem.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "let_fall",
+            "failure_outcome_key": "let_fall"
+        }
+    ],
+    "outcomes": {
+        "catch_success": {"message": "You nimbly snatch the package mid-air! The grateful courier rewards you with 10 gold.", "effects": {"character_xp_gain": 15, "gold_change": 10}},
+        "catch_failure": {"message": "You lunge but misjudge it. The package lands with a sad squelch in the mud. The courier is dismayed.", "effects": {"character_xp_gain": 5}},
+        "let_fall": {"message": "You watch as the package lands in the mud. The courier sighs.", "effects": {"character_xp_gain": 1}}
+    }
+})
+
+event_strange_plant_growth = Event.from_dict({
+    "name": "Strange Plant Growth",
+    "description": "A peculiar vine with glowing fruit has suddenly sprouted near your shop entrance overnight.",
+    "min_level": 2,
+    "dc_scaling_factor": 0.2,
+    "skill_check_options": [
+        {
+            "choice_text": "Examine and identify the plant (NATURE DC 14).",
+            "skill": "Nature",
+            "base_dc": 14,
+            "success_outcome_key": "identify_success",
+            "failure_outcome_key": "identify_failure"
+        },
+        {
+            "choice_text": "Hack it down before it causes trouble.",
+            "skill": None, # Could be Athletics if we want another check
+            "base_dc": 0,
+            "success_outcome_key": "hack_down",
+            "failure_outcome_key": "hack_down"
+        }
+    ],
+    "outcomes": {
+        "identify_success": {"message": "You recognize it as a rare Sunpetal vine! The fruit is a valuable alchemical ingredient.", "effects": {"character_xp_gain": 20, "item_reward": {"name": "Sunpetal Fruit", "quantity": 2, "description": "Glows faintly, warm to the touch.", "base_value": 25, "item_type": "ingredient", "quality": "Uncommon"}}},
+        "identify_failure": {"message": "You can't identify it. It might be dangerous, or just a weird weed. Best to leave it for now.", "effects": {"character_xp_gain": 5}},
+        "hack_down": {"message": "You remove the strange plant. Better safe than sorry.", "effects": {"character_xp_gain": 5}}
+    }
+})
+
+event_pilgrims_request = Event.from_dict({
+    "name": "Pilgrim's Request",
+    "description": "A weary pilgrim, clutching a holy symbol, asks for directions to a forgotten local shrine and seems interested in any historical details you might know.",
+    "min_level": 2,
+    "dc_scaling_factor": 0.2,
+    "skill_check_options": [
+        {
+            "choice_text": "Recall details about the old shrine (RELIGION DC 14).",
+            "skill": "Religion",
+            "base_dc": 14,
+            "success_outcome_key": "recall_shrine_success",
+            "failure_outcome_key": "recall_shrine_failure"
+        },
+        {
+            "choice_text": "Offer vague directions without religious insight.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "vague_directions",
+            "failure_outcome_key": "vague_directions"
+        }
+    ],
+    "outcomes": {
+        "recall_shrine_success": {"message": "You provide accurate details. The pilgrim blesses you and offers a small, sacred token.", "effects": {"character_xp_gain": 20, "item_reward": {"name": "Pilgrim's Token", "quantity": 1, "description": "A small wooden token, feels warm.", "base_value": 15, "item_type": "trinket", "quality": "Uncommon"}, "reputation_gain": 2}},
+        "recall_shrine_failure": {"message": "Your knowledge of local religious history is hazy. You can only offer vague directions.", "effects": {"character_xp_gain": 5}},
+        "vague_directions": {"message": "You give some general directions. The pilgrim thanks you and continues on.", "effects": {"character_xp_gain": 2}}
+    }
+})
+
+event_dropped_pouch = Event.from_dict({
+    "name": "Dropped Pouch",
+    "description": "A richly dressed noble bumps into a display, then hurries off. You notice they dropped a small, embroidered pouch, partially open, revealing gold coins.",
+    "min_level": 1,
+    "dc_scaling_factor": 0.15,
+    "skill_check_options": [
+        {
+            "choice_text": "Try to lift a coin before returning it (SLEIGHT OF HAND DC 15).",
+            "skill": "Sleight of Hand",
+            "base_dc": 15,
+            "success_outcome_key": "lift_coin_success",
+            "failure_outcome_key": "lift_coin_failure"
+        },
+        {
+            "choice_text": "Immediately return the pouch.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "return_pouch_honestly",
+            "failure_outcome_key": "return_pouch_honestly"
+        }
+    ],
+    "outcomes": {
+        "lift_coin_success": {"message": "Your fingers are nimble! You snag a couple of coins. The noble thanks you for returning the pouch, none the wiser.", "effects": {"character_xp_gain": 10, "gold_change": 15}},
+        "lift_coin_failure": {"message": "You fumble! The noble notices your attempt as they turn back, snatching the pouch with a glare.", "effects": {"character_xp_gain": 2, "reputation_loss": 5}},
+        "return_pouch_honestly": {"message": "The noble is grateful for your honesty and rewards you with a 5 gold tip.", "effects": {"character_xp_gain": 15, "gold_change": 5, "reputation_gain": 3}}
+    }
+})
+
+event_suspicious_onlooker = Event.from_dict({
+    "name": "Suspicious Onlooker",
+    "description": "You notice someone in a dark cloak loitering across the street, seemingly watching your shop a little too intently.",
+    "min_level": 2,
+    "dc_scaling_factor": 0.2,
+    "skill_check_options": [
+        {
+            "choice_text": "Subtly observe them without being noticed (STEALTH DC 12).",
+            "skill": "Stealth",
+            "base_dc": 12,
+            "success_outcome_key": "observe_success",
+            "failure_outcome_key": "observe_failure"
+        },
+        {
+            "choice_text": "Confront them directly.",
+            "skill": "Intimidation", # Or Persuasion, making it a different path
+            "base_dc": 11,
+            "success_outcome_key": "confront_success", # Needs new outcome
+            "failure_outcome_key": "confront_failure"  # Needs new outcome
+        },
+        {
+            "choice_text": "Ignore them.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "ignore_onlooker",
+            "failure_outcome_key": "ignore_onlooker"
+        }
+    ],
+    "outcomes": {
+        "observe_success": {"message": "You watch them undetected. They seem to be casing your shop, but your attentiveness makes them uneasy, and they move on.", "effects": {"character_xp_gain": 15}},
+        "observe_failure": {"message": "They spot you watching them! They give you a hard stare and then quickly disappear. You feel uneasy.", "effects": {"character_xp_gain": 5, "shop_penalty": "minor_unease_1hr"}},
+        "confront_success": {"message": "You confront the onlooker. They stammer an apology, claiming to be admiring your sign, and quickly leave.", "effects": {"character_xp_gain": 10}},
+        "confront_failure": {"message": "Your confrontation makes the onlooker defensive. They scoff and walk off, muttering.", "effects": {"character_xp_gain": 5}},
+        "ignore_onlooker": {"message": "You decide to ignore them. After a while, they're gone. Hopefully, it was nothing.", "effects": {"character_xp_gain": 2}}
+    }
+})
+
+
+GAME_EVENTS.extend([
+    event_precarious_delivery,
+    event_strange_plant_growth,
+    event_pilgrims_request,
+    event_dropped_pouch,
+    event_suspicious_onlooker
+])
+
 
 if __name__ == "__main__":
     import datetime # Added for MockGameManager timestamping
@@ -625,117 +1086,167 @@ if __name__ == "__main__":
             def __repr__(self): return f"Item({self.name})"
 
     # Test Character Setup
-    test_char = Character(name="Test Event Player", level=3) # type: ignore
-    # Give character an item for testing item requirements
-    # For event_ruined_shrine
-    lens_of_detection = Item(name="Lens of Detection", description="Aids in finding hidden things.", item_type="tool", quality="Uncommon") # type: ignore
-    test_char.add_item_to_inventory(lens_of_detection)
-    # For event_merchant_distress
-    dog_whistle = Item(name="Guard Dog Whistle", description="Summons a fierce (looking) hound.", item_type="trinket", quality="Rare") # type: ignore
-    test_char.add_item_to_inventory(dog_whistle)
+    test_char_level = 3
+    test_char = Character(name="Test Event Player", level=test_char_level) # type: ignore
 
-    # For general testing, e.g. if one of the above is consumed or lost
-    thieves_tools = Item(name="Thieves' Tools", description="Useful for disarming traps and picking locks.", item_type="tool", quality="Common", effects={"dc_reduction_stealth": 2}) # type: ignore
-    invisibility_potion = Item(name="Invisibility Potion", description="Grants invisibility.", item_type="potion", quality="Rare", effects={"auto_success_stealth": True}, is_consumable=True) # type: ignore
-    test_char.add_item_to_inventory(thieves_tools)
-    test_char.add_item_to_inventory(invisibility_potion)
-    if hasattr(test_char, 'display_character_info'): test_char.display_character_info()
+    # Give character items for testing item requirements
+    items_to_add = [
+        Item(name="Lens of Detection", description="Aids in finding hidden things.", item_type="tool", quality="Uncommon"),
+        Item(name="Guard Dog Whistle", description="Summons a fierce (looking) hound.", item_type="trinket", quality="Rare"),
+        Item(name="Thieves' Tools", description="Useful for disarming traps and picking locks.", item_type="tool", quality="Common", effects={"dc_reduction_stealth": 2}),
+        Item(name="Invisibility Potion", description="Grants invisibility.", item_type="potion", quality="Rare", effects={"auto_success_stealth": True}, is_consumable=True),
+        Item(name="Alchemist's Supplies", description="Needed for some alchemical tasks.", item_type="tool", quality="Common"),
+        Item(name="Bandages", description="Basic medical supplies.", item_type="consumable", quality="Common"),
+        Item(name="Magnifying Glass", description="Helps see small details.", item_type="tool", quality="Common")
+    ]
+    for item in items_to_add:
+        test_char.add_item_to_inventory(item) # type: ignore
 
-    # Mock GameManager for EventManager testing
-    if 'MockGameManager' not in globals() or not hasattr(MockGameManager, 'add_journal_entry'):
-        class MockGameManager:
-            def __init__(self, character_ref): # Store character reference
-                self.time_module = lambda: None # Mock time object
-                setattr(self.time_module, 'get_current_datetime', datetime.datetime.now)
-                self.character = character_ref # EventManager needs character for some operations
-                self.journal = []
+    if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
 
-            def add_journal_entry(self, action_type, summary, details=None, outcome=None, timestamp=None):
-                ts = timestamp if timestamp else (self.time_module.get_current_datetime() if hasattr(self.time_module, 'get_current_datetime') else datetime.datetime.now())
-                if isinstance(ts, str): ts = datetime.datetime.fromisoformat(ts)
+    # Mock GameManager
+    mock_gm = MockGameManager(character_ref=test_char) # type: ignore
+    event_manager = EventManager(character=test_char, game_manager=mock_gm) # type: ignore
 
-                entry = {"ts": ts, "type": action_type, "summary": summary, "details": details, "outcome": outcome}
-                self.journal.append(entry)
-                print(f"  MOCK_GM_JOURNAL: Type='{action_type}', Summary='{summary}', Outcome='{outcome}'")
-                # print(f"    Details: {details}")
+    print(f"\n--- Current GAME_EVENTS count: {len(GAME_EVENTS)} ---")
 
+    # --- Test 1: Original event_merchant_distress (Index 2 if old list, find by name for robustness) ---
+    event_to_test_1 = next((e for e in GAME_EVENTS if e.name == "Merchant in Distress"), None)
+    if event_to_test_1:
+        print(f"\n--- Test Event 1: {event_to_test_1.name} (Player Level: {test_char.level}) ---") # type: ignore
+        print(f"Representation: {event_to_test_1}")
+        available_choices_1 = event_manager.resolve_event(event_to_test_1)
 
-    mock_gm = MockGameManager(character_ref=test_char) # Pass character to Mock GM
-    event_manager = EventManager(character=test_char, game_manager=mock_gm)
+        if available_choices_1:
+            print(f"\n--- Executing Choice 0 for {event_to_test_1.name}: '{available_choices_1[0]['text']}' (Should use Guard Dog Whistle) ---")
+            if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+            choice_result_1_0 = event_manager.execute_skill_choice(event_to_test_1, 0)
+            print(f"Execution Result: {choice_result_1_0.get('message')}, Success: {choice_result_1_0.get('rolled_successfully')}")
+            if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
 
-    # Sample Event from ALL_SKILL_CHECK_EVENTS
-    if ALL_SKILL_CHECK_EVENTS:
-        test_event_instance = ALL_SKILL_CHECK_EVENTS[2] # event_merchant_distress (index 2)
-        # This event uses "Guard Dog Whistle" for auto-success on one choice.
-        # The test_char should have this item.
-
-        print(f"\n--- Test Event: {test_event_instance.name} (Player Level: {test_char.level}) ---") # type: ignore
-        print(f"Representation: {test_event_instance}")
-
-        # 1. Resolve event to get choices
-        print("\n--- Resolving event to get choices: ---")
-        available_choices = event_manager.resolve_event(test_event_instance)
-        # `resolve_event` already prints the choices with their DCs.
-
-        # 2. Execute a choice (e.g., the first one with Guard Dog Whistle)
-        if available_choices:
-            print(f"\n--- Executing Choice 0: '{available_choices[0]['text']}' (Should use Guard Dog Whistle) ---")
-            if hasattr(test_char, 'display_character_info'): test_char.display_character_info()
-            choice_result_0 = event_manager.execute_skill_choice(test_event_instance, 0)
-            print(f"Execution Result (Choice 0): {choice_result_0.get('message')}")
-            print(f"  Success: {choice_result_0.get('rolled_successfully')}, Outcome Details: {choice_result_0.get('outcome_details')}")
-            print(f"  Roll Data: {choice_result_0.get('roll_data')}")
-            if hasattr(test_char, 'display_character_info'): test_char.display_character_info()
-
-            # For testing: remove the whistle and try again to see skill check path
-            whistle_item = next((item for item in test_char.inventory if item.name == "Guard Dog Whistle"), None)
-            if whistle_item:
-                test_char.remove_specific_item_from_inventory(whistle_item) # Use specific instance removal
-                print(f"  INFO: Removed '{whistle_item.name}' for further testing.")
-                if hasattr(test_char, 'display_character_info'): test_char.display_character_info()
-
-                print(f"\n--- Re-Executing Choice 0: '{available_choices[0]['text']}' (Whistle is gone) ---")
-                choice_result_0_again = event_manager.execute_skill_choice(test_event_instance, 0)
-                print(f"Execution Result (Choice 0 again): {choice_result_0_again.get('message')}")
-                print(f"  Success: {choice_result_0_again.get('rolled_successfully')}, Outcome Details: {choice_result_0_again.get('outcome_details')}")
-                print(f"  Roll Data: {choice_result_0_again.get('roll_data')}")
-                if hasattr(test_char, 'display_character_info'): test_char.display_character_info()
-
-
-            # 3. Execute the second choice (Athletics check)
-            if len(available_choices) > 1:
-                print(f"\n--- Executing Choice 1: '{available_choices[1]['text']}' ---")
-                if hasattr(test_char, 'display_character_info'): test_char.display_character_info()
-                choice_result_1 = event_manager.execute_skill_choice(test_event_instance, 1)
-                print(f"Execution Result (Choice 1): {choice_result_1.get('message')}")
-                print(f"  Success: {choice_result_1.get('rolled_successfully')}, Outcome Details: {choice_result_1.get('outcome_details')}")
-                print(f"  Roll Data: {choice_result_1.get('roll_data')}")
-                if hasattr(test_char, 'display_character_info'): test_char.display_character_info()
+            # Remove whistle and try again
+            whistle = next((i for i in test_char.inventory if i.name == "Guard Dog Whistle"), None) # type: ignore
+            if whistle:
+                test_char.remove_specific_item_from_inventory(whistle) # type: ignore
+                print(f"  INFO: Removed '{whistle.name}' for further testing.")
+                print(f"\n--- Re-Executing Choice 0 for {event_to_test_1.name} (Whistle gone) ---")
+                choice_result_1_0_again = event_manager.execute_skill_choice(event_to_test_1, 0)
+                print(f"Execution Result: {choice_result_1_0_again.get('message')}, Success: {choice_result_1_0_again.get('rolled_successfully')}")
+                if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
         else:
-            print(f"Event {test_event_instance.name} offered no choices.")
+            print(f"Event {event_to_test_1.name} offered no choices.")
     else:
-        print("No events in ALL_SKILL_CHECK_EVENTS to test.")
+        print("Could not find 'Merchant in Distress' event to test.")
 
+    # --- Test 2: New event_mysterious_odor (Skill checks) ---
+    event_to_test_2 = next((e for e in GAME_EVENTS if e.name == "Mysterious Odor"), None)
+    if event_to_test_2:
+        print(f"\n--- Test Event 2: {event_to_test_2.name} (Player Level: {test_char.level}) ---") # type: ignore
+        available_choices_2 = event_manager.resolve_event(event_to_test_2)
+        if available_choices_2 and len(available_choices_2) > 0:
+            # Try the "Investigate" choice
+            print(f"\n--- Executing Choice 0 for {event_to_test_2.name}: '{available_choices_2[0]['text']}' ---")
+            choice_result_2_0 = event_manager.execute_skill_choice(event_to_test_2, 0) # Investigate
+            print(f"Execution Result: {choice_result_2_0.get('message')}, Success: {choice_result_2_0.get('rolled_successfully')}")
+            if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
 
-    # Test direct outcome if no choices (e.g. a simple "Lucky Find" event)
+            # Try the "Alchemy" choice (requires Alchemist's Supplies, which test_char has)
+            if len(available_choices_2) > 2:
+                 print(f"\n--- Executing Choice 2 for {event_to_test_2.name}: '{available_choices_2[2]['text']}' ---")
+                 choice_result_2_2 = event_manager.execute_skill_choice(event_to_test_2, 2) # Alchemy
+                 print(f"Execution Result: {choice_result_2_2.get('message')}, Success: {choice_result_2_2.get('rolled_successfully')}")
+                 if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+        else:
+            print(f"Event {event_to_test_2.name} offered no choices or not enough choices for test.")
+    else:
+        print("Could not find 'Mysterious Odor' event to test.")
+
+    # --- Test 3: New event_traveling_bard (Direct outcome choices) ---
+    event_to_test_3 = next((e for e in GAME_EVENTS if e.name == "Traveling Bard Visit"), None)
+    if event_to_test_3:
+        print(f"\n--- Test Event 3: {event_to_test_3.name} (Player Level: {test_char.level}) ---") # type: ignore
+        available_choices_3 = event_manager.resolve_event(event_to_test_3)
+        if available_choices_3 and len(available_choices_3) > 1:
+            # Try the "Offer food and drink" choice (direct)
+            print(f"\n--- Executing Choice 1 for {event_to_test_3.name}: '{available_choices_3[1]['text']}' ---")
+            choice_result_3_1 = event_manager.execute_skill_choice(event_to_test_3, 1) # Offer food/drink
+            print(f"Execution Result: {choice_result_3_1.get('message')}, Success: {choice_result_3_1.get('rolled_successfully')}")
+            if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+        else:
+            print(f"Event {event_to_test_3.name} offered no choices or not enough choices for test.")
+    else:
+        print("Could not find 'Traveling Bard Visit' event to test.")
+
+    # --- Test 4: Direct outcome (no choices) event like "Lucky Find" ---
     lucky_find_event_data = {
-        "name": "Simple Lucky Find",
-        "description": "You found 10 gold!",
+        "name": "Simple Lucky Find", "description": "You found 10 gold!",
         "skill_check_options": [], # No choices
         "outcomes": {"success": {"message": "You pocket 10 gold.", "effects": {"gold_change": 10, "character_xp_gain": 5}}}
     }
     lucky_event = Event.from_dict(lucky_find_event_data)
     print(f"\n--- Testing Direct Outcome Event: {lucky_event.name} ---")
-    if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
-    direct_outcome_result = event_manager.execute_skill_choice(lucky_event, 0) # choice_index 0 for direct
-    print(f"Execution Result (Direct): {direct_outcome_result.get('message')}")
-    print(f"  Success: {direct_outcome_result.get('rolled_successfully')}, Details: {direct_outcome_result.get('details')}")
-    if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+    choices_lucky = event_manager.resolve_event(lucky_event)
+    if not choices_lucky:
+        print(f"Event '{lucky_event.name}' correctly resolved to no choices.")
+        if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+        direct_outcome_result = event_manager.execute_skill_choice(lucky_event, 0) # choice_index 0 for direct
+        print(f"Execution Result (Direct): {direct_outcome_result.get('message')}, Success: {direct_outcome_result.get('rolled_successfully')}")
+        if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+    else:
+        print(f"Error: Event '{lucky_event.name}' unexpectedly yielded choices: {choices_lucky}")
+
+    # --- Test 5: New event_precarious_delivery (Acrobatics) ---
+    event_to_test_5 = next((e for e in GAME_EVENTS if e.name == "Precarious Delivery"), None)
+    if event_to_test_5:
+        print(f"\n--- Test Event 5: {event_to_test_5.name} (Player Level: {test_char.level}) ---") # type: ignore
+        available_choices_5 = event_manager.resolve_event(event_to_test_5)
+        if available_choices_5:
+            print(f"\n--- Executing Choice 0 for {event_to_test_5.name}: '{available_choices_5[0]['text']}' ---")
+            choice_result_5_0 = event_manager.execute_skill_choice(event_to_test_5, 0) # Acrobatics choice
+            print(f"Execution Result: {choice_result_5_0.get('message')}, Success: {choice_result_5_0.get('rolled_successfully')}")
+            if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+    else:
+        print("Could not find 'Precarious Delivery' event to test.")
+
+    # --- Test 6: New event_pilgrims_request (Religion) ---
+    event_to_test_6 = next((e for e in GAME_EVENTS if e.name == "Pilgrim's Request"), None)
+    if event_to_test_6:
+        print(f"\n--- Test Event 6: {event_to_test_6.name} (Player Level: {test_char.level}) ---") # type: ignore
+        available_choices_6 = event_manager.resolve_event(event_to_test_6)
+        if available_choices_6:
+            print(f"\n--- Executing Choice 0 for {event_to_test_6.name}: '{available_choices_6[0]['text']}' ---")
+            choice_result_6_0 = event_manager.execute_skill_choice(event_to_test_6, 0) # Religion choice
+            print(f"Execution Result: {choice_result_6_0.get('message')}, Success: {choice_result_6_0.get('rolled_successfully')}")
+            if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+    else:
+        print("Could not find 'Pilgrim's Request' event to test.")
+
+    # --- Test 7: Modified event_traveling_bard (Performance) ---
+    event_to_test_7 = next((e for e in GAME_EVENTS if e.name == "Traveling Bard Visit"), None)
+    if event_to_test_7:
+        print(f"\n--- Test Event 7: {event_to_test_7.name} Performance choice (Player Level: {test_char.level}) ---") # type: ignore
+        available_choices_7 = event_manager.resolve_event(event_to_test_7)
+        # Find the performance choice (usually index 2 after the change)
+        performance_choice_index = -1
+        for idx, choice in enumerate(available_choices_7):
+            if choice.get('skill') == "Performance":
+                performance_choice_index = idx
+                break
+
+        if performance_choice_index != -1:
+            print(f"\n--- Executing Performance Choice for {event_to_test_7.name}: '{available_choices_7[performance_choice_index]['text']}' ---")
+            choice_result_7_perf = event_manager.execute_skill_choice(event_to_test_7, performance_choice_index)
+            print(f"Execution Result: {choice_result_7_perf.get('message')}, Success: {choice_result_7_perf.get('rolled_successfully')}")
+            if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
+        else:
+            print(f"Could not find Performance choice in {event_to_test_7.name}")
+    else:
+        print("Could not find 'Traveling Bard Visit' to test performance choice.")
 
 
     if hasattr(test_char, 'commit_pending_xp'): # type: ignore
         print("\n--- Committing XP at end of test ---")
-        test_char.commit_pending_xp()
-        if hasattr(test_char, 'display_character_info'): test_char.display_character_info()
+        test_char.commit_pending_xp() # type: ignore
+        if hasattr(test_char, 'display_character_info'): test_char.display_character_info() # type: ignore
 
-    print("\n--- Event System Test Complete ---")
+    print("\n--- Event System Main Block Test Complete ---")

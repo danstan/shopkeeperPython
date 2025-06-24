@@ -182,6 +182,60 @@ class TestEventClass(unittest.TestCase):
         repr_with_options = repr(event_with_options)
         self.assertIn("choices=1", repr_with_options)
 
+
+class TestAllGameEventsIntegrity(unittest.TestCase):
+    def test_all_events_in_game_events_list_are_valid(self):
+        """
+        Iterates through all events in GAME_EVENTS and performs structural validation.
+        """
+        self.assertTrue(len(GAME_EVENTS) > 0, "GAME_EVENTS list should not be empty.")
+
+        for i, event_instance in enumerate(GAME_EVENTS):
+            with self.subTest(event_name=getattr(event_instance, 'name', f"Unknown Event at index {i}")):
+                self.assertIsInstance(event_instance, Event, f"Item at index {i} is not an Event instance.")
+
+                # Basic attributes
+                self.assertTrue(hasattr(event_instance, 'name') and isinstance(event_instance.name, str) and event_instance.name, "Event must have a non-empty name string.")
+                self.assertTrue(hasattr(event_instance, 'description') and isinstance(event_instance.description, str) and event_instance.description, "Event must have a non-empty description string.")
+                self.assertTrue(hasattr(event_instance, 'min_level') and isinstance(event_instance.min_level, int) and event_instance.min_level >= 0, "Event must have a non-negative min_level integer.")
+                self.assertTrue(hasattr(event_instance, 'dc_scaling_factor') and isinstance(event_instance.dc_scaling_factor, float), "Event must have a dc_scaling_factor float.")
+
+                # Outcomes
+                self.assertTrue(hasattr(event_instance, 'outcomes') and isinstance(event_instance.outcomes, dict) and event_instance.outcomes, "Event must have a non-empty outcomes dictionary.")
+                for outcome_key, outcome_data in event_instance.outcomes.items():
+                    self.assertIsInstance(outcome_data, dict, f"Outcome '{outcome_key}' must be a dictionary.")
+                    self.assertIn("message", outcome_data, f"Outcome '{outcome_key}' must have a 'message'.")
+                    self.assertIsInstance(outcome_data["message"], str, f"Message for outcome '{outcome_key}' must be a string.")
+                    self.assertIn("effects", outcome_data, f"Outcome '{outcome_key}' must have an 'effects' dictionary (can be empty).")
+                    self.assertIsInstance(outcome_data["effects"], dict, f"Effects for outcome '{outcome_key}' must be a dictionary.")
+
+                # Skill Check Options
+                self.assertTrue(hasattr(event_instance, 'skill_check_options') and isinstance(event_instance.skill_check_options, list), "Event must have skill_check_options list (can be empty).")
+                for choice_idx, choice_option in enumerate(event_instance.skill_check_options):
+                    with self.subTest(choice_index=choice_idx):
+                        self.assertIsInstance(choice_option, dict, f"Choice at index {choice_idx} must be a dictionary.")
+                        self.assertIn("choice_text", choice_option, f"Choice {choice_idx} must have 'choice_text'.")
+                        self.assertIsInstance(choice_option["choice_text"], str, f"choice_text for choice {choice_idx} must be a string.")
+
+                        self.assertIn("success_outcome_key", choice_option, f"Choice {choice_idx} must have 'success_outcome_key'.")
+                        self.assertIn(choice_option["success_outcome_key"], event_instance.outcomes, f"success_outcome_key '{choice_option['success_outcome_key']}' for choice {choice_idx} must exist in event outcomes.")
+
+                        self.assertIn("failure_outcome_key", choice_option, f"Choice {choice_idx} must have 'failure_outcome_key'.")
+                        self.assertIn(choice_option["failure_outcome_key"], event_instance.outcomes, f"failure_outcome_key '{choice_option['failure_outcome_key']}' for choice {choice_idx} must exist in event outcomes.")
+
+                        if choice_option.get("skill"): # If a skill is specified, a base_dc is expected
+                            self.assertIn("base_dc", choice_option, f"Choice {choice_idx} with skill '{choice_option['skill']}' must have 'base_dc'.")
+                            self.assertIsInstance(choice_option["base_dc"], int, f"base_dc for choice {choice_idx} must be an integer.")
+
+                        if choice_option.get("item_requirement"):
+                            item_req = choice_option["item_requirement"]
+                            self.assertIsInstance(item_req, dict, f"item_requirement for choice {choice_idx} must be a dictionary.")
+                            self.assertIn("name", item_req, f"item_requirement for choice {choice_idx} must specify item 'name'.")
+                            self.assertIn("effect", item_req, f"item_requirement for choice {choice_idx} must specify 'effect'.")
+                            if item_req["effect"] == "dc_reduction" or item_req["effect"] == "custom_bonus": # Example, extend as new effects are added
+                                self.assertIn("value", item_req, f"item_requirement with effect '{item_req['effect']}' for choice {choice_idx} often has a 'value'.")
+
+
 if __name__ == '__main__':
     unittest.main(argv=['first-arg-is-ignored'], exit=False)
 
@@ -202,7 +256,25 @@ class MockCharacter:
         self.gold = 100
         self.xp = 0
         self.pending_xp = 0
-        self.ATTRIBUTE_DEFINITIONS = Character.ATTRIBUTE_DEFINITIONS # Use actual definitions for skill mapping
+        # Ensure all skills referenced in new events are mockable by Character.ATTRIBUTE_DEFINITIONS
+        # This might require adding them if they are not standard D&D 5e skills mapped in Character.py
+        # For testing, we can expand the mock's known skills.
+        _mock_attr_defs = Character.ATTRIBUTE_DEFINITIONS.copy()
+        _mock_attr_defs.update({
+            "Animal Handling": "WIS",
+            "Medicine": "WIS",
+            "History": "INT",
+            "Perception": "WIS",
+            "Survival": "WIS",
+            "Alchemy": "INT", # Conceptual skill
+            "Acrobatics": "DEX",
+            "Nature": "INT",
+            "Performance": "CHA",
+            "Religion": "INT",
+            "Sleight of Hand": "DEX",
+            "Stealth": "DEX"
+        })
+        self.ATTRIBUTE_DEFINITIONS = _mock_attr_defs
         self.stats = {"STR": 10, "DEX": 10, "CON": 10, "INT": 10, "WIS": 10, "CHA": 10} # Base for attribute calculation
         self.exhaustion_level = 0 # Important for skill checks
 
@@ -214,9 +286,12 @@ class MockCharacter:
         self.award_xp = MagicMock()
 
     def get_attribute_score(self, skill_name): # Simplified for placeholder
+            # Ensure skill_name is treated case-insensitively for lookups if necessary, or ensure definitions match event skill strings.
+            # For this mock, assume exact match from ATTRIBUTE_DEFINITIONS.
             base_stat_name = self.ATTRIBUTE_DEFINITIONS.get(skill_name)
             if base_stat_name:
                 return (self.stats.get(base_stat_name, 10) -10) // 2
+            # print(f"Warning: MockCharacter.get_attribute_score: Skill '{skill_name}' not found in ATTRIBUTE_DEFINITIONS. Returning 0 modifier.")
             return 0
 
 class MockGameManager:
