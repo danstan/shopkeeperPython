@@ -104,10 +104,16 @@ class GameManager:
         self.output_stream = output_stream
         self._print("Initializing GameManager (basic)...")
 
-        self.time = GameTime()
-        self._print(f"Game time started at {self.time.get_time_string()}.")
-
         self.character = player_character if player_character else Character(name=None)
+
+        # Initialize GameTime: Use loaded time from character if available, else default.
+        if self.character and hasattr(self.character, 'loaded_game_time_data') and self.character.loaded_game_time_data:
+            self.time = GameTime.from_dict(self.character.loaded_game_time_data)
+            self._print(f"Game time loaded from character snapshot: {self.time.get_time_string()}.")
+        else:
+            self.time = GameTime()
+            self._print(f"Game time started at default: {self.time.get_time_string()}.")
+
         if self.character and self.character.name:
             self._print(f"Initial character reference: {self.character.name}")
         else:
