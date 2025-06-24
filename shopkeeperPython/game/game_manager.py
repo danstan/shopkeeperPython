@@ -1178,41 +1178,66 @@ class GameManager:
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)
 
         # --- Time Advancement ---
-        # This section is now processed BEFORE events that might return early.
-        # Haggling actions (PROCESS_PLAYER_HAGGLE_CHOICE_SELL/BUY) do not advance time by default.
-        # If an action explicitly sets time_advanced_by_action_hours, that's used.
-        # Otherwise, it's 1 hour, unless it's a zero-time action like skill allocation.
         if action_name not in ["PROCESS_PLAYER_HAGGLE_CHOICE_SELL", "PROCESS_PLAYER_HAGGLE_CHOICE_BUY", "ALLOCATE_SKILL_POINT", "PROCESS_ASI_FEAT_CHOICE"]:
             hours_to_advance = time_advanced_by_action_hours if time_advanced_by_action_hours > 0 else 1
-            if self.character.is_dead and time_advanced_by_action_hours == 0 : # Ensure time passes if dead
-                hours_to_advance = 1
-        else: # For zero-time actions or haggle responses
-            hours_to_advance = 0 # Explicitly set to 0 for these specific actions
+            if self.character.is_dead and time_advanced_by_action_hours == 0: hours_to_advance = 1
+        else: hours_to_advance = 0
 
         if hours_to_advance > 0:
             self._print(f"  DEBUG: Time Advancement for action '{action_name}':")
             self._print(f"    - Initial time_advanced_by_action_hours: {time_advanced_by_action_hours}")
             self._print(f"    - Calculated hours_to_advance: {hours_to_advance}")
             self._print(f"    - Time before advance_hour: {self.time.get_time_string()}")
-
             day_before_advancing_time = self.time.current_day
             self.time.advance_hour(hours_to_advance)
-
             self._print(f"    - Time after advance_hour: {self.time.get_time_string()}")
-
             if self.time.current_day != day_before_advancing_time and self.tracking_day == day_before_advancing_time:
                 self._print(f"  DEBUG: Day changed. Running end of day summary for day {self.tracking_day}.")
                 self._run_end_of_day_summary(self.tracking_day)
         else:
             self._print(f"  DEBUG: Action '{action_name}' does not advance game time this turn.")
 
-
-        # --- Event System (Post Time-Advancement, if time advanced) ---
-        # Events should only trigger if time actually passed and it's not a sub-action like haggling response.
+        # --- Event System (Modified Order: NPC Haggle > Generic Events > Customer Interaction) ---
         if not self.character.is_dead and hours_to_advance > 0:
+            # --- PRIORITY 1: NPC Sales Logic (Wandering Customer Haggling) ---
+            can_trigger_wandering_customer = action_name not in [
+                "buy_from_own_shop", "sell_to_own_shop", "buy_from_npc",
+                "set_shop_specialization", "upgrade_shop", "craft",
+                "PROCESS_PLAYER_HAGGLE_CHOICE_SELL", "PROCESS_PLAYER_HAGGLE_CHOICE_BUY",
+                "ALLOCATE_SKILL_POINT", "PROCESS_ASI_FEAT_CHOICE", "USE_ITEM",
+                "ATTUNE_ITEM", "UNATTUNE_ITEM"
+            ]
+
+            if self.shop and self.shop.inventory and can_trigger_wandering_customer:
+                current_base_npc_buy_chance = Shop.BASE_NPC_BUY_CHANCE
+                current_reputation_buy_chance_multiplier = Shop.REPUTATION_BUY_CHANCE_MULTIPLIER
+                current_max_npc_buy_chance_bonus = Shop.MAX_NPC_BUY_CHANCE_BONUS
+                npc_buy_chance_bonus_from_reputation = self.shop.reputation * current_reputation_buy_chance_multiplier
+                capped_bonus = min(npc_buy_chance_bonus_from_reputation, current_max_npc_buy_chance_bonus)
+                final_npc_buy_chance = current_base_npc_buy_chance + capped_bonus + self.shop.temporary_customer_boost
+                self.shop.temporary_customer_boost = 0 # Reset boost
+
+                if random.random() < final_npc_buy_chance:
+                    eligible_items_for_npc_purchase = [item for item in self.shop.inventory if item.item_type not in ["quest_item", "special_currency"] and item.quantity > 0]
+                    if eligible_items_for_npc_purchase:
+                        item_to_sell_to_npc_instance = random.choice(eligible_items_for_npc_purchase)
+                        if item_to_sell_to_npc_instance and isinstance(item_to_sell_to_npc_instance, Item):
+                            npc_buyer_name = "Wandering Customer"
+                            haggling_data = self.shop.initiate_haggling_for_item_sale(item_to_sell_to_npc_instance, npc_name=npc_buyer_name)
+                            if haggling_data:
+                                self._print(f"  A {npc_buyer_name} is interested in buying {item_to_sell_to_npc_instance.name}. They offer {haggling_data['initial_offer']}g.")
+                                self.active_haggling_session = haggling_data
+                                # If NPC haggling starts, it takes precedence.
+                                return {"type": "haggling_pending", "haggling_data": haggling_data}
+                            else: # Failed to initiate haggle (e.g. item quantity 0, though filtered)
+                                self._print(f"  DEBUG: Failed to initiate haggling for {item_to_sell_to_npc_instance.name} (shop.initiate_haggling_for_item_sale returned None).")
+                    # else: No eligible items for NPC to buy
+
+            # --- PRIORITY 2: Generic Skill/Base Events ---
+            # This part only runs if NPC haggling didn't occur and return above.
+            event_to_process_name = None
             skill_for_action = self.ACTION_SKILL_MAP.get(action_name)
             action_allows_generic_event = self.ACTIONS_ALLOWING_GENERIC_EVENTS.get(action_name, True)
-            event_to_process_name = None
 
             if skill_for_action and random.random() < self.SKILL_EVENT_CHANCE_PER_HOUR:
                 possible_skill_events = [
