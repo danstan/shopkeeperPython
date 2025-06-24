@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shopkeeper Adventure UI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {# Removed <style> block - content moved to style.css #}
 </head>
 <body>
     {% if not user_logged_in %}
-    <div class="login-container">
+    <main class="login-container centered-content">
         <h2>Login</h2>
         <form action="{{ url_for('login_route') }}" method="post">
             <div>
@@ -22,7 +23,6 @@
             <button type="submit">Login</button>
         </form>
         <p>Don't have an account? <a href="{{ url_for('register_page') }}">Register here</a></p>
-        {# Display ALL flash messages #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -40,67 +40,57 @@
             </a>
         </div>
         {% endif %}
-    </div>
+    </main>
 
     {% elif show_character_selection %}
-    <div class="character-selection-container">
+    <main class="character-selection-container centered-content">
         <h2>Select Character</h2>
-        {% with messages = get_flashed_messages(with_categories=true) %} {# Show flashes here too #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <p class="flash-{{ category }}">{{ message }}</p>
                 {% endfor %}
             {% endif %}
         {% endwith %}
-        <ul>
+        <ul role="list">
             {% for char_info in characters_for_selection %}
-            <li>
+            <li role="listitem">
                 <span>{{ char_info.name }} (Level {{ char_info.level }})</span>
                 {% if char_info.is_dead %}
                     <span class="status-deceased">DECEASED</span>
                 {% else %}
-                    <a href="{{ url_for('select_character_route', slot_index=char_info.slot_index) }}">Select</a>
+                    <a href="{{ url_for('select_character_route', slot_index=char_info.slot_index) }}" class="action-button">Select</a>
                 {% endif %}
             </li>
             {% endfor %}
         </ul>
-        {# The logic for showing "Create New Character" link:
-           A user can always attempt to go to the creation screen if they have less than MAX_CHARS_PER_USER *total* slots filled.
-           The app.py's /create_character route will enforce the final check on whether a new character can actually be stored.
-           The display_game_output with action='create_new_char' also checks slot availability before showing the form.
-        #}
+
         {% if characters_for_selection | length < MAX_CHARS_PER_USER %}
-            <p><a href="{{ url_for('display_game_output', action='create_new_char') }}" class="create-new-link">Create New Character Slot</a></p>
+            <p><a href="{{ url_for('display_game_output', action='create_new_char') }}" class="create-new-link action-button">Create New Character Slot</a></p>
         {% elif characters_for_selection | length >= MAX_CHARS_PER_USER %}
             <p>All character slots ({{ MAX_CHARS_PER_USER }}) are currently filled. A dead character occupies a slot.</p>
-            {# Optionally, if we wanted to allow replacing a dead character (more complex):
-               {% set living_chars = characters_for_selection | selectattr('is_dead', 'false') | list %}
-               {% if living_chars | length < MAX_CHARS_PER_USER and (characters_for_selection | length == MAX_CHARS_PER_USER) %}
-                 <p><a href="{{ url_for('display_game_output', action='create_new_char_replace_dead_prompt_logic_needed_in_app_py') }}" class="create-new-link">Create New Character (Replace Dead)</a></p>
-               {% endif %}
-            #}
         {% endif %}
 
         {% if dead_characters_info %}
-        <div class="graveyard-container">
+        <section class="graveyard-container">
             <h3>Graveyard</h3>
-            <ul>
+            <ul role="list">
                 {% for dead_char in dead_characters_info %}
-                <li>
+                <li role="listitem">
                     {{ dead_char.name }} (Level {{ dead_char.level }}) - Resting in peace.
                 </li>
                 {% endfor %}
             </ul>
-        </div>
+        </section>
         {% endif %}
 
          <p class="logout-paragraph-modifiers"><a href="{{ url_for('logout_route') }}">Logout</a></p>
-    </div>
+    </main>
 
     {% elif show_character_creation_form %}
-    <div class="character-creation-container">
+    <main class="character-creation-container centered-content">
         <h2>Create Your Character</h2>
-        {% with messages = get_flashed_messages(with_categories=true) %} {# And here #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <p class="flash-{{ category }}">{{ message }}</p>
@@ -131,18 +121,18 @@
                             <span>{{ stat_key }}: {{ stat_value }}</span>
                             {% if not character_creation_stats.reroll_used %}
                             <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" class="inline-form">
-                                <button type="submit">Reroll {{ stat_key }}</button>
+                                <button type="submit" class="action-button">Reroll {{ stat_key }}</button>
                             </form>
                             {% endif %}
                         </div>
                         {% endfor %}
-                    {% else %} {# Fallback if stat_names_ordered is not available for some reason #}
+                    {% else %}
                         {% for stat_key, stat_value in character_creation_stats.stats.items() %}
                         <div>
                             <span>{{ stat_key }}: {{ stat_value }}</span>
                             {% if not character_creation_stats.reroll_used %}
                             <form action="{{ url_for('reroll_stat_route', stat_name=stat_key) }}" method="POST" class="inline-form">
-                                <button type="submit">Reroll {{ stat_key }}</button>
+                                <button type="submit" class="action-button">Reroll {{ stat_key }}</button>
                             </form>
                             {% endif %}
                         </div>
@@ -154,10 +144,10 @@
             {% endif %}
 
             <div class="character-creation-submit-container">
-                <button type="submit" id="createCharacterButton">Create Character</button>
+                <button type="submit" id="createCharacterButton" class="action-button">Create Character</button>
             </div>
         </form>
-    </div>
+    </main>
     <script>
         // Script for character creation name persistence during reroll
         document.addEventListener('DOMContentLoaded', function() {
@@ -168,7 +158,6 @@
                         const rerollForm = event.target.closest('form');
                         const characterNameInput = document.getElementById('character_name');
                         if (rerollForm && characterNameInput) {
-                            // Check if hidden input already exists
                             let hiddenInput = rerollForm.querySelector('input[name="character_name"]');
                             if (!hiddenInput) {
                                 hiddenInput = document.createElement('input');
@@ -183,12 +172,9 @@
             }
         });
     </script>
-    {# Removed the old JavaScript for client-side stat rolling and rerolling.
-       The backend now handles this via session. #}
 
     {% else %}
     {# Main Game Interface #}
-    {# Display ALL flash messages #}
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="flashes-container">
@@ -199,16 +185,15 @@
         {% endif %}
     {% endwith %}
     <div class="game-container">
-        <div id="top-right-menu-button" aria-haspopup="true" aria-expanded="false" aria-controls="settings-popup">Menu</div>
+        <button id="top-right-menu-button" aria-haspopup="true" aria-expanded="false" aria-controls="settings-popup">Menu</button>
 
-        <!-- Left Info Column -->
-        <div id="left-info-column" class="info-column">
-            <div class="mini-panel" id="mini-stats-panel" tabindex="0" role="button" aria-controls="full-stats-panel-container" aria-expanded="false">
+        <aside id="left-info-column" class="info-column">
+            <section class="mini-panel" id="mini-stats-panel" tabindex="0" role="button" aria-controls="full-stats-panel-container" aria-expanded="false">
                 <h4>Stats</h4>
                 <p>HP: <span class="mini-hp-value">{{ player_hp }}/{{ player_max_hp }}</span></p>
                 <p>Gold: <span class="mini-gold-value">{{ player_gold }} G</span></p>
-            </div>
-            <div class="full-panel-container" id="full-stats-panel-container" role="dialog" aria-labelledby="stats-panel-title" style="display: none;">
+            </section>
+            <div class="full-panel-container hidden" id="full-stats-panel-container" role="dialog" aria-modal="true" aria-labelledby="stats-panel-title">
                 <div class="full-panel-content">
                     <button class="close-full-panel" aria-label="Close Stats Panel">&times;</button>
                     <h2 id="stats-panel-title">Player Status</h2>
@@ -216,20 +201,20 @@
                     <p><strong>HP:</strong> <span class="full-hp-value">{{ player_hp }}</span> / <span class="full-max-hp-value">{{ player_max_hp }}</span></p>
                     <p><strong>Gold:</strong> <span class="full-gold-value">{{ player_gold }} G</span></p>
                     <p><strong>Stats:</strong></p>
-                    <ul>
+                    <ul role="list">
                         {% for stat, value in player_stats.items() %}
-                        <li><strong>{{ stat }}:</strong> {{ value }}</li>
+                        <li role="listitem"><strong>{{ stat }}:</strong> {{ value }}</li>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
 
-            <div class="mini-panel" id="mini-info-panel" tabindex="0" role="button" aria-controls="full-info-panel-container" aria-expanded="false">
+            <section class="mini-panel" id="mini-info-panel" tabindex="0" role="button" aria-controls="full-info-panel-container" aria-expanded="false">
                 <h4>Info</h4>
                 <p>Time: <span class="mini-time-value">{{ current_time }}</span></p>
                 <p>Town: <span class="mini-town-value">{{ current_town_name }}</span></p>
-            </div>
-            <div class="full-panel-container" id="full-info-panel-container" role="dialog" aria-labelledby="info-panel-title" style="display: none;">
+            </section>
+            <div class="full-panel-container hidden" id="full-info-panel-container" role="dialog" aria-modal="true" aria-labelledby="info-panel-title">
                 <div class="full-panel-content">
                     <button class="close-full-panel" aria-label="Close Info Panel">&times;</button>
                     <h2 id="info-panel-title">Game Info</h2>
@@ -238,11 +223,11 @@
                 </div>
             </div>
 
-            <div class="mini-panel" id="mini-shop-mgt-panel" tabindex="0" role="button" aria-controls="full-shop-mgt-panel-container" aria-expanded="false">
+            <section class="mini-panel" id="mini-shop-mgt-panel" tabindex="0" role="button" aria-controls="full-shop-mgt-panel-container" aria-expanded="false">
                 <h4>Shop Mgt</h4>
                 <p>Level: <span class="mini-shop-level-value">{{ shop_data_json.level if shop_data_json else 'N/A' }}</span></p>
-            </div>
-            <div class="full-panel-container" id="full-shop-mgt-panel-container" role="dialog" aria-labelledby="shop-mgt-panel-title" style="display: none;">
+            </section>
+            <div class="full-panel-container hidden" id="full-shop-mgt-panel-container" role="dialog" aria-modal="true" aria-labelledby="shop-mgt-panel-title">
                 <div class="full-panel-content">
                     <button class="close-full-panel" aria-label="Close Shop Management Panel">&times;</button>
                     <h2 id="shop-mgt-panel-title">Shop Management</h2>
@@ -251,130 +236,128 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </aside>
 
-        <!-- Center Map Area -->
-        <div id="map-container">
-            <svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+        <main id="map-container" aria-label="Game Map and Location Interactions">
+            <svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="map-title">
+              <title id="map-title">Overworld Map</title>
               <rect width="100%" height="100%" fill="#cccccc"></rect>
               <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="24px" fill="#333333">Overworld Map</text>
             </svg>
-            <div id="location-interactions-container" class="action-section">
-                <h4>Current Location: <span id="current-town-display-actions">{{ current_town_name }}</span></h4>
-                <div id="sub-locations-list" class="button-list">
+            <section id="location-interactions-container" class="action-section" aria-labelledby="current-location-heading">
+                <h4 id="current-location-heading">Current Location: <span id="current-town-display-actions">{{ current_town_name }}</span></h4>
+                <div id="sub-locations-list" class="button-list" role="list">
                     <!-- JS populates sub-location buttons -->
                 </div>
                 <div id="current-sub-location-actions-container">
-                    <h5 id="current-sub-location-name-display" style="display:none;"></h5>
-                    <div id="current-sub-location-actions-list" class="button-list">
+                    <h5 id="current-sub-location-name-display" class="hidden"></h5>
+                    <div id="current-sub-location-actions-list" class="button-list" role="list">
                         <!-- JS populates actions for a selected sub-location -->
                     </div>
                 </div>
-            </div>
-        </div>
+            </section>
+        </main>
 
-        <!-- Right Inventory Column -->
-        <div id="right-inventory-column" class="info-column">
-            <div class="mini-panel" id="mini-inventory-panel" tabindex="0" role="button" aria-controls="full-inventory-panel-container" aria-expanded="false">
+        <aside id="right-inventory-column" class="info-column">
+            <section class="mini-panel" id="mini-inventory-panel" tabindex="0" role="button" aria-controls="full-inventory-panel-container" aria-expanded="false">
                 <h4>Inventory</h4>
                 <p>Player: <span class="mini-player-item-count">{{ player_inventory | length if player_inventory and player_inventory[0] != "Empty" else 0 }}</span> items</p>
                 <p>Shop: <span class="mini-shop-item-count">{{ shop_inventory | length if shop_inventory and shop_inventory[0] != "Empty" else 0 }}</span> items</p>
-            </div>
-            <div class="full-panel-container" id="full-inventory-panel-container" role="dialog" aria-labelledby="inventory-panel-title" style="display: none;">
+            </section>
+            <div class="full-panel-container hidden" id="full-inventory-panel-container" role="dialog" aria-modal="true" aria-labelledby="inventory-panel-title">
                 <div class="full-panel-content">
                     <button class="close-full-panel" aria-label="Close Inventory Panel">&times;</button>
                     <h2 id="inventory-panel-title">Inventory</h2>
-                    <h3>Shop Stock</h3>
-                    {% if shop_inventory and shop_inventory[0] != "Empty" %}
-                    <div class="inventory-grid shop-inventory-grid">
-                        {% for item in shop_inventory %}
-                        <div class="inventory-item-card shop-item-card">
-                            <div class="item-icon-placeholder"></div>
-                            <div class="item-name">
-                                {{ item.name if item is mapping and item.name else item }}
+                    <section aria-labelledby="shop-stock-heading">
+                        <h3 id="shop-stock-heading">Shop Stock</h3>
+                        {% if shop_inventory and shop_inventory[0] != "Empty" %}
+                        <div class="inventory-grid shop-inventory-grid" role="list">
+                            {% for item in shop_inventory %}
+                            <div class="inventory-item-card shop-item-card" role="listitem">
+                                <div class="item-icon-placeholder" aria-hidden="true"></div>
+                                <div class="item-name">
+                                    {{ item.name if item is mapping and item.name else item }}
+                                </div>
+                                <button type="button" class="buy-item-button action-button" data-item-name="{{ item.name if item is mapping and item.name else item }}">Buy</button>
                             </div>
-                            <button type="button" class="buy-item-button action-button" data-item-name="{{ item.name if item is mapping and item.name else item }}">Buy</button>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p>Shop inventory is currently empty.</p>
-                    {% endif %}
+                        {% else %}
+                        <p>Shop inventory is currently empty.</p>
+                        {% endif %}
+                    </section>
 
-                    <h3>Player Items</h3>
-                    {% if player_inventory and player_inventory[0] != "Empty" %}
-                    <div class="inventory-grid player-inventory-grid">
-                        {% for item in player_inventory %}
-                        <div class="inventory-item-card">
-                            <div class="item-icon-placeholder"></div>
-                            <div class="item-name">
-                                {{ item.name if item is mapping and item.name else item }}
+                    <section aria-labelledby="player-items-heading">
+                        <h3 id="player-items-heading">Player Items</h3>
+                        {% if player_inventory and player_inventory[0] != "Empty" %}
+                        <div class="inventory-grid player-inventory-grid" role="list">
+                            {% for item in player_inventory %}
+                            <div class="inventory-item-card" role="listitem">
+                                <div class="item-icon-placeholder" aria-hidden="true"></div>
+                                <div class="item-name">
+                                    {{ item.name if item is mapping and item.name else item }}
+                                </div>
                             </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p>Player inventory is empty.</p>
-                    {% endif %}
+                        {% else %}
+                        <p>Player inventory is empty.</p>
+                        {% endif %}
+                    </section>
                 </div>
             </div>
-        </div>
+        </aside>
 
-        <!-- Bottom Actions/Log Bar -->
-        <div id="bottom-bar">
+        <nav id="bottom-bar" aria-label="Main game actions and log tabs">
             <div class="actions-log-tab-buttons" role="tablist">
                 <button id="actions-tab-button" role="tab" aria-controls="actions-panel-content" aria-selected="true" class="tab-button active-tab-button">Actions</button>
                 <button id="log-tab-button" role="tab" aria-controls="log-panel-content" aria-selected="false" class="tab-button">Log</button>
             </div>
             <div id="bottom-panel-content-area">
-                <div id="actions-panel-content" class="panel-content tab-content panel-visible" role="tabpanel" aria-labelledby="actions-tab-button">
+                <section id="actions-panel-content" class="panel-content tab-content panel-visible" role="tabpanel" aria-labelledby="actions-tab-button">
                     <div id="action-controls-wrapper">
                         <form id="actionForm" action="{{ url_for('perform_action') }}" method="post">
                             <input type="hidden" id="action_name_hidden" name="action_name" value="">
                             <input type="hidden" id="action_details" name="action_details" value="{}">
 
-                            <div id="travel-actions-container" class="action-section">
-                                <h4>Travel</h4>
+                            <section id="travel-actions-container" class="action-section" aria-labelledby="travel-heading">
+                                <h4 id="travel-heading">Travel</h4>
                                 <div id="map-destinations">
                                     {% if available_towns %}
                                         <p>Choose a destination:</p>
-                                        <ul class="button-list">
+                                        <ul class="button-list" role="list">
                                             {% for town_name_key in available_towns %}
-                                            <li><button type="button" class="map-destination-button action-button" data-town-name="{{ town_name_key }}">{{ town_name_key }}</button></li>
+                                            <li role="listitem"><button type="button" class="map-destination-button action-button" data-town-name="{{ town_name_key }}">{{ town_name_key }}</button></li>
                                             {% endfor %}
                                         </ul>
                                     {% else %}
                                         <p>No destinations available.</p>
                                     {% endif %}
                                 </div>
-                            </div>
+                            </section>
 
-                            <!-- MOVED to map-container: location-interactions-container -->
-
-                            <div id="general-actions-container" class="action-section">
-                                <h4>General</h4>
-                                <ul class="button-list">
-                                    <li><button type="button" id="gatherResourcesButton" class="action-button">Gather Resources</button></li>
-                                    <li><button type="button" id="studyLocalHistoryButton" class="action-button">Study Local History</button></li>
-                                    <li><button type="button" id="organizeInventoryButton" class="action-button">Organize Inventory</button></li>
-                                    <li><button type="button" id="postAdvertisementsButton" class="action-button">Post Advertisements</button></li>
-                                    <li><button type="button" id="shortRestButton" class="action-button">Short Rest</button></li>
-                                    <li><button type="button" id="longRestButton" class="action-button">Long Rest</button></li>
+                            <section id="general-actions-container" class="action-section" aria-labelledby="general-actions-heading">
+                                <h4 id="general-actions-heading">General</h4>
+                                <ul class="button-list" role="list">
+                                    <li role="listitem"><button type="button" id="gatherResourcesButton" class="action-button">Gather Resources</button></li>
+                                    <li role="listitem"><button type="button" id="studyLocalHistoryButton" class="action-button">Study Local History</button></li>
+                                    <li role="listitem"><button type="button" id="organizeInventoryButton" class="action-button">Organize Inventory</button></li>
+                                    <li role="listitem"><button type="button" id="postAdvertisementsButton" class="action-button">Post Advertisements</button></li>
+                                    <li role="listitem"><button type="button" id="shortRestButton" class="action-button">Short Rest</button></li>
+                                    <li role="listitem"><button type="button" id="longRestButton" class="action-button">Long Rest</button></li>
                                 </ul>
-                            </div>
+                            </section>
 
-                            <!-- Dynamic Action Forms Area (sibling to other action sections) -->
-                            <div id="dynamic-action-forms-container" class="action-section" style="display: none;">
-                                <!-- JS will inject forms like craft, buy, sell, NPC interactions here -->
-                                <div id="div_craft_details" class="dynamic-form details-section" style="display: none;">
-                                    <div class="form-header"><h4>Craft Item</h4><button type="button" class="close-dynamic-form" aria-label="Close Craft Form">&times;</button></div>
+                            <section id="dynamic-action-forms-container" class="action-section hidden" aria-live="polite">
+                                <div id="div_craft_details" class="dynamic-form details-section hidden" role="region" aria-labelledby="craft-form-heading">
+                                    <div class="form-header"><h4 id="craft-form-heading">Craft Item</h4><button type="button" class="close-dynamic-form" aria-label="Close Craft Form">&times;</button></div>
                                     <label for="craft_item_name">Item Name to Craft:</label>
                                     <input type="text" id="craft_item_name" name="craft_item_name_detail_input" placeholder="e.g., Minor Healing Potion">
                                     <button type="button" class="submit-details-button action-button" data-action="craft">Craft It!</button>
                                 </div>
 
-                                <div id="div_buy_details" class="dynamic-form details-section" style="display: none;">
-                                    <div class="form-header"><h4>Buy from Your Shop</h4><button type="button" class="close-dynamic-form" aria-label="Close Buy Form">&times;</button></div>
+                                <div id="div_buy_details" class="dynamic-form details-section hidden" role="region" aria-labelledby="buy-form-heading">
+                                    <div class="form-header"><h4 id="buy-form-heading">Buy from Your Shop</h4><button type="button" class="close-dynamic-form" aria-label="Close Buy Form">&times;</button></div>
                                     <label for="buy_item_name">Item Name to Buy:</label>
                                     <input type="text" id="buy_item_name" name="buy_item_name_detail_input" placeholder="e.g., Simple Dagger">
                                     <label for="buy_quantity">Quantity:</label>
@@ -382,8 +365,8 @@
                                     <button type="button" class="submit-details-button action-button" data-action="buy_from_own_shop">Buy Item(s)</button>
                                 </div>
 
-                                <div id="div_sell_details" class="dynamic-form details-section" style="display: none;">
-                                    <div class="form-header"><h4>Sell to Your Shop</h4><button type="button" class="close-dynamic-form" aria-label="Close Sell Form">&times;</button></div>
+                                <div id="div_sell_details" class="dynamic-form details-section hidden" role="region" aria-labelledby="sell-form-heading">
+                                    <div class="form-header"><h4 id="sell-form-heading">Sell to Your Shop</h4><button type="button" class="close-dynamic-form" aria-label="Close Sell Form">&times;</button></div>
                                     <label for="sell_item_dropdown">Select Item from Inventory:</label>
                                     <select id="sell_item_dropdown" name="sell_item_dropdown_select"></select>
                                     <label for="sell_item_name">Or Type Item Name to Sell:</label>
@@ -391,50 +374,50 @@
                                     <button type="button" class="submit-details-button action-button" data-action="sell_to_own_shop">Sell Item</button>
                                 </div>
 
-                                <div id="div_hemlock_herbs_details" class="dynamic-form details-section" style="display: none;">
-                                    <div class="form-header"><h4>Buy Herbs from Hemlock</h4><button type="button" class="close-dynamic-form" aria-label="Close Hemlock Form">&times;</button></div>
-                                    <div id="hemlock-herbs-list"></div>
+                                <div id="div_hemlock_herbs_details" class="dynamic-form details-section hidden" role="region" aria-labelledby="hemlock-form-heading">
+                                    <div class="form-header"><h4 id="hemlock-form-heading">Buy Herbs from Hemlock</h4><button type="button" class="close-dynamic-form" aria-label="Close Hemlock Form">&times;</button></div>
+                                    <div id="hemlock-herbs-list" role="list"></div>
                                     <label for="hemlock_quantity_dynamic">Quantity:</label>
                                     <input type="number" id="hemlock_quantity_dynamic" value="1" min="1">
                                     <button type="button" id="submit_buy_hemlock_herb_button" class="action-button">Buy Selected Herb</button>
                                 </div>
 
-                                <div id="div_borin_items_details" class="dynamic-form details-section" style="display: none;">
-                                    <div class="form-header"><h4>Buy from Borin Stonebeard</h4><button type="button" class="close-dynamic-form" aria-label="Close Borin Buy Form">&times;</button></div>
-                                    <div id="borin-items-list"></div>
+                                <div id="div_borin_items_details" class="dynamic-form details-section hidden" role="region" aria-labelledby="borin-buy-form-heading">
+                                    <div class="form-header"><h4 id="borin-buy-form-heading">Buy from Borin Stonebeard</h4><button type="button" class="close-dynamic-form" aria-label="Close Borin Buy Form">&times;</button></div>
+                                    <div id="borin-items-list" role="list"></div>
                                     <label for="borin_quantity_dynamic">Quantity:</label>
                                     <input type="number" id="borin_quantity_dynamic" value="1" min="1">
                                     <button type="button" id="submit_buy_borin_item_button" class="action-button">Buy Selected Item</button>
                                 </div>
 
-                                <div id="div_borin_repair_details" class="dynamic-form details-section" style="display: none;">
-                                    <div class="form-header"><h4>Repair Gear with Borin</h4><button type="button" class="close-dynamic-form" aria-label="Close Borin Repair Form">&times;</button></div>
+                                <div id="div_borin_repair_details" class="dynamic-form details-section hidden" role="region" aria-labelledby="borin-repair-form-heading">
+                                    <div class="form-header"><h4 id="borin-repair-form-heading">Repair Gear with Borin</h4><button type="button" class="close-dynamic-form" aria-label="Close Borin Repair Form">&times;</button></div>
                                     <label for="borin-repair-item-select">Item to Repair:</label>
                                     <select id="borin-repair-item-select" name="borin_repair_item_select_input"></select>
                                     <p>Repair Cost: <span id="borin-repair-cost-display">N/A</span></p>
                                     <button type="button" id="submit-borin-repair-button" class="action-button">Repair Selected Item</button>
                                 </div>
-                            </div> <!-- End dynamic-action-forms-container -->
+                            </section>
                         </form>
-                    </div> <!-- End action-controls-wrapper -->
-                </div> <!-- End actions-panel-content -->
+                    </div>
+                </section>
 
-                <div id="log-panel-content" class="panel-content tab-content" role="tabpanel" aria-labelledby="log-tab-button" style="display: none;">
+                <section id="log-panel-content" class="panel-content tab-content hidden" role="tabpanel" aria-labelledby="log-tab-button">
                     <div class="log-box">
                         <h2>Journal</h2>
                         {% if player_journal %}
-                        <ul id="journal-entries-list">
+                        <ul id="journal-entries-list" role="list">
                             {% for entry in player_journal | reverse %}
-                            <li>
+                            <li role="listitem">
                                 <span class="journal-timestamp">{{ entry.timestamp.strftime('%Y-%m-%d %H:%M:%S') if entry.timestamp else 'No timestamp' }}</span>
                                 <strong class="journal-action-type">{{ entry.action_type }}</strong>
                                 <p class="journal-summary">{{ entry.summary }}</p>
                                 {% if entry.details and entry.details is mapping and entry.details | length > 0 %}
                                 <div class="journal-details">
                                     <strong>Details:</strong>
-                                    <ul>
+                                    <ul role="list">
                                         {% for key, value in entry.details.items() %}
-                                        <li>{{ key }}: {{ value }}</li>
+                                        <li role="listitem">{{ key }}: {{ value }}</li>
                                         {% endfor %}
                                     </ul>
                                 </div>
@@ -449,15 +432,15 @@
                         <p>No journal entries yet.</p>
                         {% endif %}
                     </div>
-                </div> <!-- End log-panel-content -->
-            </div> <!-- End bottom-panel-content-area -->
-        </div> <!-- End bottom-bar -->
+                </section>
+            </div>
+        </nav>
 
-        <div id="settings-popup" role="menu" style="display: none;">
-            <ul>
+        <div id="settings-popup" role="menu" class="hidden">
+            <ul role="none">
                 <li id="settings-option" role="menuitem">Settings</li>
                 <li role="menuitem"><a href="{{ url_for('logout_route') }}" id="logout-option">Logout</a></li>
-                <li role="menuitem"><button type="button" id="save-game-button" class="popup-menu-button">Save Game</button></li>
+                <li role="menuitem"><button type="button" id="save-game-button" class="popup-menu-button action-button">Save Game</button></li>
             </ul>
         </div>
     </div>
@@ -471,7 +454,7 @@
             borinItemsData: {{ borin_items_json | default({}) | tojson | safe }},
             playerInventory: {{ player_inventory | default('[]') | tojson | safe }},
             awaitingEventChoice: {{ awaiting_event_choice | default('false') | tojson }},
-            pendingEventDataJson: {{ pending_event_data_json | tojson | safe }}, // Line 260 - Changed to tojson
+            pendingEventDataJson: {{ pending_event_data_json | tojson | safe }},
             lastSkillRollStr: {{ last_skill_roll_str | tojson | safe }},
             popupActionResult: {{ popup_action_result | tojson | safe }},
             shopData: {{ shop_data_json | default('null') | safe }},
@@ -484,29 +467,32 @@
     <script src="{{ url_for('static', filename='js/main_ui.js') }}" defer></script>
     {% endif %}
 
-    <div id="subLocationActionsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="subLocationActionsModalTitle">
+    <div id="subLocationActionsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="subLocationActionsModalTitle">
         <div class="modal-content">
-            <span class="close-button">&times;</span>
+            <button class="close-button" aria-label="Close Sub-location Actions">&times;</button>
             <h3 id="subLocationActionsModalTitle">Actions</h3>
-            <div id="modal-actions-list">
+            <div id="modal-actions-list" class="button-list">
                 <!-- Action buttons will be dynamically inserted here -->
             </div>
         </div>
     </div>
 
+    {# Conditionally render event popup wrapper only if needed, JS still controls final visibility via .hidden #}
     {% if awaiting_event_choice and pending_event_data_json %}
-    <div id="event-choice-popup" class="modal" role="dialog" aria-modal="true" aria-labelledby="event-popup-name"> <!-- Start visible if data present -->
-        <div class="modal-content">
-            <h3 id="event-popup-name">Event Title</h3> <!-- Title will be set by JS -->
-            <p id="event-popup-description"></p>
-            <div id="event-popup-choices" class="action-buttons-container">
-                <!-- Choices will be populated by JavaScript -->
+    <div id="event-choice-popup-wrapper"> {# Wrapper to allow JS to control the .modal itself if needed #}
+        <div id="event-choice-popup" class="modal" role="dialog" aria-modal="true" aria-labelledby="event-popup-name">
+            <div class="modal-content">
+                <h3 id="event-popup-name">Event Title</h3>
+                <p id="event-popup-description"></p>
+                <div id="event-popup-choices" class="action-buttons-container button-list">
+                    <!-- Choices will be populated by JavaScript -->
+                </div>
             </div>
         </div>
     </div>
     {% endif %}
 
-    <div id="toast-container"></div> {# Container for toast messages #}
+    <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
 </body>
 </html>
