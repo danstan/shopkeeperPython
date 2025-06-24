@@ -86,6 +86,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const studyLocalHistoryButton = document.getElementById('studyLocalHistoryButton');
     const organizeInventoryButton = document.getElementById('organizeInventoryButton');
     const postAdvertisementsButton = document.getElementById('postAdvertisementsButton');
+    const shortRestButton = document.getElementById('shortRestButton'); // Added
+    const longRestButton = document.getElementById('longRestButton'); // Added
     // const craftingRecipesList = document.getElementById('crafting-recipes-list'); // If this element still exists and is used.
 
     // Event Popup
@@ -373,6 +375,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (postAdvertisementsButton) {
             postAdvertisementsButton.addEventListener('click', function() {
                 handleActionClick('post_advertisements', postAdvertisementsButton);
+            });
+        }
+        if (shortRestButton) { // Added
+            shortRestButton.addEventListener('click', function() {
+                handleActionClick('rest_short', shortRestButton);
+            });
+        }
+        if (longRestButton) { // Added
+            longRestButton.addEventListener('click', function() {
+                handleActionClick('rest_long', longRestButton);
             });
         }
 
