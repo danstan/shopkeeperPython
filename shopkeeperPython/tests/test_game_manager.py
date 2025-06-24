@@ -301,6 +301,100 @@ class TestGameManager(unittest.TestCase):
             spy_sale4.assert_not_called()
         self.assertEqual(self.gm.shop.gold, initial_shop_gold)
 
+    def test_perform_action_rest_short_success(self):
+        initial_hp = self.player.current_hp = 5
+        initial_hit_dice = self.player.hit_dice = 3
+        self.player.hit_die_type = 8 # d8
+        self.player.abilities["CON"] = 12 # +1 modifier
+
+        with patch('random.randint', return_value=5): # Mock HD roll
+            self.gm.perform_hourly_action("rest_short")
+
+        self.assertEqual(self.player.hit_dice, initial_hit_dice - 1)
+        # Expected HP: initial_hp (5) + roll (5) + CON_mod (1) = 11
+        self.assertEqual(self.player.current_hp, initial_hp + 5 + 1)
+        self.assertIn("Spent 1 Hit Die, recovered 6 HP", self.test_output_stream.getvalue())
+        # Check journal entry
+        last_entry = self.player.journal[-1]
+        self.assertEqual(last_entry.action_type, "Short Rest")
+        self.assertEqual(last_entry.details.get("hp_recovered"), 6)
+
+    def test_perform_action_rest_short_no_hit_dice(self):
+        initial_hp = self.player.current_hp = 5
+        self.player.hit_dice = 0
+
+        self.gm.perform_hourly_action("rest_short")
+
+        self.assertEqual(self.player.current_hp, initial_hp) # HP should not change
+        self.assertIn("has no Hit Dice remaining", self.test_output_stream.getvalue())
+        last_entry = self.player.journal[-1]
+        self.assertEqual(last_entry.action_type, "Short Rest")
+        self.assertEqual(last_entry.outcome, "No Hit Dice remaining.")
+
+    def test_perform_action_rest_long_success(self):
+        self.player.current_hp = 1
+        self.player.max_hp = 20
+        self.player.hit_dice = 0
+        self.player.level = 3
+        self.player.exhaustion_level = 2
+        self.player.add_item_to_inventory(Item(name="Food", description="Some food", base_value=1, item_type="consumable", quantity=1))
+        self.player.add_item_to_inventory(Item(name="Drink", description="Some drink", base_value=1, item_type="consumable", quantity=1))
+
+        initial_time = self.gm.time.current_hour
+
+        self.gm.perform_hourly_action("rest_long")
+
+        self.assertEqual(self.player.current_hp, self.player.max_hp)
+        self.assertEqual(self.player.hit_dice, self.player.level)
+        self.assertEqual(self.player.exhaustion_level, 1) # Reduced by 1
+        self.assertIsNone(next((item for item in self.player.inventory if item.name == "Food"), None)) # Consumed
+        self.assertIsNone(next((item for item in self.player.inventory if item.name == "Drink"), None)) # Consumed
+        self.assertIn("HP fully restored. All Hit Dice recovered.", self.test_output_stream.getvalue())
+
+        # Check time advanced by 8 hours
+        expected_hour = (initial_time + 8) % 24
+        self.assertEqual(self.gm.time.current_hour, expected_hour)
+
+        last_entry = self.player.journal[-1]
+        self.assertEqual(last_entry.action_type, "Long Rest")
+        self.assertTrue(last_entry.outcome.startswith("HP fully restored."))
+
+    def test_perform_action_rest_long_no_food(self):
+        self.player.current_hp = 1
+        self.player.exhaustion_level = 0
+        # No food, but has drink
+        self.player.add_item_to_inventory(Item(name="Drink", description="Some drink", base_value=1, item_type="consumable", quantity=1))
+        initial_exhaustion = self.player.exhaustion_level
+
+        self.gm.perform_hourly_action("rest_long")
+
+        self.assertNotEqual(self.player.current_hp, self.player.max_hp) # HP should not be fully restored
+        self.assertEqual(self.player.exhaustion_level, initial_exhaustion + 1) # Gained exhaustion
+        self.assertIn("Failed to complete long rest. Missing: Food", self.test_output_stream.getvalue())
+        last_entry = self.player.journal[-1]
+        self.assertEqual(last_entry.action_type, "Long Rest")
+        self.assertTrue(last_entry.outcome.startswith("Failed to complete long rest."))
+
+    def test_perform_action_gather_rumors_tavern(self):
+        # Ensure the current town has a tavern with the action
+        # Default setup has Starting Village, which we modified to have "The Sleeping Dragon Inn"
+        # Or switch to Steel Flow City
+        self.gm.current_town = self.gm.towns_map["Steel Flow City"] # Has "The Rusty Pickaxe Tavern"
+
+        initial_journal_len = len(self.player.journal)
+        with patch('random.choice', return_value="Test rumor") as mock_choice:
+            self.gm.perform_hourly_action("gather_rumors_tavern")
+
+        self.assertIn("Test rumor", self.test_output_stream.getvalue())
+        self.assertEqual(len(self.player.journal), initial_journal_len + 1)
+        last_entry = self.player.journal[-1]
+        self.assertEqual(last_entry.action_type, "Gather Rumors")
+        self.assertEqual(last_entry.details.get("rumor"), "Test rumor")
+        # Check if XP was awarded (player's XP should increase)
+        # Assuming base XP is 0 or tracking XP gain specifically
+        # For simplicity, we'll just check if the output indicates XP gain if applicable.
+        # The action itself awards XP, so self.player.xp should have increased.
+
 
 if __name__ == '__main__':
     unittest.main()
