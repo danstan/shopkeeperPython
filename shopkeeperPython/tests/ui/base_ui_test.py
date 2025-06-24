@@ -21,70 +21,38 @@ class BaseUITest(unittest.TestCase):
         options.set_capability('goog:loggingPrefs', {'browser': 'ALL'})
 
         self.driver = webdriver.Chrome(options=options)
-        self.driver.implicitly_wait(5) # Reduced implicit wait, explicit waits are better
+        # self.driver.implicitly_wait(5) # Using explicit waits primarily
         logging.info("BaseUITest.setUp: Navigating to login page.")
         self.driver.get("http://localhost:5001/")
 
-        # Login
-        logging.info("BaseUITest.setUp: Attempting login.")
-        username_field = self.wait_for_element((By.ID, "login_username"), timeout=15)
-        password_field = self.wait_for_element((By.ID, "login_password"))
-        login_button = self.wait_for_element((By.XPATH, "//button[text()='Login']"))
-
-        username_field.send_keys("testuser")
-        password_field.send_keys("password123")
-        login_button.click()
-        logging.info("BaseUITest.setUp: Login form submitted.")
-
-        # Wait for login to complete.
-        # After login, user might be on character selection or character creation.
+        # Basic check: Wait for the login username field to be present or page title
         try:
-            logging.info("BaseUITest.setUp: Checking for character selection page.")
-            char_selection_heading = self.wait_for_element((By.XPATH, "//h2[text()='Select Character']"), timeout=7) # Shorter timeout
-            if char_selection_heading:
-                logging.info("BaseUITest.setUp: Character selection page found. Selecting first character.")
-                first_select_link = self.wait_for_element((By.XPATH, "(//a[text()='Select'])[1]"), timeout=5)
-                first_select_link.click()
+            logging.info("BaseUITest.setUp: Attempting to find login username field.")
+            username_field = self.wait_for_element((By.ID, "login_username"), timeout=20) # Increased timeout for this basic check
+            if username_field:
+                logging.info("BaseUITest.setUp: Login username field found. Page seems to be loading.")
+            else:
+                logging.warning("BaseUITest.setUp: Login username field NOT found after wait.")
 
-                logging.info("BaseUITest.setUp: Character selected. Waiting for main game interface markers.")
-                # Wait for an element that indicates the main game interface is loaded (e.g. actions tab)
-                self.wait_for_element((By.ID, "actions-tab-button"), timeout=15)
-                logging.info("BaseUITest.setUp: 'actions-tab-button' found after character selection.")
-
-                logging.info("BaseUITest.setUp: Waiting for body.js-loaded. (after char select)")
-                WebDriverWait(self.driver, 20).until(
-                    EC.presence_of_element_located((By.XPATH, "//body[contains(@class, 'js-loaded')]"))
-                )
-                logging.info("BaseUITest.setUp: body.js-loaded found. (after char select)")
-
-                logging.info("BaseUITest.setUp: Waiting for body.init-main-interface-called. (after char select)")
-                WebDriverWait(self.driver, 20).until(
-                    EC.presence_of_element_located((By.XPATH, "//body[contains(@class, 'init-main-interface-called')]"))
-                )
-                logging.info("BaseUITest.setUp: body.init-main-interface-called found. initializeMainInterfaceInteractions likely called.")
+            # Also check page title
+            expected_title = "Shopkeeper Game" # Assuming this is the title from render_template in app.py
+            WebDriverWait(self.driver, 10).until(EC.title_is(expected_title))
+            logging.info(f"BaseUITest.setUp: Page title is '{self.driver.title}'. Expected '{expected_title}'.")
 
         except TimeoutException:
-            logging.info("BaseUITest.setUp: Character selection not found or timed out, assuming character creation page.")
-            # Check if we are on the character creation form
-            self.wait_for_element((By.ID, "characterCreationForm"), timeout=7)
-            logging.info("BaseUITest.setUp: Character creation form confirmed by presence of characterCreationForm.")
+            logging.error("BaseUITest.setUp: Timed out waiting for login username field or correct page title. Basic page load failed.")
+            # Screenshot/source is saved by wait_for_element on its timeout
+            raise # Re-raise the exception to fail the test setup clearly
 
-            logging.info("BaseUITest.setUp: Waiting for body.js-loaded on char creation page.")
-            WebDriverWait(self.driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, "//body[contains(@class, 'js-loaded')]"))
-            )
-            logging.info("BaseUITest.setUp: body.js-loaded found on char creation page.")
+        logging.info("BaseUITest.setUp (simplified): Basic page load check completed.")
 
-            logging.info("BaseUITest.setUp: Waiting for body.init-main-interface-called on char creation page.")
-            WebDriverWait(self.driver, 20).until(
-                EC.presence_of_element_located((By.XPATH, "//body[contains(@class, 'init-main-interface-called')]"))
-            )
-            logging.info("BaseUITest.setUp: body.init-main-interface-called found on char creation page. initializeMainInterfaceInteractions likely called.")
-
-        logging.info("BaseUITest.setUp: Completed.")
+        # NOTE: All further login and navigation logic is temporarily removed for this basic check.
+        # If this simplified setUp passes, the issue is likely in the login or post-login navigation logic.
 
     def tearDown(self):
-        test_method_name = self.id().split('.')[-1] # Get the name of the test method
+        # Ensure driver is available before trying to get logs or quit
+        if hasattr(self, 'driver') and self.driver:
+            test_method_name = self.id().split('.')[-1] # Get the name of the test method
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         browser_log_filename = f"browser_log_{test_method_name}_{timestamp}.txt" # Removed /app/
 

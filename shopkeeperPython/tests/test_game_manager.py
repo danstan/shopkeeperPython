@@ -302,17 +302,25 @@ class TestGameManager(unittest.TestCase):
         self.assertEqual(self.gm.shop.gold, initial_shop_gold)
 
     def test_perform_action_rest_short_success(self):
-        initial_hp = self.player.current_hp = 5
+        self.player.stats["CON"] = 12 # Corrected: Use self.stats
+        # Recalculate base_max_hp and hp after changing CON if necessary, or ensure it's set.
+        # For this test, setting hp directly after CON might be simplest.
+        # Default con_mod is -5. With CON 12, con_mod is +1.
+        # If base_max_hp was 5 (10 + -5*1), now it should be 10 + 1*1 = 11 if level 1.
+        # Let's ensure base_max_hp is explicitly set for clarity or roll_stats is called.
+        # For simplicity in test, let's ensure hp is set to a known value for the test logic.
+        self.player.base_max_hp = 15 # Example: ensure max_hp is sufficient for the test
+        self.player.hp = 5           # Corrected: Use self.hp
+        initial_hp = self.player.hp
         initial_hit_dice = self.player.hit_dice = 3
-        self.player.hit_die_type = 8 # d8
-        self.player.abilities["CON"] = 12 # +1 modifier
+        # self.player.hit_die_type = 8 # d8 - This attribute doesn't exist on Character, HD is d8 by default in rest logic
 
         with patch('random.randint', return_value=5): # Mock HD roll
             self.gm.perform_hourly_action("rest_short")
 
         self.assertEqual(self.player.hit_dice, initial_hit_dice - 1)
-        # Expected HP: initial_hp (5) + roll (5) + CON_mod (1) = 11
-        self.assertEqual(self.player.current_hp, initial_hp + 5 + 1)
+        # Expected HP: initial_hp (5) + roll (5) + CON_mod (1 based on CON 12) = 11
+        self.assertEqual(self.player.hp, initial_hp + 5 + 1) # Corrected: Use self.hp
         self.assertIn("Spent 1 Hit Die, recovered 6 HP", self.test_output_stream.getvalue())
         # Check journal entry
         last_entry = self.player.journal[-1]
@@ -332,19 +340,19 @@ class TestGameManager(unittest.TestCase):
         self.assertEqual(last_entry.outcome, "No Hit Dice remaining.")
 
     def test_perform_action_rest_long_success(self):
-        self.player.current_hp = 1
-        self.player.max_hp = 20
+        self.player.level = 3 # Set level first as it might influence max_hp calculation if not overridden
+        self.player.base_max_hp = 20 # Set base_max_hp directly
+        self.player.hp = 1     # Corrected from current_hp and set after base_max_hp
         self.player.hit_dice = 0
-        self.player.level = 3
         self.player.exhaustion_level = 2
-        self.player.add_item_to_inventory(Item(name="Food", description="Some food", base_value=1, item_type="consumable", quantity=1))
-        self.player.add_item_to_inventory(Item(name="Drink", description="Some drink", base_value=1, item_type="consumable", quantity=1))
+        self.player.add_item_to_inventory(Item(name="Food", description="Some food", base_value=1, item_type="consumable", quality="Common", quantity=1))
+        self.player.add_item_to_inventory(Item(name="Drink", description="Some drink", base_value=1, item_type="consumable", quality="Common", quantity=1))
 
         initial_time = self.gm.time.current_hour
 
         self.gm.perform_hourly_action("rest_long")
 
-        self.assertEqual(self.player.current_hp, self.player.max_hp)
+        self.assertEqual(self.player.hp, self.player.get_effective_max_hp()) # Compare hp to effective_max_hp
         self.assertEqual(self.player.hit_dice, self.player.level)
         self.assertEqual(self.player.exhaustion_level, 1) # Reduced by 1
         self.assertIsNone(next((item for item in self.player.inventory if item.name == "Food"), None)) # Consumed
@@ -363,7 +371,7 @@ class TestGameManager(unittest.TestCase):
         self.player.current_hp = 1
         self.player.exhaustion_level = 0
         # No food, but has drink
-        self.player.add_item_to_inventory(Item(name="Drink", description="Some drink", base_value=1, item_type="consumable", quantity=1))
+        self.player.add_item_to_inventory(Item(name="Drink", description="Some drink", base_value=1, item_type="consumable", quality="Common", quantity=1))
         initial_exhaustion = self.player.exhaustion_level
 
         self.gm.perform_hourly_action("rest_long")
@@ -404,19 +412,26 @@ class TestGameManager(unittest.TestCase):
 
         self.assertIn(f"{self.player.name} spends an hour studying local history", self.test_output_stream.getvalue())
         self.assertIn("Learned some interesting historical facts", self.test_output_stream.getvalue())
-        self.assertEqual(self.player.xp, initial_xp + 10)
+        self.assertEqual(self.player.pending_xp, initial_xp + 10) # Check pending_xp
         self.assertEqual(len(self.player.journal), initial_journal_len + 1)
         last_entry = self.player.journal[-1]
         self.assertEqual(last_entry.action_type, "Study History")
         self.assertEqual(last_entry.outcome, "Learned some interesting historical facts about the area.")
 
         # Test the discovery case
-        initial_xp = self.player.xp # Reset for this part of the test
+        # initial_xp here refers to self.player.xp which is 0.
+        # pending_xp from the previous action was 10.
+        previous_pending_xp = self.player.pending_xp
+        # Clear the output stream for the second action part of the test for clearer assertion
+        self.test_output_stream.truncate(0)
+        self.test_output_stream.seek(0)
+
         with patch('random.random', return_value=0.05) as mock_random: # Triggering the 10% discovery
             self.gm.perform_hourly_action("study_local_history")
         self.assertIn("Uncovered a minor local secret", self.test_output_stream.getvalue())
-        self.assertEqual(self.player.xp, initial_xp + 10 + 5) # 10 base + 5 discovery
-        last_entry_discovery = self.player.journal[-1]
+        # XP from this action (10 base + 5 discovery) is added to previous pending_xp
+        self.assertEqual(self.player.pending_xp, previous_pending_xp + 10 + 5)
+        last_entry_discovery = self.player.journal[-1] # This will be the journal entry from the second action
         self.assertEqual(last_entry_discovery.outcome, "Uncovered a minor local secret or a piece of forgotten lore!")
 
 
@@ -427,7 +442,7 @@ class TestGameManager(unittest.TestCase):
         self.gm.perform_hourly_action("organize_inventory")
 
         self.assertIn(f"{self.player.name} meticulously organizes their personal inventory", self.test_output_stream.getvalue())
-        self.assertEqual(self.player.xp, initial_xp + 3)
+        self.assertEqual(self.player.pending_xp, initial_xp + 3) # Check pending_xp
         self.assertEqual(len(self.player.journal), initial_journal_len + 1)
         last_entry = self.player.journal[-1]
         self.assertEqual(last_entry.action_type, "Organize Inventory")
@@ -441,12 +456,14 @@ class TestGameManager(unittest.TestCase):
         self.gm.perform_hourly_action("post_advertisements")
 
         self.assertIn(f"{self.player.name} posts advertisements for '{self.gm.shop.name}'", self.test_output_stream.getvalue())
-        self.assertIn("Hopefully, this will attract more customers!", self.test_output_stream.getvalue())
-        self.assertEqual(self.player.xp, initial_xp + 7)
+        # The specific phrase "Hopefully, this will attract more customers!" is part of the journal outcome,
+        # and might be appended with more details. The _print statement is more about the boost.
+        self.assertIn("Applied a small temporary boost to customer attraction", self.test_output_stream.getvalue())
+        self.assertEqual(self.player.pending_xp, initial_xp + 7) # Check pending_xp
         self.assertEqual(len(self.player.journal), initial_journal_len + 1)
         last_entry = self.player.journal[-1]
         self.assertEqual(last_entry.action_type, "Post Advertisements")
-        self.assertTrue(last_entry.outcome.startswith("Hopefully, this will attract more customers!"))
+        self.assertTrue(last_entry.outcome.startswith("Hopefully, this will attract more customers!")) # Journal outcome check is good
         self.assertAlmostEqual(self.gm.shop.temporary_customer_boost, initial_boost + 0.05)
 
 

@@ -1,0 +1,13 @@
+++ date
++ echo '--- Script execution started at Tue Jun 24 13:00:02 UTC 2025 ---'
+--- Script execution started at Tue Jun 24 13:00:02 UTC 2025 ---
++ echo 'Setting PYTHONPATH...'
+Setting PYTHONPATH...
+++ pwd
++ export PYTHONPATH=/app
++ PYTHONPATH=/app
++ echo 'PYTHONPATH set to: /app'
+PYTHONPATH set to: /app
++ echo 'Attempting to install dependencies...'
+Attempting to install dependencies...
++ pip install -r shopkeeperPython/requirements.txt
