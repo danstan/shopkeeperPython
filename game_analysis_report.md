@@ -183,6 +183,14 @@ This report details the analysis of the current game codebase and UI/UX against 
     *   Good use of CSS variables, Flexbox.
     *   **Issues:** Specificity/`!important`, potential layout fragility (absolute positioning), organization, magic numbers, inconsistent button styling.
         *   **Recommendation:** Reduce specificity, improve button styling consistency, organize better.
+     
+*   **Update (2025-06-24 11:50am): UI Refactoring and Panel Bug Fix**
+    *   Significant refactoring of frontend code (`main_ui.js`, `index.html`, `style.css`) was completed to address several points from the `ui_code_analysis.md`.
+    *   **`main_ui.js`**: The monolithic `DOMContentLoaded` listener was broken down into smaller, more manageable modules/objects (e.g., `UIPanels`, `UIBottomTabs`, `UIActionsAndEvents`). DOM elements are now cached in a global `DOM` object for efficiency. Magic strings for action names were replaced with constants. `var` declarations were updated to `let` and `const`.
+    *   **`index.html`**: All inline `style` attributes were removed and replaced with CSS classes (primarily a utility `.hidden` class). Semantic HTML tags such as `<main>`, `<aside>`, `<nav>`, and `<section>` were introduced to improve document structure. ARIA attributes (e.g., `role`, `aria-controls`, `aria-expanded`, `aria-modal`, `aria-labelledby`) were added or enhanced for better accessibility of custom components like modals and tab panels. Commented-out code and a duplicate heading were removed.
+    *   **`style.css`**: The stylesheet was reorganized with more descriptive comments. The `!important` directive in `.active-tab-button` was removed. A CSS variable (`--spacing-unit`) was introduced to standardize spacing. Default visibility for JavaScript-toggled UI elements (like full panels and dynamic forms) is now more robustly handled through CSS classes.
+    *   **Bug Fix**: Addressed an issue where all full-panel module windows (inventory, shop management, etc.) were incorrectly appearing simultaneously after game actions. The JavaScript logic controlling panel visibility (`UIPanels.init` and a safeguard in `main()`) was corrected to ensure panels are hidden by default on page load and only the specifically activated panel is shown.
+
 
 ## Overall Conclusion & Prioritized Recommendations
 
