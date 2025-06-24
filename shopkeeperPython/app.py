@@ -409,14 +409,13 @@ def login_route():
 @app.route('/logout')
 def logout_route():
     session.pop('username', None)
-    session.pop('selected_character_slot', None) # Clear selected character on logout
-    session.pop('character_creation_stats', None) # Clear pending creation stats
-    session.pop('character_creation_name', None) # Clear pending char name
-    get_flashed_messages()
+    session.pop('selected_character_slot', None)
+    session.pop('character_creation_stats', None)
+    session.pop('character_creation_name', None)
+    session.pop('awaiting_event_choice', None) # Clear event flag
+    session.pop('pending_event_data', None)    # Clear event data
+    get_flashed_messages() # Clear any existing flashed messages before adding new one
     flash('You have been logged out.', 'success')
-    # Session variables controlling character selection are cleared above.
-    # The new g objects (output_stream, player_char, game_manager) will be
-    # created by before_request_setup on the GET request resulting from the redirect.
     return redirect(url_for('display_game_output'))
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -472,12 +471,17 @@ def select_character_route(slot_index: int):
 
     if 0 <= slot_index < len(characters_list):
         session['selected_character_slot'] = slot_index
-        # Clear pending character creation info when selecting an existing character
         session.pop('character_creation_stats', None)
         session.pop('character_creation_name', None)
+        session.pop('awaiting_event_choice', None) # Clear event flag
+        session.pop('pending_event_data', None)    # Clear event data
         flash(f"Character slot {slot_index + 1} selected.", "success")
     else:
         flash("Invalid character slot.", "error")
+        # Even on invalid selection, clear pending event state
+        session.pop('awaiting_event_choice', None)
+        session.pop('pending_event_data', None)
+
 
     return redirect(url_for('display_game_output'))
 
@@ -563,9 +567,11 @@ def create_character_route():
     if g.game_manager.is_game_setup:
         success_message = f"Character {new_character.name} (user: {username}) created and game world prepared."
         flash(success_message, "success")
-        g.game_manager._print(success_message) # Also print to game log via g.game_manager
+        g.game_manager._print(success_message)
         session.pop('character_creation_stats', None)
         session.pop('character_creation_name', None)
+        session.pop('awaiting_event_choice', None) # Clear event state
+        session.pop('pending_event_data', None)
     else:
         g.game_manager._print(f"Character {new_character.name} (user: {username}) created, but game world setup failed. is_game_setup is False.")
         error_message = (f"Character {new_character.name} was saved, but there was an issue preparing the game world. "
@@ -573,6 +579,10 @@ def create_character_route():
         flash(error_message, "warning")
         session.pop('character_creation_stats', None)
         session.pop('character_creation_name', None)
+        # Also clear event state here in case of failure after creation attempt
+        session.pop('awaiting_event_choice', None)
+        session.pop('pending_event_data', None)
+
 
     return redirect(url_for('display_game_output'))
 
@@ -793,9 +803,24 @@ def display_game_output():
         available_towns = []
 
 
-    # Retrieve event data from session for template
-    awaiting_event_choice = session.get('awaiting_event_choice', False)
-    pending_event_data_for_template = session.get('pending_event_data', None) if awaiting_event_choice else None
+    # Retrieve event data from session
+    awaiting_event_choice_session = session.get('awaiting_event_choice', False)
+    pending_event_data_session = session.get('pending_event_data', None)
+
+    # Determine actual event display state for the template
+    # If showing character creation or selection, suppress event pop-up and clear session flags
+    if show_character_creation_form or show_character_selection:
+        awaiting_event_choice_for_template = False
+        pending_event_data_for_template = None
+        # Clear the actual session flags as we are in a non-gameplay state
+        if session.get('awaiting_event_choice'): # Check before popping
+            session.pop('awaiting_event_choice')
+        if session.get('pending_event_data'): # Check before popping
+            session.pop('pending_event_data')
+    else:
+        awaiting_event_choice_for_template = awaiting_event_choice_session
+        pending_event_data_for_template = pending_event_data_session if awaiting_event_choice_for_template else None
+
     last_skill_roll_str = session.pop('last_skill_roll_display_str', None) # Pop to clear after use
 
     # Shop data for UI
