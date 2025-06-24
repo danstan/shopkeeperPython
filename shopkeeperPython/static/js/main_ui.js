@@ -332,6 +332,31 @@ function cacheDomElements() {
     DOM.featSelectionListDiv = document.getElementById('feat-selection-list');
     DOM.confirmAsiFeatChoiceButton = document.getElementById('confirm-asi-feat-choice-button');
 
+    // Haggling Modal Elements
+    DOM.hagglingPopupWrapper = document.getElementById('haggling-popup-wrapper');
+    DOM.hagglingPopup = document.getElementById('haggling-popup');
+    DOM.hagglingPopupTitle = document.getElementById('haggling-popup-title');
+    DOM.haggleItemName = document.getElementById('haggle-item-name');
+    DOM.haggleItemQuality = document.getElementById('haggle-item-quality');
+    DOM.haggleItemQuantity = document.getElementById('haggle-item-quantity');
+    DOM.haggleNpcName = document.getElementById('haggle-npc-name');
+    DOM.haggleNpcMood = document.getElementById('haggle-npc-mood');
+    DOM.haggleCurrentOffer = document.getElementById('haggle-current-offer');
+    DOM.haggleTargetPriceInfo = document.getElementById('haggle-target-price-info'); // Optional display
+    DOM.hagglePlayerTargetPrice = document.getElementById('haggle-player-target-price');
+    DOM.haggleShopTargetPrice = document.getElementById('haggle-shop-target-price');
+    DOM.haggleLastCheckResult = document.getElementById('haggle-last-check-result');
+    DOM.haggleLastCheckText = document.getElementById('haggle-last-check-text');
+    DOM.hagglingChoicesContainer = document.getElementById('haggling-choices-container');
+    DOM.haggleAcceptButton = document.getElementById('haggle-accept-button');
+    DOM.haggleDeclineButton = document.getElementById('haggle-decline-button');
+    DOM.hagglePersuadeButton = document.getElementById('haggle-persuade-button');
+    DOM.haggleRoundsInfo = document.getElementById('haggle-rounds-info');
+    DOM.haggleCurrentRound = document.getElementById('haggle-current-round');
+    DOM.haggleMaxRounds = document.getElementById('haggle-max-rounds');
+    DOM.haggleFinalOfferNotice = document.getElementById('haggle-final-offer-notice');
+
+
     // Toast Container
     DOM.toastContainer = document.getElementById('toast-container');
 }
@@ -360,6 +385,9 @@ function loadConfigData() {
     gameConfigData.playerPendingAsiFeatChoice = window.gameConfig.playerPendingAsiFeatChoice || false;
     gameConfigData.featDefinitionsJson = window.gameConfig.featDefinitionsJson || [];
     gameConfigData.playerStatsJson = window.gameConfig.playerStatsJson || {};
+    // Haggling config
+    gameConfigData.hagglingPending = window.gameConfig.hagglingPending || false;
+    gameConfigData.pendingHagglingDataJson = window.gameConfig.pendingHagglingDataJson || null;
 }
 
 
@@ -1035,6 +1063,7 @@ const UIInitialPopups = {
                     }
                 }
                 if (DOM.eventPopup) DOM.eventPopup.style.display = 'block';
+                if (DOM.hagglingPopupWrapper) DOM.hagglingPopupWrapper.classList.add('hidden'); // Ensure haggle is hidden if event shows
             } catch (e) {
                 console.error("Error processing event data for popup:", e);
                 if (DOM.eventPopup) DOM.eventPopup.style.display = 'none';
@@ -1066,12 +1095,160 @@ const UIInitialPopups = {
         }
     },
 
+    processHagglingPopup() {
+        const { hagglingPending, pendingHagglingDataJson } = gameConfigData;
+        if (hagglingPending && pendingHagglingDataJson && DOM.hagglingPopupWrapper) {
+            UIHaggling.populateAndShowModal(pendingHagglingDataJson);
+            if (DOM.eventPopup) DOM.eventPopup.style.display = 'none'; // Ensure event popup is hidden
+        } else {
+            if (DOM.hagglingPopupWrapper) DOM.hagglingPopupWrapper.classList.add('hidden');
+        }
+    },
+
     init() {
         this.processActionResultToast();
         this.processEventPopup();
         this.processSkillRollToast();
+        this.processHagglingPopup(); // Check for haggling state on page load/refresh
     }
 };
+
+const UIHaggling = {
+    currentHagglingData: null,
+
+    populateAndShowModal(data) {
+        this.currentHagglingData = data;
+        if (!DOM.hagglingPopupWrapper || !this.currentHagglingData) {
+            console.error("Haggling modal elements or data missing.");
+            this.closeModal();
+            return;
+        }
+
+        const {
+            item_name, item_quality, quantity, npc_name, npc_mood, current_offer,
+            player_target_price, shop_target_price, haggle_rounds_attempted,
+            max_haggle_rounds, can_still_haggle, last_skill_check_result, context
+        } = this.currentHagglingData;
+
+        if (DOM.haggleItemName) DOM.haggleItemName.textContent = item_name || 'N/A';
+        if (DOM.haggleItemQuality) DOM.haggleItemQuality.textContent = item_quality || 'N/A';
+        if (DOM.haggleItemQuantity) DOM.haggleItemQuantity.textContent = quantity !== undefined ? quantity : (context === "player_selling" ? "1" : "N/A"); // Assume 1 if player selling and not specified
+        if (DOM.haggleNpcName) DOM.haggleNpcName.textContent = npc_name || 'Mysterious Figure';
+        if (DOM.haggleNpcMood) DOM.haggleNpcMood.textContent = npc_mood || 'Neutral';
+        if (DOM.haggleCurrentOffer) DOM.haggleCurrentOffer.textContent = `${current_offer || 0}g`;
+
+        if (DOM.haggleTargetPriceInfo) { // Optional display logic for target prices
+            if (context === "player_buying" && player_target_price !== undefined) {
+                if (DOM.hagglePlayerTargetPrice) DOM.hagglePlayerTargetPrice.textContent = `${player_target_price}g`;
+                if (DOM.haggleShopTargetPrice) DOM.haggleShopTargetPrice.parentElement.classList.add('hidden'); // Hide shop target if player buying
+                DOM.haggleTargetPriceInfo.classList.remove('hidden');
+            } else if (context === "player_selling" && shop_target_price !== undefined) {
+                if (DOM.haggleShopTargetPrice) DOM.haggleShopTargetPrice.textContent = `${shop_target_price}g`;
+                 if (DOM.hagglePlayerTargetPrice) DOM.hagglePlayerTargetPrice.parentElement.classList.add('hidden'); // Hide player target if shop selling
+                DOM.haggleTargetPriceInfo.classList.remove('hidden');
+            } else {
+                DOM.haggleTargetPriceInfo.classList.add('hidden');
+            }
+        }
+
+        if (DOM.haggleLastCheckResult && DOM.haggleLastCheckText) {
+            if (last_skill_check_result) {
+                DOM.haggleLastCheckText.textContent = last_skill_check_result;
+                DOM.haggleLastCheckResult.classList.remove('hidden');
+            } else {
+                DOM.haggleLastCheckResult.classList.add('hidden');
+            }
+        }
+
+        if (DOM.haggleCurrentRound) DOM.haggleCurrentRound.textContent = haggle_rounds_attempted || 0;
+        if (DOM.haggleMaxRounds) DOM.haggleMaxRounds.textContent = max_haggle_rounds || 3;
+
+        const finalOffer = !can_still_haggle || (haggle_rounds_attempted >= max_haggle_rounds);
+        if (DOM.hagglePersuadeButton) DOM.hagglePersuadeButton.disabled = finalOffer;
+        if (DOM.haggleFinalOfferNotice) DOM.haggleFinalOfferNotice.classList.toggle('hidden', !finalOffer);
+
+        if (DOM.hagglingPopupTitle) {
+            DOM.hagglingPopupTitle.textContent = context === "player_buying" ? `Buy from ${npc_name}` : `Sell to ${npc_name}`;
+        }
+
+        DOM.hagglingPopupWrapper.classList.remove('hidden');
+        DOM.hagglingPopup.setAttribute('aria-hidden', 'false');
+        // Focus first button
+        if(DOM.haggleAcceptButton) DOM.haggleAcceptButton.focus();
+    },
+
+    closeModal() {
+        if (DOM.hagglingPopupWrapper) {
+            DOM.hagglingPopupWrapper.classList.add('hidden');
+            if(DOM.hagglingPopup) DOM.hagglingPopup.setAttribute('aria-hidden', 'true');
+        }
+        this.currentHagglingData = null;
+    },
+
+    handleChoice(choiceType) {
+        if (!this.currentHagglingData) {
+            console.error("No active haggling session data to process choice.");
+            this.closeModal();
+            return;
+        }
+
+        const actionName = this.currentHagglingData.context === "player_buying" ?
+                           "PROCESS_PLAYER_HAGGLE_CHOICE_BUY" :
+                           "PROCESS_PLAYER_HAGGLE_CHOICE_SELL";
+
+        const details = {
+            haggle_choice: choiceType,
+            // The backend will use self.active_haggling_session, so no need to send full state back
+        };
+
+        if (DOM.actionForm && DOM.hiddenActionNameInput && DOM.hiddenDetailsInput) {
+            DOM.hiddenActionNameInput.value = actionName;
+            DOM.hiddenDetailsInput.value = JSON.stringify(details);
+            DOM.actionForm.submit();
+            // Don't close modal here; backend response will either close or update it.
+        } else {
+            console.error("Action form elements missing for haggling submission.");
+            showToast("Error submitting haggle choice.", "error");
+            this.closeModal();
+        }
+    },
+
+    init() {
+        if (DOM.hagglingChoicesContainer) {
+            DOM.hagglingChoicesContainer.addEventListener('click', (event) => {
+                const button = event.target.closest('.haggle-choice-button');
+                if (button && button.dataset.choice) {
+                    this.handleChoice(button.dataset.choice);
+                }
+            });
+        }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && DOM.hagglingPopupWrapper && !DOM.hagglingPopupWrapper.classList.contains('hidden')) {
+                // For haggling, Escape should probably mean "Decline" or just close without action if no decline button.
+                // Let's make it behave like clicking decline.
+                this.handleChoice('decline');
+            }
+        });
+         // Close modal if clicking outside of it (on the wrapper/overlay)
+        if (DOM.hagglingPopupWrapper) {
+            DOM.hagglingPopupWrapper.addEventListener('click', (event) => {
+                if (event.target === DOM.hagglingPopupWrapper) {
+                     this.handleChoice('decline'); // Treat as decline
+                }
+            });
+        }
+
+        // Initial check on page load
+        if (gameConfigData.hagglingPending && gameConfigData.pendingHagglingDataJson) {
+            this.populateAndShowModal(gameConfigData.pendingHagglingDataJson);
+        } else {
+            this.closeModal(); // Ensure it's hidden if no data
+        }
+    }
+};
+
 
 const UISkillAllocation = {
     populateSkillAllocationModal() {

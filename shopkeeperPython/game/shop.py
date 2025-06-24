@@ -244,48 +244,112 @@ class Shop:
     def stock_item(self, item: Item):
         self.add_item_to_inventory(item)
 
-    def complete_sale_to_npc(self, item_name: str, quality_to_sell: str = None, npc_offer_percentage: float = 1.0) -> int: # Returns price or 0
-        item_instance_to_sell = None
-        for item_in_stock in self.inventory:
-            if item_in_stock.name == item_name:
-                if quality_to_sell is None or item_in_stock.quality == quality_to_sell:
-                    item_instance_to_sell = item_in_stock
-                    break
-        if item_instance_to_sell:
-            base_selling_price = self.calculate_sale_price(item_instance_to_sell)
+    def initiate_haggling_for_item_sale(self, item_to_sell: Item, npc_name: str = "A Customer") -> dict | None:
+        """
+        Initiates a haggling session when an NPC wants to buy an item from the shop.
+        Returns a dictionary with haggling state if successful, None otherwise.
+        """
+        if not item_to_sell or item_to_sell not in self.inventory:
+            print(f"SHOP: Cannot initiate haggling. Item '{item_to_sell.name if item_to_sell else 'Unknown'}' not in stock.")
+            return None
 
-            # Apply reputation bonus to NPC offer percentage
-            effective_npc_offer_percentage = npc_offer_percentage + (self.reputation * 0.001)
-            # Cap effective_npc_offer_percentage to avoid excessively high prices (e.g., max 110% of base offer)
-            effective_npc_offer_percentage = min(effective_npc_offer_percentage, npc_offer_percentage * 1.1)
+        # Calculate the shop's "ideal" selling price (player selling to NPC means shop wants higher price)
+        # For player selling to NPC, this is the price the shop would normally charge *anyone*
+        # Let's use calculate_sale_price without a character_buying, so it's the shop's standard markup.
+        standard_shop_price = self.calculate_sale_price(item_to_sell) # This is what the shop *would* sell it for to a player
+
+        # NPC's initial offer is a percentage of this standard shop price.
+        # This 'standard_shop_price' is what the player *would* get if they sold directly.
+        # The NPC offer should be based on what the NPC thinks it's worth, which is related to item.value.
+        # Let's adjust: NPC offer is based on item.value, modified by NPC_MIN/MAX_OFFER_PERCENTAGE.
+        # The shop's `calculate_sale_price` is what the *player* would pay if *they* were buying from *this shop*.
+        # For an NPC buying from the player's shop, the NPC should offer a % of the item's objective value.
+
+        # Let's use the item's objective value `item_to_sell.value` as the base for NPC's offer.
+        # This value already includes quality multipliers.
+        base_value_for_npc_offer = item_to_sell.value
+
+        min_offer_actual = base_value_for_npc_offer * self.NPC_MIN_OFFER_PERCENTAGE
+        max_offer_actual = base_value_for_npc_offer * self.NPC_MAX_OFFER_PERCENTAGE
+
+        # Reputation influence: higher reputation pushes offers towards the higher end of the range.
+        # Normalized reputation: (self.reputation - MIN_REPUTATION) / (MAX_REPUTATION - MIN_REPUTATION)
+        # This gives a 0-1 scale. Let's simplify: use raw rep points for a small nudge.
+        reputation_influence = (self.reputation / self.MAX_REPUTATION) * (max_offer_actual - min_offer_actual) # Max influence shifts it fully up
+
+        initial_offer_value_float = min_offer_actual + reputation_influence
+        # Ensure it doesn't exceed max_offer_actual due to extreme positive rep if formula is off
+        initial_offer_value_float = min(initial_offer_value_float, max_offer_actual)
+        # Ensure it's not below min_offer_actual due to negative rep
+        initial_offer_value_float = max(initial_offer_value_float, min_offer_actual)
+
+        initial_npc_offer = int(initial_offer_value_float)
 
 
-            final_selling_price = int(base_selling_price * effective_npc_offer_percentage)
-            self.gold += final_selling_price
-            self.remove_item_from_inventory(item_instance_to_sell.name, specific_item_to_remove=item_instance_to_sell)
+        haggling_state = {
+            "item_name": item_to_sell.name,
+            "item_quality": item_to_sell.quality,
+            "item_base_value": item_to_sell.base_value, # For reference
+            "item_id_in_shop_inventory": self.inventory.index(item_to_sell), # To identify the exact item
+            "npc_name": npc_name,
+            "initial_offer": initial_npc_offer,
+            "current_offer": initial_npc_offer,
+            "shop_target_price": standard_shop_price, # What the shop ideally wants (player selling context)
+            "npc_mood": "Neutral",
+            "haggle_rounds_attempted": 0,
+            "max_haggle_rounds": 3, # Default, can be adjusted
+            "context": "player_selling", # Player's shop is selling
+            "can_still_haggle": True
+        }
+        print(f"SHOP: Initiating haggling with {npc_name} for {item_to_sell.name}. Initial NPC offer: {initial_npc_offer}g (Shop's ideal price: {standard_shop_price}g).")
+        return haggling_state
 
-            # Reputation gain logic
-            rep_change = 0
-            quality_rep_bonus = {"Rare": 2, "Very Rare": 3, "Legendary": 4, "Mythical": 5}
-            if item_instance_to_sell.quality in quality_rep_bonus:
-                rep_change += quality_rep_bonus[item_instance_to_sell.quality]
+    def finalize_haggled_sale(self, item_instance_to_sell: Item, final_selling_price: int) -> bool:
+        """
+        Completes the sale of an item to an NPC after haggling.
+        Assumes item_instance_to_sell is the correct instance from inventory.
+        """
+        if not item_instance_to_sell or item_instance_to_sell not in self.inventory:
+            print(f"SHOP: Error finalizing sale. Item '{item_instance_to_sell.name if item_instance_to_sell else 'Unknown'}' not found in stock.")
+            return False
 
-            if self.specialization in self.ADVANCED_RECIPES and \
-               item_instance_to_sell.name in self.ADVANCED_RECIPES[self.specialization]:
-                rep_change += 1
+        self.gold += final_selling_price
+        # remove_item_from_inventory can take the instance directly
+        removed_item = self.remove_item_from_inventory(item_instance_to_sell.name, specific_item_to_remove=item_instance_to_sell)
 
-            if rep_change > 0:
-                old_rep = self.reputation
-                self.reputation = min(self.reputation + rep_change, self.MAX_REPUTATION)
-                if self.reputation != old_rep:
-                    print(f"SHOP: Selling {item_instance_to_sell.quality} {item_instance_to_sell.name} improved your shop's reputation to {self.reputation} (+{self.reputation - old_rep}).")
-            return final_selling_price
-        else:
-            # print(f"Item '{item_name}' (Quality: {quality_to_sell if quality_to_sell else 'any'}) not found in inventory for sale to NPC.")
-            return 0
+        if not removed_item:
+            # This should not happen if item_instance_to_sell was correctly from inventory
+            print(f"SHOP: CRITICAL ERROR - Failed to remove sold item '{item_instance_to_sell.name}' from inventory. Reverting gold.")
+            self.gold -= final_selling_price
+            return False
 
-    def calculate_sale_price(self, item_or_item_name: (Item | str)) -> int:
-        """Calculates the sale price of an item, considering town demand and shop markup."""
+        # Reputation gain logic (same as before)
+        rep_change = 0
+        quality_rep_bonus = {"Rare": 2, "Very Rare": 3, "Legendary": 4, "Mythical": 5}
+        if item_instance_to_sell.quality in quality_rep_bonus:
+            rep_change += quality_rep_bonus[item_instance_to_sell.quality]
+
+        if self.specialization in self.ADVANCED_RECIPES and \
+           item_instance_to_sell.name in self.ADVANCED_RECIPES[self.specialization]:
+            rep_change += 1
+
+        if rep_change > 0:
+            old_rep = self.reputation
+            self.reputation = min(self.reputation + rep_change, self.MAX_REPUTATION)
+            if self.reputation != old_rep:
+                print(f"SHOP: Selling {item_instance_to_sell.quality} {item_instance_to_sell.name} improved shop reputation to {self.reputation} (+{self.reputation - old_rep}).")
+
+        print(f"SHOP: Successfully sold {item_instance_to_sell.name} for {final_selling_price}g after haggling.")
+        return True
+
+    # calculate_sale_price is primarily for player buying from this shop, or shop setting its own prices.
+    # For NPC buying from player's shop, their offer is based on item.value and their own offer percentages.
+    # For player buying from other NPCs, that NPC's shop/pricing logic would apply.
+    def calculate_sale_price(self, item_or_item_name: (Item | str), character_buying: 'Character' = None) -> int:
+        """
+        Calculates the price this shop would charge if a character (player or NPC) buys this item from this shop.
+        Considers town demand, shop markup, and potential character faction benefits.
+        """
         item_instance = None
         if isinstance(item_or_item_name, str):
             for item_in_stock in self.inventory: # Search in current inventory

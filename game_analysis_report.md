@@ -41,9 +41,11 @@ This report details the analysis of the current game codebase and UI/UX against 
     *   **Product Quality Progression:** Aligned. `Shop._determine_quality()` uses `crafting_experience[item_name]` and shop level bonus against `QUALITY_THRESHOLDS`. Critical success/failure can modify quality.
     *   **Simple Starting Specializations:** Aligned. Basic recipes are available from the start.
 *   **NPC Customer Interaction:**
-    *   **Selling to NPCs:** Shop can sell items to generic NPCs (`Shop.complete_sale_to_npc`).
-    *   **Haggling (Major Discrepancy):** GDD: "opportunities for haggling." This interactive mechanic is not implemented for player sales to NPCs or purchases from NPCs.
-        *   **Recommendation:** Implement an interactive haggling system (likely skill-check based) for transactions with NPCs.
+    *   **Selling to NPCs:** Shop can sell items to generic NPCs. This process now includes an interactive haggling phase.
+    *   **Haggling (Implemented):** GDD: "opportunities for haggling." An interactive haggling system has been implemented for:
+        *   **Player's shop selling to NPC customers:** When an NPC customer decides to buy an item, a haggling modal appears. The player can accept the NPC's initial offer, decline, or attempt to persuade for a better price using a Persuasion skill check. Multiple rounds of haggling are possible, with increasing difficulty.
+        *   **Player buying from NPC vendors (e.g., Hemlock, Borin):** When the player initiates a purchase from these NPCs, a similar haggling modal appears. The NPC's listed price is the starting point, and the player can attempt to negotiate it down using Persuasion skill checks.
+        *   **Mechanics:** The system involves initial offer generation (based on item value, NPC/shop reputation, and defined ranges), skill checks against dynamic DCs, and outcomes affecting the final price and NPC mood. The UI supports this interaction via a new modal.
 *   **Shop Expansion & Specialization:**
     *   **Expansion (Levels):** Aligned. Shop levels (1-3) affect inventory slots and crafting quality bonus, with upgrade costs. UI exists.
     *   **Specialization:** Aligned. Player can choose specializations ("General Store", "Blacksmith", "Alchemist") with no direct cost, affecting advanced recipe access. UI exists.
@@ -224,6 +226,29 @@ This report details the analysis of the current game codebase and UI/UX against 
     *   **Testing:** A detailed testing plan was outlined, covering modal appearance, selection of different ASI options, feat selection, and validation. Manual execution of these tests would be required to fully confirm functionality.
     *   **Impact:** This feature allows players to make crucial character development choices at milestone levels as per the GDD, significantly enhancing character progression.
 
+*   **Update (DATE by Agent Jules): Implemented Interactive NPC Haggling**
+    *   Successfully implemented an interactive NPC haggling system, a core GDD shopkeeping interaction.
+    *   **Mechanics:**
+        *   Haggling can occur when the player's shop sells to an NPC customer or when the player buys from specific NPC vendors (e.g., Hemlock, Borin).
+        *   The process involves an initial offer, followed by player choices to accept, decline, or attempt persuasion (using a Persuasion skill check).
+        *   Skill checks are made against a dynamic DC, influenced by factors like haggle rounds attempted.
+        *   Successful persuasion improves the price for the player; failure may result in no change or the NPC ending negotiation.
+        *   A limited number of haggle rounds are allowed per interaction.
+    *   **Backend (`Shop.py`, `GameManager.py`):**
+        *   `Shop.py`: Added `initiate_haggling_for_item_sale()` to set up the haggling state for NPC customers buying from the player's shop. Added `finalize_haggled_sale()` to complete transactions post-haggling.
+        *   `GameManager.py`:
+            *   Modified NPC sales logic to use `initiate_haggling_for_item_sale()` and return a `haggling_pending` state to the UI.
+            *   Modified `_handle_buy_from_npc()` (player buying from NPC vendors) to also initiate a `haggling_pending` state.
+            *   Added new action handlers: `PROCESS_PLAYER_HAGGLE_CHOICE_SELL` and `PROCESS_PLAYER_HAGGLE_CHOICE_BUY` to manage player's haggling decisions (accept, decline, persuade) and outcomes. These actions are zero-time cost.
+            *   A transient `active_haggling_session` dictionary is managed by `GameManager` to track the current haggling state.
+    *   **Frontend (`index.html`, `main_ui.js`):**
+        *   `index.html`: Added HTML structure for a new haggling modal (`#haggling-popup-wrapper`) to display item information, NPC details, current offer, and player choices.
+        *   `main_ui.js`:
+            *   Created a new `UIHaggling` module to manage the modal's visibility, populate it with data from the backend, and handle player interactions.
+            *   Integrated with `UIInitialPopups` to display the modal when `haggling_pending` is true.
+            *   Handles submission of haggling choices to the new backend actions.
+    *   **Impact:** This feature significantly enhances NPC interactions related to buying and selling, adding a layer of player agency and skill-based negotiation as outlined in the GDD.
+
 ## Overall Conclusion & Prioritized Recommendations
 
 The game has a solid foundational implementation for many core GDD features. Key areas requiring attention are:
@@ -232,7 +257,7 @@ The game has a solid foundational implementation for many core GDD features. Key
 
 1.  **Implement "+1 Skill Bonus Choice":** Crucial for character progression as per GDD. *(Verified Complete - See Update Note 2025-06-25)*
 2.  **Implement UI for ASI/Feat Choice:** Essential for milestone level progression. *(Complete - See Update Note 2025-06-25)*
-3.  **Implement Interactive NPC Haggling:** A core GDD shopkeeping interaction.
+3.  **Implement Interactive NPC Haggling:** A core GDD shopkeeping interaction. *(Complete - See Update Note DATE)*
 4.  **Integrate Long Rest Interruptions with Event System:** Make interruptions more thematic and dynamic.
 5.  **Implement UI for Attunement & Consumable Use:** Core item interactions are missing UI.
 
