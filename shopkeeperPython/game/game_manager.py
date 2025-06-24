@@ -279,7 +279,13 @@ class GameManager:
         self._print(f"Stocked initial items in {self.shop.name}.")
         self.event_manager = EventManager(self.character, self)
         self._print(f"EventManager initialized/updated for character: {self.character.name}.")
-        self._reset_daily_trackers()
+
+        # Ensure event manager's history is synced with current game time upon setup
+        if self.event_manager and hasattr(self.event_manager, 'reset_daily_event_history') and self.time:
+            # self._print(f"GameManager.setup_for_character: Initializing event_manager daily history for day {self.time.current_day}")
+            self.event_manager.reset_daily_event_history(self.time.current_day)
+
+        self._reset_daily_trackers() # This will also call it, but good to have it explicitly after EM init too.
         self._print("Daily trackers reset for the new character setup.")
         self.is_game_setup = True
         self._print(f"--- Game world setup complete for {self.character.name}. is_game_setup: {self.is_game_setup} ---")
@@ -311,6 +317,15 @@ class GameManager:
         self.daily_customer_dialogue_snippets = []
         if hasattr(self, 'time') and self.time: self.tracking_day = self.time.current_day
         else: self.tracking_day = 1
+
+        # Reset event manager's daily history
+        if hasattr(self, 'event_manager') and self.event_manager and hasattr(self.event_manager, 'reset_daily_event_history'):
+            if hasattr(self, 'time') and self.time:
+                # self._print(f"GameManager._reset_daily_trackers: Calling event_manager.reset_daily_event_history for day {self.time.current_day}")
+                self.event_manager.reset_daily_event_history(self.time.current_day)
+            # else:
+                # self._print("GameManager._reset_daily_trackers: Cannot reset event history - GameTime not available.")
+
 
     def _handle_buy_from_npc(self, details: dict) -> int:
         npc_name = details.get("npc_name"); item_name_to_buy = details.get("item_name")
