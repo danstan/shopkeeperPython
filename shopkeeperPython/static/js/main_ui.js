@@ -96,6 +96,7 @@ const UIAsiFeatChoice = {
     },
 
     resetSelections() {
+        // No event active check here, this is a helper for resetting state.
         this.selectedMainChoice = null;
         this.selectedAsiType = null;
         this.selectedFeatId = null;
@@ -116,6 +117,12 @@ const UIAsiFeatChoice = {
     },
 
     openModal() {
+        if (isEventActive() && DOM.asiFeatChoicePopupWrapper && DOM.asiFeatChoicePopupWrapper.classList.contains('hidden')) {
+            // If an event is active AND this ASI/Feat popup is currently hidden (i.e., we're trying to show it)
+            // then prevent showing it.
+            showToast("Cannot make ASI/Feat choice while a game event is active.", "warning");
+            return;
+        }
         if (DOM.asiFeatChoicePopupWrapper) {
             this.resetSelections();
             this.populateFeatList();
@@ -133,6 +140,12 @@ const UIAsiFeatChoice = {
     },
 
     handleSubmit() {
+        if (isEventActive()) {
+            // ASI/Feat choice is modal itself. If an event is active, this modal shouldn't even be reachable.
+            // This is a defensive check.
+            showToast("Please resolve the current game event before making ASI/Feat choices.", "warning");
+            return;
+        }
         let actionDetails = {};
         if (this.selectedMainChoice === 'asi') {
             actionDetails.choice_type = 'asi';
@@ -361,6 +374,27 @@ function cacheDomElements() {
     DOM.toastContainer = document.getElementById('toast-container');
 }
 
+// --- GLOBAL HELPER FOR EVENT STATE ---
+function isEventActive() {
+    // Check if the event-active class is on the body (primary check)
+    if (document.body.classList.contains('event-active')) {
+        return true;
+    }
+    // Fallback: Check if the event popup DOM element is visible.
+    // DOM.eventPopup might not be cached yet if this is called very early.
+    const eventPopupElement = document.getElementById('event-choice-popup');
+    if (eventPopupElement && eventPopupElement.style.display === 'block') {
+        // To be absolutely sure, also check the wrapper if it exists, as per HTML structure
+        const eventPopupWrapper = document.getElementById('event-choice-popup-wrapper');
+        if (eventPopupWrapper && !eventPopupWrapper.classList.contains('hidden')) {
+            return true;
+        }
+        // If only eventPopup is checked, it might be a false positive if wrapper is hidden
+        // However, processEventPopup controls eventPopup.style.display directly.
+    }
+    return false;
+}
+
 
 // --- CONFIG DATA (scoped) ---
 let gameConfigData = {};
@@ -512,7 +546,9 @@ const UIBottomTabs = {
         const switchTab = (activeTab, inactiveTab, activePanel, inactivePanel) => {
             // Rely on CSS classes for visibility: .panel-content is display:none, .panel-visible is display:block
             activePanel.classList.add('panel-visible');
+            activePanel.classList.remove('hidden'); // Ensure 'hidden' class is removed
             inactivePanel.classList.remove('panel-visible');
+            // inactivePanel.classList.add('hidden'); // Optionally add back if other logic relies on it, but CSS default should be enough
 
             activeTab.classList.add('active-tab-button');
             inactiveTab.classList.remove('active-tab-button');
@@ -612,6 +648,10 @@ const UIShopAndInventory = {
         const changeSpecButton = document.getElementById('submit-change-specialization');
         if (changeSpecButton && DOM.actionForm && DOM.hiddenActionNameInput && DOM.hiddenDetailsInput) {
             changeSpecButton.addEventListener('click', () => {
+                if (isEventActive()) {
+                    showToast("Please resolve the current event first.", "warning");
+                    return;
+                }
                 const selectElement = document.getElementById('shop-specialization-select');
                 DOM.hiddenActionNameInput.value = CONSTANTS.ACTION_NAMES.SET_SHOP_SPECIALIZATION;
                 DOM.hiddenDetailsInput.value = JSON.stringify({ specialization_name: selectElement.value });
@@ -621,6 +661,10 @@ const UIShopAndInventory = {
         const upgradeShopButton = document.getElementById('submit-upgrade-shop');
         if (upgradeShopButton && DOM.actionForm && DOM.hiddenActionNameInput && DOM.hiddenDetailsInput) {
             upgradeShopButton.addEventListener('click', () => {
+                if (isEventActive()) {
+                    showToast("Please resolve the current event first.", "warning");
+                    return;
+                }
                 DOM.hiddenActionNameInput.value = CONSTANTS.ACTION_NAMES.UPGRADE_SHOP;
                 DOM.hiddenDetailsInput.value = JSON.stringify({});
                 DOM.actionForm.submit();
@@ -707,6 +751,11 @@ const UIActionsAndEvents = {
     },
 
     handleDirectActionSubmit(actionName, details = {}, buttonElement = null) {
+        if (isEventActive()) {
+            showToast("Please resolve the current event before performing other actions.", "warning");
+            if (buttonElement) buttonElement.classList.remove('button-processing'); // Remove if added before check
+            return;
+        }
         if (DOM.hiddenActionNameInput) DOM.hiddenActionNameInput.value = actionName;
         if (DOM.hiddenDetailsInput) DOM.hiddenDetailsInput.value = JSON.stringify(details);
         if (DOM.actionForm) {
@@ -717,6 +766,10 @@ const UIActionsAndEvents = {
 
     // More complex handler for actions that might open forms
     handleActionClick(actionName, buttonElement = null) {
+        if (isEventActive()) {
+            showToast("Please resolve the current event before performing other actions.", "warning");
+            return;
+        }
         if (DOM.hiddenActionNameInput) DOM.hiddenActionNameInput.value = actionName;
 
         switch (actionName) {
@@ -833,6 +886,14 @@ const UIActionsAndEvents = {
 
 
     handleDynamicFormSubmit(event) {
+        if (isEventActive()) {
+            showToast("Please resolve the current event before performing other actions.", "warning");
+            // Prevent form submission logic if an event is active.
+            // We might also want to remove any 'button-processing' class if it was added.
+            const processingButton = event.target.closest('.button-processing');
+            if (processingButton) processingButton.classList.remove('button-processing');
+            return;
+        }
         const targetButton = event.target.closest('.submit-details-button, #submit_buy_hemlock_herb_button, #submit_buy_borin_item_button, #submit-borin-repair-button');
         if (!targetButton) return;
 
@@ -1063,10 +1124,17 @@ const UIInitialPopups = {
                 }
                 if (DOM.eventPopup) DOM.eventPopup.style.display = 'block';
                 if (DOM.hagglingPopupWrapper) DOM.hagglingPopupWrapper.classList.add('hidden'); // Ensure haggle is hidden if event shows
+                document.body.classList.add('event-active'); // Add class to body
             } catch (e) {
                 console.error("Error processing event data for popup:", e);
                 if (DOM.eventPopup) DOM.eventPopup.style.display = 'none';
+                document.body.classList.remove('event-active'); // Ensure class is removed on error
             }
+        } else {
+            // If no event is active, ensure the class is not on the body
+            // This handles cases where the page might load without a pending event
+            // after a previous event was resolved.
+            document.body.classList.remove('event-active');
         }
     },
 
@@ -1116,6 +1184,17 @@ const UIHaggling = {
     currentHagglingData: null,
 
     populateAndShowModal(data) {
+        // This function shows the modal. It should not be callable if an event is active.
+        // The isEventActive() check should ideally be done by the caller of this function,
+        // or by UIInitialPopups.processHagglingPopup.
+        if (isEventActive() && DOM.hagglingPopupWrapper && DOM.hagglingPopupWrapper.classList.contains('hidden')) {
+            // If an event is active AND this haggling popup is currently hidden (i.e., we're trying to show it)
+            // then prevent showing it.
+            // If it's already visible and an event triggers, the body.event-active CSS should handle it.
+            showToast("Cannot start haggling while a game event is active.", "warning");
+            return;
+        }
+
         this.currentHagglingData = data;
         if (!DOM.hagglingPopupWrapper || !this.currentHagglingData) {
             console.error("Haggling modal elements or data missing.");
@@ -1185,6 +1264,12 @@ const UIHaggling = {
     },
 
     handleChoice(choiceType) {
+        if (isEventActive()) {
+            // Haggling is modal. If an event is active, this modal should be blocked by body.event-active CSS.
+            // This is a defensive check.
+            showToast("Please resolve the current game event before continuing to haggle.", "warning");
+            return;
+        }
         if (!this.currentHagglingData) {
             console.error("No active haggling session data to process choice.");
             this.closeModal();
@@ -1313,6 +1398,12 @@ const UISkillAllocation = {
     },
 
     handleSkillChoiceClick(event) {
+        if (isEventActive()) {
+            // This check is theoretically not essential if the skill allocation modal itself is blocked by event-active CSS,
+            // but it's good for defense-in-depth.
+            showToast("Please resolve the current game event before allocating skill points.", "warning");
+            return;
+        }
         if (event.target.classList.contains('skill-allocation-choice-button')) {
             const skillName = event.target.dataset.skillName;
             if (skillName && DOM.actionForm && DOM.hiddenActionNameInput && DOM.hiddenDetailsInput) {
