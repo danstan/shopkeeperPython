@@ -1421,8 +1421,13 @@ const UIHaggling = {
     },
 
     handleChoice(choiceType) {
-        if (isEventActive()) {
+        console.log("[UIHaggling.handleChoice] Called with choiceType:", choiceType);
+
+        const eventActive = isEventActive();
+        console.log("[UIHaggling.handleChoice] isEventActive() returned:", eventActive);
+        if (eventActive) {
             showToast("Please resolve the current game event before continuing to haggle.", "warning");
+            console.log("[UIHaggling.handleChoice] Exiting because isEventActive() is true.");
             return;
         }
 
@@ -1430,11 +1435,12 @@ const UIHaggling = {
         // we should try to submit a decline action to the backend to clear the session there.
         // If currentHagglingData is truly corrupt, the backend might reject it, but it's worth trying.
         if (choiceType === 'decline') {
-            console.log("Haggling choice: Decline. Attempting to submit to backend.");
+            console.log("[UIHaggling.handleChoice] Processing 'decline'. Current haggling data:", this.currentHagglingData);
             // Try to determine context even if data is partial, default if not possible
             const context = (this.currentHagglingData && this.currentHagglingData.context)
                             ? this.currentHagglingData.context
                             : "player_selling"; // Default context for decline if unknown
+            console.log("[UIHaggling.handleChoice] Decline context determined as:", context);
             const actionName = context === "player_buying" ?
                                "PROCESS_PLAYER_HAGGLE_CHOICE_BUY" :
                                "PROCESS_PLAYER_HAGGLE_CHOICE_SELL";
@@ -1459,8 +1465,9 @@ const UIHaggling = {
         }
 
         // For 'accept' or 'persuade', we absolutely need valid currentHagglingData
+        console.log("[UIHaggling.handleChoice] Validating currentHagglingData for accept/persuade. Data:", this.currentHagglingData);
         if (!this.currentHagglingData || typeof this.currentHagglingData !== 'object' || !this.currentHagglingData.context) {
-            console.error("No valid haggling session data to process choice (accept/persuade). Current data:", this.currentHagglingData);
+            console.error("[UIHaggling.handleChoice] No valid haggling session data to process choice (accept/persuade). Current data:", this.currentHagglingData);
             showToast("Cannot process action due to missing trade data. Please decline.", "error");
             // Do not close modal here, let user explicitly decline the error state.
             return;
@@ -1469,19 +1476,25 @@ const UIHaggling = {
         const actionName = this.currentHagglingData.context === "player_buying" ?
                            "PROCESS_PLAYER_HAGGLE_CHOICE_BUY" :
                            "PROCESS_PLAYER_HAGGLE_CHOICE_SELL";
+        console.log("[UIHaggling.handleChoice] Determined actionName:", actionName);
 
         const details = {
             haggle_choice: choiceType,
             // Backend uses self.active_haggling_session
         };
+        console.log("[UIHaggling.handleChoice] Prepared details for submission:", details);
 
         if (DOM.actionForm && DOM.hiddenActionNameInput && DOM.hiddenDetailsInput) {
+            console.log("[UIHaggling.handleChoice] Form elements found. Setting values and submitting.");
             DOM.hiddenActionNameInput.value = actionName;
             DOM.hiddenDetailsInput.value = JSON.stringify(details);
             DOM.actionForm.submit();
             // Backend response will update or close the modal.
         } else {
-            console.error("Action form elements missing for haggling submission (accept/persuade).");
+            console.error("[UIHaggling.handleChoice] Action form elements missing for haggling submission (accept/persuade).");
+            console.log("[UIHaggling.handleChoice] DOM.actionForm:", DOM.actionForm);
+            console.log("[UIHaggling.handleChoice] DOM.hiddenActionNameInput:", DOM.hiddenActionNameInput);
+            console.log("[UIHaggling.handleChoice] DOM.hiddenDetailsInput:", DOM.hiddenDetailsInput);
             showToast("Error submitting haggle choice.", "error");
             this.closeModal(); // Fallback close
         }
