@@ -1671,6 +1671,7 @@ function main() {
     UITopMenu.init();
     UISkillAllocation.init();
     UIAsiFeatChoice.init(); // Initialize ASI/Feat choice UI
+    UIHaggling.init(); // Initialize Haggling UI event listeners
 
     if (DOM.actionForm) { // Core game interactions are available
         UIActionsAndEvents.init();
