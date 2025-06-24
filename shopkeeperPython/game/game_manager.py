@@ -490,19 +490,18 @@ class GameManager:
                 else: self._print(f"  Cannot travel to unknown town: {town_name}.")
             elif action_name == "gather_resources":
                 self._print(f"  {self.character.name} attempts to gather resources in {self.current_town.name}.")
+                outcome_message = "Found nothing of interest this time." # Default outcome
+                gathered_resource_details = {} # For journal
+
                 if self.current_town and self.current_town.nearby_resources:
                     chosen_resource_name = random.choice(self.current_town.nearby_resources)
-                    # Ensure chosen_resource_name is in RESOURCE_ITEM_DEFINITIONS
                     if chosen_resource_name in RESOURCE_ITEM_DEFINITIONS:
                         resource_def = RESOURCE_ITEM_DEFINITIONS[chosen_resource_name]
-                        quantity_gathered = random.randint(1, 3) # Default quantity
-
-                        # Get item details from RESOURCE_ITEM_DEFINITIONS
+                        quantity_gathered = random.randint(1, 3)
                         item_description = resource_def.get("description", "A gathered resource.")
                         item_base_value = resource_def.get("base_value", 0)
                         item_type = resource_def.get("item_type", "resource")
-                        item_quality = resource_def.get("quality", "Common") # Default quality
-
+                        item_quality = resource_def.get("quality", "Common")
                         gathered_item = Item(
                             name=chosen_resource_name,
                             description=item_description,
@@ -512,12 +511,23 @@ class GameManager:
                             quantity=quantity_gathered
                         )
                         self.character.add_item_to_inventory(gathered_item)
-                        self._print(f"  Found {quantity_gathered}x {chosen_resource_name}.")
+                        outcome_message = f"Found {quantity_gathered}x {chosen_resource_name}."
+                        self._print(f"  {outcome_message}")
                         action_xp_reward = 5
+                        gathered_resource_details = {"item_name": chosen_resource_name, "quantity": quantity_gathered, "town": self.current_town.name}
                     else:
-                        self._print(f"  Could not find definition for resource: {chosen_resource_name}.")
+                        outcome_message = f"Could not find definition for resource: {chosen_resource_name}."
+                        self._print(f"  {outcome_message}")
                 else:
-                    self._print("  No resources available to gather in this town.")
+                    outcome_message = "No resources available to gather in this town."
+                    self._print(f"  {outcome_message}")
+
+                self.add_journal_entry(
+                    action_type="Gather Resources",
+                    summary=f"{self.character.name} gathered resources in {self.current_town.name}.",
+                    details=gathered_resource_details,
+                    outcome=outcome_message
+                )
             elif action_name == "wait": self._print(f"  {self.character.name} waits."); action_xp_reward = 1
             elif action_name == "buy_from_npc":
                 action_xp_reward = self._handle_buy_from_npc(action_details) # Returns 1 if successful, 0 otherwise
@@ -657,23 +667,26 @@ class GameManager:
 
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)
 
-        # --- Post-action processing (Time, Events, NPC Sales) ---
+        # --- Time Advancement ---
+        # This section is now processed BEFORE events that might return early.
         hours_to_advance = time_advanced_by_action_hours if time_advanced_by_action_hours > 0 else 1
-        if self.character.is_dead and time_advanced_by_action_hours == 0: hours_to_advance = 1 # Ensure time passes if dead
+        if self.character.is_dead and time_advanced_by_action_hours == 0:
+            hours_to_advance = 1 # Ensure time passes if dead, even if action didn't specify hours
 
         day_before_advancing_time = self.time.current_day
         self.time.advance_hour(hours_to_advance)
-        if self.time.current_day != day_before_advancing_time and self.tracking_day == day_before_advancing_time: # Check tracking_day too
-            self._run_end_of_day_summary(self.tracking_day) # Pass the day that just ended
+        # End of day summary check also moved up, if time advancement causes day to change.
+        if self.time.current_day != day_before_advancing_time and self.tracking_day == day_before_advancing_time:
+            self._run_end_of_day_summary(self.tracking_day)
 
-        if not self.character.is_dead:
-            # --- Event System ---
+        # --- Event System (Post Time-Advancement) ---
+        if not self.character.is_dead: # Events only if character is not dead
             skill_for_action = self.ACTION_SKILL_MAP.get(action_name)
             action_allows_generic_event = self.ACTIONS_ALLOWING_GENERIC_EVENTS.get(action_name, True)
 
             event_to_process_name = None
-            event_choices_for_ui = None
-            event_object_to_process = None
+            # event_choices_for_ui = None # Not needed at this scope
+            # event_object_to_process = None # Not needed at this scope
 
             # Determine if a skill-specific event is attempted
             if skill_for_action and random.random() < self.SKILL_EVENT_CHANCE_PER_HOUR:
@@ -694,29 +707,28 @@ class GameManager:
 
             # Process the triggered event, if any
             if event_to_process_name:
-                event_object_to_process = next((ev for ev in self.skill_check_events if ev.name == event_to_process_name), None)
-                if event_object_to_process:
-                    # Call resolve_event to get choices for GameManager (redundant as trigger_random_event also calls it)
-                    # This also handles printing choices to console again.
-                    event_choices_for_ui = self.event_manager.resolve_event(event_object_to_process)
-
-                    if event_choices_for_ui: # Event has choices, so it's pending for UI
+                current_event_object = next((ev for ev in self.skill_check_events if ev.name == event_to_process_name), None)
+                if current_event_object:
+                    current_event_choices = self.event_manager.resolve_event(current_event_object)
+                    if current_event_choices: # Event has choices, so it's pending for UI
                         self._print(f"  Event '{event_to_process_name}' is pending player choice.")
+                        # IMPORTANT: Time has already advanced. Journal entry for the action is already made (if applicable).
+                        # Now we return to UI for event choice.
                         return {
                             "type": "event_pending",
                             "event_data": {
                                 "name": event_to_process_name,
-                                "description": event_object_to_process.description,
-                                "choices": event_choices_for_ui
+                                "description": current_event_object.description,
+                                "choices": current_event_choices
                             }
                         }
                     else: # Event has no choices (direct outcome)
                         self._print(f"  Event '{event_to_process_name}' triggered with no UI choices. Attempting direct execution.")
-                        self.event_manager.execute_skill_choice(event_object_to_process, 0) # Assuming 0 for direct/default
-                        # Event effects are applied. Action is complete for this turn regarding this event.
-                        # Flow continues to NPC sales, etc.
+                        self.event_manager.execute_skill_choice(current_event_object, 0)
+                        # Direct event effects applied. Flow continues to NPC sales, etc.
 
-            # --- NPC Sales Logic ---
+            # --- NPC Sales Logic (Post Events) ---
+            # This runs if no event caused an early return (i.e., event was direct outcome or no event occurred)
             if self.shop and self.shop.inventory and action_name not in ["buy_from_own_shop", "sell_to_own_shop", "buy_from_npc", "set_shop_specialization", "upgrade_shop", "craft"]:
                 current_base_npc_buy_chance = Shop.BASE_NPC_BUY_CHANCE
                 current_reputation_buy_chance_multiplier = Shop.REPUTATION_BUY_CHANCE_MULTIPLIER
@@ -750,16 +762,18 @@ class GameManager:
             elif self.current_town and not self.character.is_dead and self.shop: # Fallback customer interaction
                  if random.random() < self.CUSTOMER_INTERACTION_CHANCE_PER_HOUR:
                     self._handle_customer_interaction()
+        # else: character is dead, already handled time advancement, skip events and NPC sales.
 
         # After all actions and time advancement, check for pending ASI/Feat choice
         if self.character and hasattr(self.character, 'pending_asi_feat_choice') and self.character.pending_asi_feat_choice:
             self._print(f"  ATTENTION: {self.character.name} has an Ability Score Improvement or Feat choice pending!")
             # In a full UI, this might trigger a different game state or modal for the player to make their choice.
 
-        if event_data_for_return and "type" in event_data_for_return: return event_data_for_return
+        # The event_data_for_return variable is no longer used to pass event pending status.
+        # That is handled by the direct return of the event_pending dictionary from the event block.
         return {"type": "action_complete"}
 
-    # ... (rest of the GameManager class, like _handle_buy_from_npc, _handle_customer_interaction, etc.)
+    # ... (rest of the GameManager class)
     # The provided overwrite will only replace perform_hourly_action.
     # For a full overwrite, the entire class content would be needed here.
     # For now, assuming the tool can replace just one method if the file path is given.
