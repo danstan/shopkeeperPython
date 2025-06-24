@@ -762,6 +762,44 @@ class Character:
         char._recalculate_all_attributes() # Recalculate attributes after loading all data
         return char
 
+    def to_dict(self, current_town_name: str = None, current_time_data: dict = None) -> dict:
+        # If current_town_name is None, default to "Starting Village"
+        town_name_to_save = current_town_name if current_town_name is not None else "Starting Village"
+        data = {
+            "name": self.name,
+            "stats": self.stats.copy(),
+            "stat_bonuses": self.stat_bonuses.copy(), # Item stat bonuses
+            "ac_bonus": self.ac_bonus,
+            "level": self.level,
+            "xp": self.xp,
+            "pending_xp": self.pending_xp,
+            "base_max_hp": self.base_max_hp,
+            "hp": self.hp,
+            "hit_dice": self.hit_dice,
+            "max_hit_dice": self.max_hit_dice,
+            "attunement_slots": self.attunement_slots,
+            "attuned_items": [item.to_dict() for item in self.attuned_items],
+            "exhaustion_level": self.exhaustion_level,
+            "inventory": [item.to_dict() for item in self.inventory],
+            "gold": self.gold,
+            "skill_points_to_allocate": self.skill_points_to_allocate,
+            "speed": self.speed,
+            "is_dead": self.is_dead,
+            "current_town_name": town_name_to_save,
+            "journal": [entry.to_dict() for entry in self.journal],
+            "background_id": self.background_id,
+            "appearance_data": self.appearance_data,
+            "attribute_bonuses_from_background": self.attribute_bonuses_from_background,
+            "feats": self.feats,
+            "feat_attribute_bonuses": self.feat_attribute_bonuses,
+            "feat_stat_bonuses": self.feat_stat_bonuses,
+            "faction_reputations": self.faction_reputations,
+            "pending_asi_feat_choice": self.pending_asi_feat_choice,
+        }
+        if current_time_data is not None:
+            data["game_time_snapshot"] = current_time_data
+        return data
+
     # --- Attribute Calculation Methods ---
     def _calculate_attribute_score(self, attribute_name: str) -> int:
         """
@@ -921,10 +959,10 @@ class Character:
         """Checks if the character has a specific feat."""
         return feat_id in self.feats
 
-    def to_dict(self, current_town_name: str = None) -> dict:
+    def to_dict(self, current_town_name: str = None, current_time_data: dict = None) -> dict:
         # If current_town_name is None, default to "Starting Village"
         town_name_to_save = current_town_name if current_town_name is not None else "Starting Village"
-        return {
+        data = {
             "name": self.name,
             "stats": self.stats.copy(),
             "stat_bonuses": self.stat_bonuses.copy(), # Item stat bonuses
@@ -937,7 +975,7 @@ class Character:
             "hit_dice": self.hit_dice,
             "max_hit_dice": self.max_hit_dice,
             "attunement_slots": self.attunement_slots,
-            "attuned_items": [item.to_dict() for item in self.attuned_items], # Corrected key
+            "attuned_items": [item.to_dict() for item in self.attuned_items],
             "exhaustion_level": self.exhaustion_level,
             "inventory": [item.to_dict() for item in self.inventory],
             "gold": self.gold,
@@ -955,6 +993,9 @@ class Character:
             "faction_reputations": self.faction_reputations,
             "pending_asi_feat_choice": self.pending_asi_feat_choice,
         }
+        if current_time_data is not None:
+            data["game_time_snapshot"] = current_time_data
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> 'Character':
@@ -998,6 +1039,9 @@ class Character:
         # are already correctly stored in base_max_hp, feat_attribute_bonuses, and feat_stat_bonuses respectively.
         # This is important to prevent issues like double-adding HP bonuses.
         char.pending_asi_feat_choice = data.get("pending_asi_feat_choice", False)
+
+        # Load game time snapshot
+        char.loaded_game_time_data = data.get("game_time_snapshot", None) # Store it on the character instance
 
         journal_data = data.get("journal", [])
         if journal_data:

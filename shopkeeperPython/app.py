@@ -1086,7 +1086,11 @@ def perform_action():
             if username and slot_index is not None:
                 if username in user_characters and 0 <= slot_index < len(user_characters[username]):
                     current_town_name_to_save = g.game_manager.current_town.name if g.game_manager.current_town else "Unknown"
-                    user_characters[username][slot_index] = g.player_char.to_dict(current_town_name=current_town_name_to_save)
+                    current_time_dict = g.game_manager.time.to_dict()
+                    user_characters[username][slot_index] = g.player_char.to_dict(
+                        current_town_name=current_town_name_to_save,
+                        current_time_data=current_time_dict
+                    )
                     save_user_characters() # Global save function is fine
                 else:
                     g.game_manager._print(f"  Warning: Character slot data mismatch for user {username}, slot {slot_index}. Could not save character state after action.")
@@ -1119,7 +1123,11 @@ def perform_action():
                 )
                 if username and slot_index is not None and user_characters.get(username) and 0 <= slot_index < len(user_characters[username]):
                     current_town_name_death_save = g.game_manager.current_town.name if g.game_manager.current_town else "Unknown"
-                    user_characters[username][slot_index] = g.player_char.to_dict(current_town_name=current_town_name_death_save)
+                    current_time_dict_death_save = g.game_manager.time.to_dict()
+                    user_characters[username][slot_index] = g.player_char.to_dict(
+                        current_town_name=current_town_name_death_save,
+                        current_time_data=current_time_dict_death_save
+                    )
                     save_user_characters()
 
             if username and slot_index is not None:
@@ -1222,7 +1230,11 @@ def submit_event_choice_route():
         slot_idx = session.get('selected_character_slot')
         if username and slot_idx is not None and username in user_characters and 0 <= slot_idx < len(user_characters[username]):
             current_town_name_event_save = g.game_manager.current_town.name if g.game_manager.current_town else "Unknown"
-            user_characters[username][slot_idx] = g.player_char.to_dict(current_town_name=current_town_name_event_save)
+            current_time_dict_event_save = g.game_manager.time.to_dict()
+            user_characters[username][slot_idx] = g.player_char.to_dict(
+                current_town_name=current_town_name_event_save,
+                current_time_data=current_time_dict_event_save
+            )
             save_user_characters()
         else:
             g.game_manager._print("  Warning: Could not save character state after event due to session/slot mismatch.")
