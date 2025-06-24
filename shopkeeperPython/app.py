@@ -811,6 +811,22 @@ def display_game_output():
     awaiting_event_choice_session = session.get('awaiting_event_choice', False)
     pending_event_data_session = session.get('pending_event_data', None)
 
+    # ASI/Feat Choice Data
+    player_pending_asi_feat_choice_display = False
+    feat_definitions_for_template = []
+    player_stats_for_template = {}
+
+    if g.player_char and hasattr(g.player_char, 'pending_asi_feat_choice'):
+        player_pending_asi_feat_choice_display = g.player_char.pending_asi_feat_choice
+
+    if player_pending_asi_feat_choice_display: # Only load feat defs if choice is pending
+        from .game.feats import FEAT_DEFINITIONS # Import locally to avoid circularity if any
+        feat_definitions_for_template = FEAT_DEFINITIONS
+
+    if g.player_char and hasattr(g.player_char, 'stats'):
+        player_stats_for_template = g.player_char.stats
+
+
     # Determine actual event display state for the template
     # If showing character creation or selection, suppress event pop-up and clear session flags
     if show_character_creation_form or show_character_selection:
@@ -897,7 +913,11 @@ def display_game_output():
                            pending_char_name=pending_char_name_display,
                            awaiting_event_choice=awaiting_event_choice_for_template, # Use the conditioned variable
                            pending_event_data_json=json.dumps(pending_event_data_for_template) if pending_event_data_for_template else None, # Use the conditioned variable
-                           last_skill_roll_str=last_skill_roll_str
+                           last_skill_roll_str=last_skill_roll_str,
+                           # ASI/Feat Choice Data for JS
+                           player_pending_asi_feat_choice=player_pending_asi_feat_choice_display,
+                           feat_definitions_json=json.dumps(feat_definitions_for_template),
+                           player_stats_json=json.dumps(player_stats_for_template)
                            )
 
 # --- Reroll Stat Route ---

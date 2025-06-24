@@ -3,7 +3,8 @@
 // --- CONSTANTS ---
 const CONSTANTS = {
     ACTION_NAMES: {
-        ALLOCATE_SKILL_POINT: 'ALLOCATE_SKILL_POINT', // New action
+        ALLOCATE_SKILL_POINT: 'ALLOCATE_SKILL_POINT',
+        PROCESS_ASI_FEAT_CHOICE: 'PROCESS_ASI_FEAT_CHOICE', // New action
         TRAVEL_TO_TOWN: 'travel_to_town',
         CRAFT: 'craft',
         BUY_FROM_OWN_SHOP: 'buy_from_own_shop',
@@ -27,6 +28,178 @@ const CONSTANTS = {
     SUB_LOCATIONS: {
         HEMLOCK_HUT: "Old Man Hemlock's Hut",
         BORIN_SMITHY: "Borin Stonebeard's Smithy",
+    }
+};
+
+const UIAsiFeatChoice = {
+    selectedMainChoice: null, // 'asi' or 'feat'
+    selectedAsiType: null, // 'plus_two' or 'plus_one_one'
+    selectedFeatId: null,
+
+    updateVisibility() {
+        DOM.asiOptionsContainer.classList.toggle('hidden', this.selectedMainChoice !== 'asi');
+        DOM.featOptionsContainer.classList.toggle('hidden', this.selectedMainChoice !== 'feat');
+
+        if (this.selectedMainChoice === 'asi') {
+            DOM.asiPlusTwoOptionsDiv.classList.toggle('hidden', this.selectedAsiType !== 'plus_two');
+            DOM.asiPlusOneOneOptionsDiv.classList.toggle('hidden', this.selectedAsiType !== 'plus_one_one');
+        }
+        this.validateAndToggleButton();
+    },
+
+    populateFeatList() {
+        if (!DOM.featSelectionListDiv) return;
+        DOM.featSelectionListDiv.innerHTML = ''; // Clear previous
+        const feats = gameConfigData.featDefinitionsJson;
+
+        if (!feats || feats.length === 0) {
+            DOM.featSelectionListDiv.innerHTML = '<p>No feats available at this time.</p>';
+            return;
+        }
+
+        feats.forEach(feat => {
+            const label = document.createElement('label');
+            label.className = 'feat-choice-label';
+            const input = document.createElement('input');
+            input.type = 'radio';
+            input.name = 'feat_choice_radio';
+            input.value = feat.id;
+            input.addEventListener('change', () => {
+                this.selectedFeatId = input.value;
+                this.validateAndToggleButton();
+            });
+
+            label.appendChild(input);
+            label.appendChild(document.createTextNode(` ${feat.name}`));
+            const desc = document.createElement('p');
+            desc.className = 'feat-description';
+            desc.textContent = feat.description;
+            label.appendChild(desc);
+            DOM.featSelectionListDiv.appendChild(label);
+        });
+    },
+
+    validateAndToggleButton() {
+        let isValid = false;
+        if (this.selectedMainChoice === 'asi') {
+            if (this.selectedAsiType === 'plus_two') {
+                isValid = !!DOM.asiPlusTwoStatSelect.value;
+            } else if (this.selectedAsiType === 'plus_one_one') {
+                const stat1 = DOM.asiPlusOneStat1Select.value;
+                const stat2 = DOM.asiPlusOneStat2Select.value;
+                isValid = stat1 && stat2 && stat1 !== stat2;
+            }
+        } else if (this.selectedMainChoice === 'feat') {
+            isValid = !!this.selectedFeatId;
+        }
+        DOM.confirmAsiFeatChoiceButton.disabled = !isValid;
+    },
+
+    resetSelections() {
+        this.selectedMainChoice = null;
+        this.selectedAsiType = null;
+        this.selectedFeatId = null;
+
+        if(DOM.asiFeatMainChoiceAsiRadio) DOM.asiFeatMainChoiceAsiRadio.checked = false;
+        if(DOM.asiFeatMainChoiceFeatRadio) DOM.asiFeatMainChoiceFeatRadio.checked = false;
+        if(DOM.asiIncreaseTypePlusTwoRadio) DOM.asiIncreaseTypePlusTwoRadio.checked = false;
+        if(DOM.asiIncreaseTypePlusOneOneRadio) DOM.asiIncreaseTypePlusOneOneRadio.checked = false;
+
+        if(DOM.asiPlusTwoStatSelect) DOM.asiPlusTwoStatSelect.value = '';
+        if(DOM.asiPlusOneStat1Select) DOM.asiPlusOneStat1Select.value = '';
+        if(DOM.asiPlusOneStat2Select) DOM.asiPlusOneStat2Select.value = '';
+
+        const featRadios = DOM.featSelectionListDiv.querySelectorAll('input[name="feat_choice_radio"]');
+        featRadios.forEach(radio => radio.checked = false);
+
+        this.updateVisibility();
+    },
+
+    openModal() {
+        if (DOM.asiFeatChoicePopupWrapper) {
+            this.resetSelections();
+            this.populateFeatList();
+            DOM.asiFeatChoicePopupWrapper.classList.remove('hidden');
+            DOM.asiFeatChoicePopup.setAttribute('aria-hidden', 'false');
+            // Focus management can be added here if needed
+        }
+    },
+
+    closeModal() { // Though not used if choice is mandatory
+        if (DOM.asiFeatChoicePopupWrapper) {
+            DOM.asiFeatChoicePopupWrapper.classList.add('hidden');
+            DOM.asiFeatChoicePopup.setAttribute('aria-hidden', 'true');
+        }
+    },
+
+    handleSubmit() {
+        let actionDetails = {};
+        if (this.selectedMainChoice === 'asi') {
+            actionDetails.choice_type = 'asi';
+            if (this.selectedAsiType === 'plus_two') {
+                actionDetails.stat_primary = DOM.asiPlusTwoStatSelect.value;
+                actionDetails.points_primary = 2;
+            } else if (this.selectedAsiType === 'plus_one_one') {
+                actionDetails.stat_primary = DOM.asiPlusOneStat1Select.value;
+                actionDetails.points_primary = 1;
+                actionDetails.stat_secondary = DOM.asiPlusOneStat2Select.value;
+                actionDetails.points_secondary = 1;
+            }
+        } else if (this.selectedMainChoice === 'feat') {
+            actionDetails.choice_type = 'feat';
+            actionDetails.feat_id = this.selectedFeatId;
+        }
+
+        if (DOM.actionForm && DOM.hiddenActionNameInput && DOM.hiddenDetailsInput) {
+            DOM.hiddenActionNameInput.value = CONSTANTS.ACTION_NAMES.PROCESS_ASI_FEAT_CHOICE;
+            DOM.hiddenDetailsInput.value = JSON.stringify(actionDetails);
+            DOM.actionForm.submit();
+            this.closeModal(); // Close after submission
+        } else {
+            console.error("Form elements missing for ASI/Feat choice submission.");
+            showToast("Error submitting your choice.", "error");
+        }
+    },
+
+    init() {
+        if (!DOM.asiFeatChoicePopupWrapper || !gameConfigData.playerPendingAsiFeatChoice) {
+            if (DOM.asiFeatChoicePopupWrapper) DOM.asiFeatChoicePopupWrapper.classList.add('hidden'); // Ensure hidden if not pending
+            return;
+        }
+        this.openModal(); // Open if pending
+
+        // Main choice (ASI vs Feat)
+        [DOM.asiFeatMainChoiceAsiRadio, DOM.asiFeatMainChoiceFeatRadio].forEach(radio => {
+            if(radio) radio.addEventListener('change', (event) => {
+                this.selectedMainChoice = event.target.value;
+                this.selectedAsiType = null; // Reset sub-choice
+                this.selectedFeatId = null;  // Reset sub-choice
+                if(DOM.asiIncreaseTypePlusTwoRadio) DOM.asiIncreaseTypePlusTwoRadio.checked = false;
+                if(DOM.asiIncreaseTypePlusOneOneRadio) DOM.asiIncreaseTypePlusOneOneRadio.checked = false;
+                const featRadios = DOM.featSelectionListDiv.querySelectorAll('input[name="feat_choice_radio"]');
+                featRadios.forEach(r => r.checked = false);
+                this.updateVisibility();
+            });
+        });
+
+        // ASI type choice (+2 vs +1/+1)
+        [DOM.asiIncreaseTypePlusTwoRadio, DOM.asiIncreaseTypePlusOneOneRadio].forEach(radio => {
+           if(radio) radio.addEventListener('change', (event) => {
+                this.selectedAsiType = event.target.value;
+                this.updateVisibility();
+            });
+        });
+
+        // Stat selection dropdowns for ASI
+        [DOM.asiPlusTwoStatSelect, DOM.asiPlusOneStat1Select, DOM.asiPlusOneStat2Select].forEach(select => {
+            if(select) select.addEventListener('change', () => this.validateAndToggleButton());
+        });
+
+        // Confirm button
+        if(DOM.confirmAsiFeatChoiceButton) DOM.confirmAsiFeatChoiceButton.addEventListener('click', () => this.handleSubmit());
+
+        // Initial validation check
+        this.updateVisibility();
     }
 };
 
@@ -142,6 +315,22 @@ function cacheDomElements() {
     DOM.skillPointsAvailableModalDisplay = document.getElementById('skill-points-available-modal-display');
     DOM.closeSkillAllocationPopupButton = document.getElementById('close-skill-allocation-popup');
 
+    // ASI/Feat Choice Popup
+    DOM.asiFeatChoicePopupWrapper = document.getElementById('asi-feat-choice-popup-wrapper');
+    DOM.asiFeatChoicePopup = document.getElementById('asi-feat-choice-popup');
+    DOM.asiFeatMainChoiceAsiRadio = document.querySelector('input[name="asi_feat_type_choice"][value="asi"]');
+    DOM.asiFeatMainChoiceFeatRadio = document.querySelector('input[name="asi_feat_type_choice"][value="feat"]');
+    DOM.asiOptionsContainer = document.getElementById('asi-options-container');
+    DOM.asiIncreaseTypePlusTwoRadio = document.querySelector('input[name="asi_increase_type"][value="plus_two"]');
+    DOM.asiIncreaseTypePlusOneOneRadio = document.querySelector('input[name="asi_increase_type"][value="plus_one_one"]');
+    DOM.asiPlusTwoOptionsDiv = document.getElementById('asi-plus-two-options');
+    DOM.asiPlusTwoStatSelect = document.getElementById('asi_plus_two_stat');
+    DOM.asiPlusOneOneOptionsDiv = document.getElementById('asi-plus-one-one-options');
+    DOM.asiPlusOneStat1Select = document.getElementById('asi_plus_one_stat1');
+    DOM.asiPlusOneStat2Select = document.getElementById('asi_plus_one_stat2');
+    DOM.featOptionsContainer = document.getElementById('feat-options-container');
+    DOM.featSelectionListDiv = document.getElementById('feat-selection-list');
+    DOM.confirmAsiFeatChoiceButton = document.getElementById('confirm-asi-feat-choice-button');
 
     // Toast Container
     DOM.toastContainer = document.getElementById('toast-container');
@@ -167,7 +356,10 @@ function loadConfigData() {
     gameConfigData.playerSkillPointsToAllocate = window.gameConfig.playerSkillPointsToAllocate || 0;
     gameConfigData.playerChosenSkillBonuses = window.gameConfig.playerChosenSkillBonuses || {};
     gameConfigData.characterAttributeDefinitions = window.gameConfig.characterAttributeDefinitions || {};
-
+    // ASI/Feat Choice config
+    gameConfigData.playerPendingAsiFeatChoice = window.gameConfig.playerPendingAsiFeatChoice || false;
+    gameConfigData.featDefinitionsJson = window.gameConfig.featDefinitionsJson || [];
+    gameConfigData.playerStatsJson = window.gameConfig.playerStatsJson || {};
 }
 
 
@@ -996,7 +1188,8 @@ function main() {
     UIPanels.init();
     UIBottomTabs.init();
     UITopMenu.init();
-    UISkillAllocation.init(); // Initialize skill allocation UI
+    UISkillAllocation.init();
+    UIAsiFeatChoice.init(); // Initialize ASI/Feat choice UI
 
     if (DOM.actionForm) { // Core game interactions are available
         UIActionsAndEvents.init();

@@ -191,6 +191,38 @@ This report details the analysis of the current game codebase and UI/UX against 
     *   **`style.css`**: The stylesheet was reorganized with more descriptive comments. The `!important` directive in `.active-tab-button` was removed. A CSS variable (`--spacing-unit`) was introduced to standardize spacing. Default visibility for JavaScript-toggled UI elements (like full panels and dynamic forms) is now more robustly handled through CSS classes.
     *   **Bug Fix**: Addressed an issue where all full-panel module windows (inventory, shop management, etc.) were incorrectly appearing simultaneously after game actions. The JavaScript logic controlling panel visibility (`UIPanels.init` and a safeguard in `main()`) was corrected to ensure panels are hidden by default on page load and only the specifically activated panel is shown.
 
+*   **Update (2025-06-25 by Agent Jules): Verification of "+1 Skill Bonus Choice" Feature**
+    *   Reviewed the implementation of the "+1 Skill Bonus Choice" feature, which was listed as High Priority.
+    *   **Finding:** This feature appears to be fully implemented.
+        *   `Character.py` correctly accrues `skill_points_to_allocate` and has an `allocate_skill_point` method that updates `chosen_skill_bonuses`. The `get_attribute_score` method correctly incorporates these bonuses.
+        *   `main_ui.js` includes a `UISkillAllocation` module that handles the UI modal, populates skill choices, and submits the `ALLOCATE_SKILL_POINT` action.
+        *   `index.html` contains the necessary modal structure and a button to trigger it, conditionally displayed when skill points are available. Jinja variables correctly pass data to the JavaScript.
+        *   `app.py` handles the `perform_action` route, which calls `game_manager.py`.
+        *   `game_manager.py`'s `perform_hourly_action` method has a case for `ALLOCATE_SKILL_POINT` that correctly calls the character's allocation method and does not advance game time or award XP.
+    *   **Conclusion:** The `game_analysis_report.md` may have been outdated regarding this specific item, or the initial analysis missed the UI components updated in the previous UI refactoring. This feature is considered complete. The next high-priority item will be addressed.
+
+*   **Update (2025-06-25 by Agent Jules): Implemented UI for ASI/Feat Choice**
+    *   Successfully implemented the UI for Ability Score Improvement (ASI) and Feat selection, addressing a high-priority item.
+    *   **HTML (`index.html`):** Added a new modal (`#asi-feat-choice-popup-wrapper`) that is displayed when a character has a pending ASI/Feat choice. The modal includes radio buttons to choose between ASI or Feat, and further nested options for specific ASI distributions (+2 to one stat, or +1 to two different stats) using dropdowns, and a list for feat selection.
+    *   **JavaScript (`main_ui.js`):**
+        *   Created a new `UIAsiFeatChoice` module.
+        *   Added logic to automatically display the modal if `playerPendingAsiFeatChoice` is true.
+        *   Implemented dynamic population of the feat list from `gameConfigData.featDefinitionsJson`.
+        *   Handled UI state changes based on user selections (e.g., showing/hiding ASI or Feat specific sections).
+        *   Added client-side validation (e.g., ensuring two different stats are chosen for +1/+1 ASI).
+        *   The "Confirm Choice" button is enabled/disabled based on valid selections.
+        *   On confirmation, the module constructs an `action_details` object (with `choice_type`, and relevant stat/feat data) and submits a new action `PROCESS_ASI_FEAT_CHOICE`.
+    *   **Python (`app.py`):**
+        *   Updated `display_game_output` to pass `player_pending_asi_feat_choice` (from `g.player_char`), `feat_definitions_json` (from `game.feats.FEAT_DEFINITIONS`), and `player_stats_json` to the `index.html` template for use by JavaScript.
+    *   **Python (`game_manager.py`):**
+        *   Added a new case for the `PROCESS_ASI_FEAT_CHOICE` action within `perform_hourly_action`.
+        *   This handler parses the `action_details` (choice_type, stat/feat data).
+        *   It calls the appropriate methods on the `Character` object: `apply_stat_increase_choice()` for ASIs or `apply_feat_choice()` for feats. These character methods handle the application of choices, updating stats/feats, and setting `pending_asi_feat_choice` to `False`.
+        *   This action correctly does not advance game time or award XP.
+        *   Journal entries are added to record the choice.
+    *   **Backend (`Character.py`):** Existing methods `apply_stat_increase_choice` and `apply_feat_choice` were leveraged. The flag `pending_asi_feat_choice` is set during level up (`_check_level_up`) at appropriate ASI levels.
+    *   **Testing:** A detailed testing plan was outlined, covering modal appearance, selection of different ASI options, feat selection, and validation. Manual execution of these tests would be required to fully confirm functionality.
+    *   **Impact:** This feature allows players to make crucial character development choices at milestone levels as per the GDD, significantly enhancing character progression.
 
 ## Overall Conclusion & Prioritized Recommendations
 
@@ -198,8 +230,8 @@ The game has a solid foundational implementation for many core GDD features. Key
 
 **High Priority (Gameplay Impact & Foundational):**
 
-1.  **Implement "+1 Skill Bonus Choice":** Crucial for character progression as per GDD.
-2.  **Implement UI for ASI/Feat Choice:** Essential for milestone level progression.
+1.  **Implement "+1 Skill Bonus Choice":** Crucial for character progression as per GDD. *(Verified Complete - See Update Note 2025-06-25)*
+2.  **Implement UI for ASI/Feat Choice:** Essential for milestone level progression. *(Complete - See Update Note 2025-06-25)*
 3.  **Implement Interactive NPC Haggling:** A core GDD shopkeeping interaction.
 4.  **Integrate Long Rest Interruptions with Event System:** Make interruptions more thematic and dynamic.
 5.  **Implement UI for Attunement & Consumable Use:** Core item interactions are missing UI.

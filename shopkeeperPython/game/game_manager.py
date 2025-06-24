@@ -807,13 +807,44 @@ class GameManager:
                 else:
                     if self.character.allocate_skill_point(skill_name_to_allocate):
                         self._print(f"  Successfully allocated 1 point to {skill_name_to_allocate}.")
-                        # No XP for this administrative action
                         self.add_journal_entry(action_type="Allocate Skill Point", summary=f"Allocated 1 point to {skill_name_to_allocate}.", outcome="Success")
                     else:
-                        # allocate_skill_point method already prints error details
                         self.add_journal_entry(action_type="Allocate Skill Point", summary=f"Failed to allocate point to {skill_name_to_allocate}.", outcome="Failure")
-                action_xp_reward = 0 # No XP for this action
-                time_advanced_by_action_hours = 0 # Does not advance game hour
+                action_xp_reward = 0
+                time_advanced_by_action_hours = 0
+
+            elif action_name == "PROCESS_ASI_FEAT_CHOICE":
+                choice_type = action_details.get("choice_type")
+                if not self.character:
+                    self._print("  Cannot process ASI/Feat choice: No character loaded.")
+                elif not self.character.pending_asi_feat_choice:
+                    self._print(f"  {self.character.name} does not have an ASI/Feat choice pending.")
+                elif choice_type == "asi":
+                    stat_primary = action_details.get("stat_primary")
+                    points_primary = action_details.get("points_primary")
+                    stat_secondary = action_details.get("stat_secondary") # Optional
+                    points_secondary = action_details.get("points_secondary", 0) # Optional
+
+                    if self.character.apply_stat_increase_choice(stat_primary, points_primary, stat_secondary, points_secondary):
+                        summary_msg = f"Chose ASI: +{points_primary} {stat_primary}"
+                        if stat_secondary and points_secondary:
+                            summary_msg += f", +{points_secondary} {stat_secondary}"
+                        self._print(f"  {self.character.name} {summary_msg}.")
+                        self.add_journal_entry(action_type="ASI Choice", summary=summary_msg, outcome="Success")
+                    else:
+                        # apply_stat_increase_choice prints specific errors
+                        self.add_journal_entry(action_type="ASI Choice", summary="Failed to apply ASI choice.", outcome="Failure")
+                elif choice_type == "feat":
+                    feat_id = action_details.get("feat_id")
+                    if self.character.apply_feat_choice(feat_id):
+                        # apply_feat_choice prints success/error and adds feat name
+                        self.add_journal_entry(action_type="Feat Choice", summary=f"Chose feat: {feat_id}", outcome="Success")
+                    else:
+                        self.add_journal_entry(action_type="Feat Choice", summary=f"Failed to choose feat: {feat_id}", outcome="Failure")
+                else:
+                    self._print(f"  Invalid choice_type '{choice_type}' for ASI/Feat.")
+                action_xp_reward = 0
+                time_advanced_by_action_hours = 0
 
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 

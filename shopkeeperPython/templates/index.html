@@ -495,6 +495,79 @@
         </div>
     </div>
 
+    {# ASI/Feat Choice Modal #}
+    <div id="asi-feat-choice-popup-wrapper" class="hidden">
+        <div id="asi-feat-choice-popup" class="modal" role="dialog" aria-modal="true" aria-labelledby="asi-feat-choice-popup-name">
+            <div class="modal-content">
+                {# <button class="close-button" id="close-asi-feat-choice-popup" aria-label="Close ASI/Feat Choice">&times;</button> #}
+                {# No close button, choice is mandatory if pending #}
+                <h3 id="asi-feat-choice-popup-name">Level Up! Choose Your Advancement</h3>
+
+                <div class="asi-feat-main-choice">
+                    <p>What would you like to do?</p>
+                    <label><input type="radio" name="asi_feat_type_choice" value="asi"> Increase Ability Scores</label>
+                    <label><input type="radio" name="asi_feat_type_choice" value="feat"> Select a Feat</label>
+                </div>
+
+                <div id="asi-options-container" class="details-section hidden">
+                    <h4>Increase Ability Scores</h4>
+                    <label><input type="radio" name="asi_increase_type" value="plus_two"> +2 to one Ability Score</label>
+                    <label><input type="radio" name="asi_increase_type" value="plus_one_one"> +1 to two different Ability Scores</label>
+
+                    <div id="asi-plus-two-options" class="details-subsection hidden">
+                        <label for="asi_plus_two_stat">Select Stat for +2:</label>
+                        <select id="asi_plus_two_stat" class="themed-select">
+                            <option value="">-- Select Stat --</option>
+                            <option value="STR">Strength (STR)</option>
+                            <option value="DEX">Dexterity (DEX)</option>
+                            <option value="CON">Constitution (CON)</option>
+                            <option value="INT">Intelligence (INT)</option>
+                            <option value="WIS">Wisdom (WIS)</option>
+                            <option value="CHA">Charisma (CHA)</option>
+                        </select>
+                    </div>
+
+                    <div id="asi-plus-one-one-options" class="details-subsection hidden">
+                        <div>
+                            <label for="asi_plus_one_stat1">Select First Stat for +1:</label>
+                            <select id="asi_plus_one_stat1" class="themed-select">
+                                <option value="">-- Select Stat --</option>
+                                <option value="STR">Strength (STR)</option>
+                                <option value="DEX">Dexterity (DEX)</option>
+                                <option value="CON">Constitution (CON)</option>
+                                <option value="INT">Intelligence (INT)</option>
+                                <option value="WIS">Wisdom (WIS)</option>
+                                <option value="CHA">Charisma (CHA)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="asi_plus_one_stat2">Select Second Stat for +1:</label>
+                            <select id="asi_plus_one_stat2" class="themed-select">
+                                <option value="">-- Select Stat --</option>
+                                <option value="STR">Strength (STR)</option>
+                                <option value="DEX">Dexterity (DEX)</option>
+                                <option value="CON">Constitution (CON)</option>
+                                <option value="INT">Intelligence (INT)</option>
+                                <option value="WIS">Wisdom (WIS)</option>
+                                <option value="CHA">Charisma (CHA)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="feat-options-container" class="details-section hidden">
+                    <h4>Select a Feat</h4>
+                    <div id="feat-selection-list" class="scrollable-list" role="radiogroup" aria-labelledby="feat-selection-heading">
+                        <!-- Feats will be populated by JavaScript -->
+                        <p>Loading feats...</p>
+                    </div>
+                </div>
+
+                <button type="button" id="confirm-asi-feat-choice-button" class="action-button" disabled>Confirm Choice</button>
+            </div>
+        </div>
+    </div>
+
     {# Conditionally render event popup wrapper only if needed, JS still controls final visibility via .hidden #}
     {% if awaiting_event_choice and pending_event_data_json %}
     <div id="event-choice-popup-wrapper"> {# Wrapper to allow JS to control the .modal itself if needed #}
