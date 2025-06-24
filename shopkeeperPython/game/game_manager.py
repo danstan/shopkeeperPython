@@ -1158,16 +1158,28 @@ class GameManager:
             event_to_process_name = None
 
             if skill_for_action and random.random() < self.SKILL_EVENT_CHANCE_PER_HOUR:
-                possible_skill_events = [ev for ev in self.skill_check_events if any(choice.get('skill') == skill_for_action for choice in ev.skill_check_options)]
+                possible_skill_events = [
+                    ev for ev in self.skill_check_events
+                    if self.character.level >= ev.min_level and \
+                       any(choice.get('skill') == skill_for_action for choice in ev.skill_check_options)
+                ]
                 if possible_skill_events:
                     event_to_process_name = self.event_manager.trigger_random_event(possible_events=possible_skill_events)
 
             if not event_to_process_name and action_allows_generic_event and random.random() < self.BASE_EVENT_CHANCE_PER_HOUR:
-                possible_generic_events = [ev for ev in self.skill_check_events if ev.event_type == "generic"]
+                possible_generic_events = [
+                    ev for ev in self.skill_check_events
+                    if self.character.level >= ev.min_level and \
+                       ev.event_type == "generic"
+                ]
                 if possible_generic_events:
                     event_to_process_name = self.event_manager.trigger_random_event(possible_events=possible_generic_events)
 
             if event_to_process_name:
+                # Need to ensure current_event_object is fetched from the original unfiltered list
+                # or that the name is sufficient for EventManager to handle (which it should be).
+                # The event_manager.trigger_random_event already returns the name of an event from the filtered list.
+                # So, fetching it again from self.skill_check_events using the name is correct.
                 current_event_object = next((ev for ev in self.skill_check_events if ev.name == event_to_process_name), None)
                 if current_event_object:
                     current_event_choices = self.event_manager.resolve_event(current_event_object)
