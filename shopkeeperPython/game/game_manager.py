@@ -670,14 +670,34 @@ class GameManager:
             # --- Event System ---
             skill_for_action = self.ACTION_SKILL_MAP.get(action_name)
             event_triggered_by_skill = False
+            possible_events_for_skill = []
+            possible_generic_events = []
+
             if skill_for_action and random.random() < self.SKILL_EVENT_CHANCE_PER_HOUR:
-                event_data_for_return = self.event_manager.trigger_random_event(skill_name=skill_for_action, is_generic=False)
-                if event_data_for_return and event_data_for_return.get("type") == "event_pending": return event_data_for_return
-                if event_data_for_return: event_triggered_by_skill = True
+                # Filter events that have at least one skill_check_option matching the skill_for_action
+                # and are not explicitly typed as "generic" if we want skill-specific ones.
+                # Or, more simply, any event that *can* use the skill.
+                for event_obj in self.skill_check_events:
+                    if any(choice.get('skill') == skill_for_action for choice in event_obj.skill_check_options):
+                        possible_events_for_skill.append(event_obj)
+
+                if possible_events_for_skill:
+                    self._print(f"  Considering {len(possible_events_for_skill)} skill-related events for '{skill_for_action}'.")
+                    event_data_for_return = self.event_manager.trigger_random_event(possible_events=possible_events_for_skill)
+                    if event_data_for_return and event_data_for_return.get("type") == "event_pending": return event_data_for_return
+                    if event_data_for_return: event_triggered_by_skill = True
 
             if not event_triggered_by_skill and self.ACTIONS_ALLOWING_GENERIC_EVENTS.get(action_name, True) and random.random() < self.BASE_EVENT_CHANCE_PER_HOUR:
-                event_data_for_return = self.event_manager.trigger_random_event(is_generic=True)
-                if event_data_for_return and event_data_for_return.get("type") == "event_pending": return event_data_for_return
+                # Filter for events explicitly marked as "generic" or those without specific skill associations
+                # if a distinction is needed. For now, let's assume generic means event_type == "generic".
+                for event_obj in self.skill_check_events:
+                    if event_obj.event_type == "generic": # Assuming Event class has event_type attribute
+                        possible_generic_events.append(event_obj)
+
+                if possible_generic_events:
+                    self._print(f"  Considering {len(possible_generic_events)} generic events.")
+                    event_data_for_return = self.event_manager.trigger_random_event(possible_events=possible_generic_events)
+                    if event_data_for_return and event_data_for_return.get("type") == "event_pending": return event_data_for_return
 
             # --- NPC Sales Logic ---
             if self.shop and self.shop.inventory and action_name not in ["buy_from_own_shop", "sell_to_own_shop", "buy_from_npc", "set_shop_specialization", "upgrade_shop", "craft"]:
