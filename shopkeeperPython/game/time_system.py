@@ -25,11 +25,14 @@ class GameTime:
         Returns:
             tuple[int, int]: A tuple containing (days_passed, new_current_hour).
         """
+        print(f"  DEBUG GameTime.advance_hour: Start. Current: Day {self.current_day}, {self.current_hour:02d}:00. Advancing by {hours} hour(s).")
+
         if hours < 0:
-            # print("Cannot advance time by a negative number of hours.") # Less verbose
+            print("  DEBUG GameTime.advance_hour: Cannot advance time by a negative number of hours.")
             return 0, self.current_hour
 
         if hours == 0:
+            print("  DEBUG GameTime.advance_hour: Advancing by 0 hours, no change.")
             return 0, self.current_hour
 
         days_passed = 0
@@ -39,8 +42,10 @@ class GameTime:
             self.current_hour -= 24
             self.current_day += 1
             days_passed += 1
+            # This print is already useful:
             print(f"A new day has begun! It is now Day {self.current_day}.")
 
+        print(f"  DEBUG GameTime.advance_hour: End. New time: Day {self.current_day}, {self.current_hour:02d}:00. Days passed this call: {days_passed}.")
         return days_passed, self.current_hour
 
     def get_time_string(self) -> str:

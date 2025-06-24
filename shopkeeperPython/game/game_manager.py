@@ -673,10 +673,19 @@ class GameManager:
         if self.character.is_dead and time_advanced_by_action_hours == 0:
             hours_to_advance = 1 # Ensure time passes if dead, even if action didn't specify hours
 
+        self._print(f"  DEBUG: Time Advancement for action '{action_name}':")
+        self._print(f"    - Initial time_advanced_by_action_hours: {time_advanced_by_action_hours}")
+        self._print(f"    - Calculated hours_to_advance: {hours_to_advance}")
+        self._print(f"    - Time before advance_hour: {self.time.get_time_string()}")
+
         day_before_advancing_time = self.time.current_day
         self.time.advance_hour(hours_to_advance)
+
+        self._print(f"    - Time after advance_hour: {self.time.get_time_string()}")
+
         # End of day summary check also moved up, if time advancement causes day to change.
         if self.time.current_day != day_before_advancing_time and self.tracking_day == day_before_advancing_time:
+            self._print(f"  DEBUG: Day changed. Running end of day summary for day {self.tracking_day}.")
             self._run_end_of_day_summary(self.tracking_day)
 
         # --- Event System (Post Time-Advancement) ---
