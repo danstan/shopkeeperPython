@@ -119,6 +119,7 @@ class Character:
         self.inventory = []
         self.gold = 100 # Default starting gold, can be modified by background
         self.skill_points_to_allocate = 0
+        self.chosen_skill_bonuses: dict[str, int] = {} # E.g. {"Persuasion": 1, "Stealth": 2}
         self.speed = 30
         self.is_dead = False # Added for perma-death
         self.current_town_name = "Starting Village" # Initialize current town name
@@ -795,6 +796,7 @@ class Character:
             "feat_stat_bonuses": self.feat_stat_bonuses,
             "faction_reputations": self.faction_reputations,
             "pending_asi_feat_choice": self.pending_asi_feat_choice,
+            "chosen_skill_bonuses": self.chosen_skill_bonuses.copy(),
         }
         if current_time_data is not None:
             data["game_time_snapshot"] = current_time_data
@@ -822,10 +824,11 @@ class Character:
         base_score = self.attributes.get(attribute_name, 0) # From stat modifier
         background_bonus = self.attribute_bonuses_from_background.get(attribute_name, 0)
         feat_bonus = self.feat_attribute_bonuses.get(attribute_name, 0) # Bonus directly to the attribute/skill
-        final_score = base_score + background_bonus + feat_bonus
+        chosen_skill_bonus = self.chosen_skill_bonuses.get(attribute_name, 0) # Bonus from allocated skill points
+        final_score = base_score + background_bonus + feat_bonus + chosen_skill_bonus
 
         # This print can be very verbose, consider removing or conditionalizing it
-        # print(f"DEBUG: get_attribute_score for {attribute_name}: Base={base_score}, BgBonus={background_bonus}, FeatBonus={feat_bonus}, Final={final_score}")
+        # print(f"DEBUG: get_attribute_score for {attribute_name}: Base={base_score}, BgBonus={background_bonus}, FeatBonus={feat_bonus}, ChosenBonus={chosen_skill_bonus}, Final={final_score}")
 
         return final_score
 
@@ -1039,6 +1042,7 @@ class Character:
         # are already correctly stored in base_max_hp, feat_attribute_bonuses, and feat_stat_bonuses respectively.
         # This is important to prevent issues like double-adding HP bonuses.
         char.pending_asi_feat_choice = data.get("pending_asi_feat_choice", False)
+        char.chosen_skill_bonuses = data.get("chosen_skill_bonuses", {}) # Load chosen skill bonuses
 
         # Load game time snapshot
         char.loaded_game_time_data = data.get("game_time_snapshot", None) # Store it on the character instance
@@ -1056,6 +1060,25 @@ class Character:
 
         char._recalculate_all_attributes()
         return char
+
+    # --- Skill Point Allocation Method ---
+    def allocate_skill_point(self, skill_name: str) -> bool:
+        """
+        Allocates a skill point to the specified skill.
+        """
+        if self.skill_points_to_allocate <= 0:
+            print(f"Error: {self.name} has no skill points to allocate.")
+            return False
+
+        if skill_name not in self.ATTRIBUTE_DEFINITIONS:
+            print(f"Error: '{skill_name}' is not a valid skill.")
+            return False
+
+        self.chosen_skill_bonuses[skill_name] = self.chosen_skill_bonuses.get(skill_name, 0) + 1
+        self.skill_points_to_allocate -= 1
+        print(f"{self.name} allocated 1 skill point to {skill_name}. New bonus: {self.chosen_skill_bonuses[skill_name]}. Points remaining: {self.skill_points_to_allocate}.")
+        # No need to call _recalculate_all_attributes here, as get_attribute_score directly uses chosen_skill_bonuses.
+        return True
 
     # --- ASI/Feat Choice Methods ---
     def set_pending_asi_feat_choice(self, status: bool):

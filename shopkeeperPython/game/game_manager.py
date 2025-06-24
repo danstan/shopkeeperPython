@@ -798,6 +798,23 @@ class GameManager:
                 self.add_journal_entry(action_type="Post Advertisements", summary=f"Posted advertisements in {self.current_town.name}.", outcome=outcome_message)
                 time_advanced_by_action_hours = 1
 
+            elif action_name == "ALLOCATE_SKILL_POINT":
+                skill_name_to_allocate = action_details.get("skill_name")
+                if not skill_name_to_allocate:
+                    self._print("  No skill_name provided for skill point allocation.")
+                elif not self.character:
+                    self._print("  Cannot allocate skill point: No character loaded.")
+                else:
+                    if self.character.allocate_skill_point(skill_name_to_allocate):
+                        self._print(f"  Successfully allocated 1 point to {skill_name_to_allocate}.")
+                        # No XP for this administrative action
+                        self.add_journal_entry(action_type="Allocate Skill Point", summary=f"Allocated 1 point to {skill_name_to_allocate}.", outcome="Success")
+                    else:
+                        # allocate_skill_point method already prints error details
+                        self.add_journal_entry(action_type="Allocate Skill Point", summary=f"Failed to allocate point to {skill_name_to_allocate}.", outcome="Failure")
+                action_xp_reward = 0 # No XP for this action
+                time_advanced_by_action_hours = 0 # Does not advance game hour
+
             else: self._print(f"  Action '{action_name}' not recognized or fully implemented.")
 
             if action_xp_reward > 0: self.character.award_xp(action_xp_reward)

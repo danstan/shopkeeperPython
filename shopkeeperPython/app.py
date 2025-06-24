@@ -611,6 +611,8 @@ def display_game_output():
     player_hp_display = 0
     player_max_hp_display = 0
     player_gold_display = 0 # Will be derived from g.player_char.gold later
+    player_skill_points_to_allocate_display = 0 # Default for skill points
+    player_chosen_skill_bonuses_display = {} # Default for chosen bonuses
     current_time_display = "N/A"
     current_town_display = "N/A"
     shop_inventory_display = ["Empty"]
@@ -726,6 +728,8 @@ def display_game_output():
                 player_stats_display = g.player_char.stats
                 player_hp_display = g.player_char.hp
                 player_max_hp_display = g.player_char.get_effective_max_hp()
+                player_skill_points_to_allocate_display = g.player_char.skill_points_to_allocate
+                player_chosen_skill_bonuses_display = g.player_char.chosen_skill_bonuses
                 # player_gold_display is handled globally at the end of display_game_output from g.player_char
                 current_time_display = g.game_manager.time.get_time_string()
                 current_town_display = g.game_manager.current_town.name if g.game_manager.current_town else "Unknown"
@@ -868,6 +872,9 @@ def display_game_output():
                            player_hp=player_hp_display,
                            player_max_hp=player_max_hp_display,
                            player_gold=player_gold_display,
+                           player_skill_points_to_allocate=player_skill_points_to_allocate_display, # New
+                           player_chosen_skill_bonuses=player_chosen_skill_bonuses_display, # New
+                           character_attribute_definitions_json=json.dumps(Character.ATTRIBUTE_DEFINITIONS), # New
                            current_time=current_time_display,
                            current_town_name=current_town_display,
                            shop_inventory=shop_inventory_display,

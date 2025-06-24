@@ -3,6 +3,7 @@
 // --- CONSTANTS ---
 const CONSTANTS = {
     ACTION_NAMES: {
+        ALLOCATE_SKILL_POINT: 'ALLOCATE_SKILL_POINT', // New action
         TRAVEL_TO_TOWN: 'travel_to_town',
         CRAFT: 'craft',
         BUY_FROM_OWN_SHOP: 'buy_from_own_shop',
@@ -133,6 +134,15 @@ function cacheDomElements() {
     DOM.eventPopupDescriptionEl = document.getElementById('event-popup-description');
     DOM.eventPopupChoicesContainer = document.getElementById('event-popup-choices');
 
+    // Skill Allocation Popup
+    DOM.allocateSkillPointsButton = document.getElementById('allocate-skill-points-button');
+    DOM.skillAllocationPopupWrapper = document.getElementById('skill-allocation-popup-wrapper');
+    DOM.skillAllocationPopup = document.getElementById('skill-allocation-popup');
+    DOM.skillAllocationChoicesContainer = document.getElementById('skill-allocation-choices');
+    DOM.skillPointsAvailableModalDisplay = document.getElementById('skill-points-available-modal-display');
+    DOM.closeSkillAllocationPopupButton = document.getElementById('close-skill-allocation-popup');
+
+
     // Toast Container
     DOM.toastContainer = document.getElementById('toast-container');
 }
@@ -153,6 +163,10 @@ function loadConfigData() {
     gameConfigData.pendingEventDataJson = window.gameConfig.pendingEventDataJson;
     gameConfigData.lastSkillRollStr = window.gameConfig.lastSkillRollStr;
     gameConfigData.submitEventChoiceUrl = window.gameConfig.submitEventChoiceUrl;
+    // New config data for skill allocation
+    gameConfigData.playerSkillPointsToAllocate = window.gameConfig.playerSkillPointsToAllocate || 0;
+    gameConfigData.playerChosenSkillBonuses = window.gameConfig.playerChosenSkillBonuses || {};
+    gameConfigData.characterAttributeDefinitions = window.gameConfig.characterAttributeDefinitions || {};
 
 }
 
@@ -867,6 +881,111 @@ const UIInitialPopups = {
     }
 };
 
+const UISkillAllocation = {
+    populateSkillAllocationModal() {
+        if (!DOM.skillAllocationChoicesContainer || !DOM.skillPointsAvailableModalDisplay || !gameConfigData.characterAttributeDefinitions) {
+            console.error("Skill allocation modal elements or config data missing.");
+            return;
+        }
+
+        DOM.skillAllocationChoicesContainer.innerHTML = ''; // Clear previous buttons
+        const pointsAvailable = gameConfigData.playerSkillPointsToAllocate || 0;
+        DOM.skillPointsAvailableModalDisplay.textContent = pointsAvailable;
+
+        if (pointsAvailable <= 0) {
+            DOM.skillAllocationChoicesContainer.innerHTML = '<p>No skill points available to allocate.</p>';
+            // Optionally disable the open button or hide the modal trigger if points are zero.
+            // For now, the modal will show this message if opened with zero points.
+            return;
+        }
+
+        const skills = Object.keys(gameConfigData.characterAttributeDefinitions);
+        skills.sort(); // Sort skills alphabetically for consistent display
+
+        skills.forEach(skillName => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'action-button skill-allocation-choice-button';
+            button.dataset.skillName = skillName;
+
+            const currentBonus = gameConfigData.playerChosenSkillBonuses[skillName] || 0;
+            button.textContent = `${skillName} (+${currentBonus})`;
+            // Add ARIA label for better accessibility, e.g., "Allocate point to Acrobatics, current bonus +0"
+            button.setAttribute('aria-label', `Allocate point to ${skillName}, current bonus +${currentBonus}`);
+
+            DOM.skillAllocationChoicesContainer.appendChild(button);
+        });
+    },
+
+    openSkillAllocationModal() {
+        if (DOM.skillAllocationPopupWrapper && DOM.skillAllocationPopup) {
+            this.populateSkillAllocationModal(); // Repopulate each time to reflect current points/bonuses
+            DOM.skillAllocationPopupWrapper.classList.remove('hidden');
+            DOM.skillAllocationPopup.classList.remove('hidden'); // Ensure modal itself is visible if wrapper controls it
+            DOM.skillAllocationPopup.setAttribute('aria-hidden', 'false');
+            // Focus the first interactive element in the modal if available
+            const firstButton = DOM.skillAllocationChoicesContainer.querySelector('button');
+            if (firstButton) {
+                firstButton.focus();
+            } else if (DOM.closeSkillAllocationPopupButton) {
+                DOM.closeSkillAllocationPopupButton.focus();
+            }
+        }
+    },
+
+    closeSkillAllocationModal() {
+        if (DOM.skillAllocationPopupWrapper && DOM.skillAllocationPopup) {
+            DOM.skillAllocationPopupWrapper.classList.add('hidden');
+            DOM.skillAllocationPopup.classList.add('hidden');
+            DOM.skillAllocationPopup.setAttribute('aria-hidden', 'true');
+            if (DOM.allocateSkillPointsButton) { // Return focus to the button that opened the modal
+                DOM.allocateSkillPointsButton.focus();
+            }
+        }
+    },
+
+    handleSkillChoiceClick(event) {
+        if (event.target.classList.contains('skill-allocation-choice-button')) {
+            const skillName = event.target.dataset.skillName;
+            if (skillName && DOM.actionForm && DOM.hiddenActionNameInput && DOM.hiddenDetailsInput) {
+                DOM.hiddenActionNameInput.value = CONSTANTS.ACTION_NAMES.ALLOCATE_SKILL_POINT;
+                DOM.hiddenDetailsInput.value = JSON.stringify({ skill_name: skillName });
+                DOM.actionForm.submit();
+                this.closeSkillAllocationModal(); // Close modal after submission
+            } else {
+                console.error("Skill name or form elements missing for skill allocation submission.");
+                showToast("Error submitting skill allocation.", "error");
+            }
+        }
+    },
+
+    init() {
+        if (DOM.allocateSkillPointsButton) {
+            DOM.allocateSkillPointsButton.addEventListener('click', () => this.openSkillAllocationModal());
+        }
+        if (DOM.closeSkillAllocationPopupButton) {
+            DOM.closeSkillAllocationPopupButton.addEventListener('click', () => this.closeSkillAllocationModal());
+        }
+        if (DOM.skillAllocationChoicesContainer) {
+            DOM.skillAllocationChoicesContainer.addEventListener('click', (event) => this.handleSkillChoiceClick(event));
+        }
+        // Close modal if clicking outside of it (on the wrapper/overlay)
+        if (DOM.skillAllocationPopupWrapper) {
+            DOM.skillAllocationPopupWrapper.addEventListener('click', (event) => {
+                if (event.target === DOM.skillAllocationPopupWrapper) {
+                    this.closeSkillAllocationModal();
+                }
+            });
+        }
+        // Close modal with Escape key
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && DOM.skillAllocationPopupWrapper && !DOM.skillAllocationPopupWrapper.classList.contains('hidden')) {
+                this.closeSkillAllocationModal();
+            }
+        });
+    }
+};
+
 
 // --- MAIN INITIALIZATION ---
 function main() {
@@ -877,6 +996,7 @@ function main() {
     UIPanels.init();
     UIBottomTabs.init();
     UITopMenu.init();
+    UISkillAllocation.init(); // Initialize skill allocation UI
 
     if (DOM.actionForm) { // Core game interactions are available
         UIActionsAndEvents.init();

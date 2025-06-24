@@ -1,2 +1,2293 @@
-2025-06-24 13:08:23,636 - INFO - BaseUITest.setUp: Initializing WebDriver.
-2025-06-24 13:08:26,825 - INFO - BaseUITest.setUp: Navigating to login page.
+DEBUG: Top of app.py
+...INFO: Flask secret key loaded from FLASK_SECRET_KEY environment variable.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+ActionHero is due to gain 5 XP at end of day. Total pending: 5
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 5)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+ActionHero is due to gain 7 XP at end of day. Total pending: 7
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 7)
+HP: 10/10, HD: 1/1
+Gold: 110
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Shiny Pebble (Qty: 1, Quality: Common) added as new stack to ActionHero's inventory.
+ActionHero is due to gain 8 XP at end of day. Total pending: 8
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 8)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory:
+  - Shiny Pebble (Common)
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20....
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+ActionHero is due to gain 1 XP at end of day. Total pending: 1
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 1)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Homebody ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Homebody ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Lost Adventurer ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Lost Adventurer ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Traveler ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Shop 'Traveler's Emporium' has updated its town to Steel Flow City.
+Traveler is due to gain 15 XP at end of day. Total pending: 15
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 3 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 10:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Traveler ---
+Level: 1, XP: 0 (Pending: 15)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20......[2025-06-24 16:06:08,825] WARNING in app: CREATE_CHARACTER_ROUTE: Character name 'TakenName' taken for user 'testuser'.
+...[2025-06-24 16:06:09,249] WARNING in app: CREATE_CHARACTER_ROUTE: Character name 'TakenName' taken for user 'testuser'.
+......
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+ActionHero is due to gain 1 XP at end of day. Total pending: 1
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: ActionHero ---
+Level: 1, XP: 0 (Pending: 1)
+HP: 10/10, HD: 1/1
+Gold: 100
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 10, 'DEX': 10, 'CON': 10, 'INT': 10, 'WIS': 10, 'CHA': 10}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':10, 'DEX':10, 'CON':10, 'INT':10, 'WIS':10, 'CHA':10}
+Attributes:
+  Acrobatics: +0
+  Animal Handling: +0
+  Arcana: +0
+  Athletics: +0
+  Deception: +0
+  History: +0
+  Insight: +0
+  Intimidation: +0
+  Investigation: +0
+  Medicine: +0
+  Nature: +0
+  Perception: +0
+  Performance: +0
+  Persuasion: +0
+  Religion: +0
+  Sleight of Hand: +0
+  Stealth: +0
+  Survival: +0
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: RerolledHero ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 50
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'CHA': 14, 'CON': 11, 'DEX': 12, 'INT': 9, 'STR': 15, 'WIS': 13}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':15, 'DEX':12, 'CON':11, 'INT':9, 'WIS':13, 'CHA':14}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: RerolledHero ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 10/10, HD: 1/1
+Gold: 50
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'CHA': 14, 'CON': 11, 'DEX': 12, 'INT': 9, 'STR': 15, 'WIS': 13}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':15, 'DEX':12, 'CON':11, 'INT':9, 'WIS':13, 'CHA':14}
+Attributes:
+  Acrobatics: +1
+  Animal Handling: +1
+  Arcana: -1
+  Athletics: +2
+  Deception: +2
+  History: -1
+  Insight: +1
+  Intimidation: +2
+  Investigation: -1
+  Medicine: +1
+  Nature: -1
+  Perception: +1
+  Performance: +2
+  Persuasion: +2
+  Religion: -1
+  Sleight of Hand: +1
+  Stealth: +1
+  Survival: +1
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: UniqueNewName ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 11/11, HD: 1/1
+Gold: 50
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'CHA': 9, 'CON': 12, 'DEX': 16, 'INT': 14, 'STR': 12, 'WIS': 12}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':12, 'DEX':16, 'CON':12, 'INT':14, 'WIS':12, 'CHA':9}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: UniqueNewName ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 11/11, HD: 1/1
+Gold: 50
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'CHA': 9, 'CON': 12, 'DEX': 16, 'INT': 14, 'STR': 12, 'WIS': 12}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':12, 'DEX':16, 'CON':12, 'INT':14, 'WIS':12, 'CHA':9}
+Attributes:
+  Acrobatics: +3
+  Animal Handling: +1
+  Arcana: +2
+  Athletics: +1
+  Deception: -1
+  History: +2
+  Insight: +1
+  Intimidation: -1
+  Investigation: +2
+  Medicine: +1
+  Nature: +2
+  Perception: +1
+  Performance: -1
+  Persuasion: -1
+  Religion: +2
+  Sleight of Hand: +3
+  Stealth: +3
+  Survival: +1
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established......................
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+Applying background: Acolyte for Acolyte Test
+  Applied +1 to Insight from background.
+  Applied +1 to Religion from background.
+Sacred Text Scrap (Qty: 1, Quality: Common) added as new stack to Acolyte Test's inventory.
+  Added starting item: Sacred Text Scrap (Qty: 1)
+  Adjusted starting gold by 5. New total: 105
+Applying background: Urchin for Urchin Test
+  Applied +1 to Sleight of Hand from background.
+  Applied +1 to Stealth from background.
+Small Token (Qty: 1, Quality: Common) added as new stack to Urchin Test's inventory.
+  Added starting item: Small Token (Qty: 1)
+Warning: Background ID 'non_existent_bg' not found in BACKGROUND_DEFINITIONS.
+Feat 'Tough' added to Test Character.
+Applying effects for feat: Tough for Test Character
+  Increased base_max_hp by 5. New base_max_hp: 5
+Info: Character Test Character already has feat 'tough'.
+Error: Feat ID 'invalid_feat_id' is not a valid feat definition.
+Sword (Qty: 1, Quality: Common) added as new stack to Test Character's inventory.
+Sword (Qty: 1, Quality: Rare) added as new stack to Test Character's inventory.
+Potion (Qty: 1, Quality: Common) added as new stack to Test Character's inventory.
+Arrow (Qty: 5, Quality: Common) added as new stack to Test Character's inventory.
+Stacked 10x Arrow (Common) in Test Character's inventory. New total: 15.
+ASI +1/+1 Test is due to gain 300 XP at end of day. Total pending: 300
+ASI +1/+1 Test officially gains 300 XP. Total XP: 300
+ASI +1/+1 Test leveled up to Level 2!
+  ASI +1/+1 Test gained 0 HP. Max HP is now 10.
+  ASI +1/+1 Test gained 1 skill point. Total skill points to allocate: 1.
+ASI +1/+1 Test is due to gain 600 XP at end of day. Total pending: 600
+ASI +1/+1 Test officially gains 600 XP. Total XP: 900
+ASI +1/+1 Test leveled up to Level 3!
+  ASI +1/+1 Test gained 0 HP. Max HP is now 10.
+  ASI +1/+1 Test gained 1 skill point. Total skill points to allocate: 2.
+ASI +1/+1 Test is due to gain 1800 XP at end of day. Total pending: 1800
+ASI +1/+1 Test officially gains 1800 XP. Total XP: 2700
+ASI +1/+1 Test leveled up to Level 4!
+  ASI +1/+1 Test gained 0 HP. Max HP is now 10.
+  ASI +1/+1 Test has an Ability Score Improvement or Feat choice available!
+  STR increased by 1 to 12.
+  DEX increased by 1 to 12.
+Reapplying effects for ASI +1/+1 Test's attuned items...
+ASI/Feat choice for ASI +1/+1 Test has been made or deferred.
+  ASI +1/+1 Test applied Ability Score Increases.
+ASI +2 Test is due to gain 300 XP at end of day. Total pending: 300
+ASI +2 Test officially gains 300 XP. Total XP: 300
+ASI +2 Test leveled up to Level 2!
+  ASI +2 Test gained 0 HP. Max HP is now 10.
+  ASI +2 Test gained 1 skill point. Total skill points to allocate: 1.
+ASI +2 Test is due to gain 600 XP at end of day. Total pending: 600
+ASI +2 Test officially gains 600 XP. Total XP: 900
+ASI +2 Test leveled up to Level 3!
+  ASI +2 Test gained 0 HP. Max HP is now 10.
+  ASI +2 Test gained 1 skill point. Total skill points to allocate: 2.
+ASI +2 Test is due to gain 1800 XP at end of day. Total pending: 1800
+ASI +2 Test officially gains 1800 XP. Total XP: 2700
+ASI +2 Test leveled up to Level 4!
+  ASI +2 Test gained 0 HP. Max HP is now 10.
+  ASI +2 Test has an Ability Score Improvement or Feat choice available!
+  STR increased by 2 to 12.
+Reapplying effects for ASI +2 Test's attuned items...
+ASI/Feat choice for ASI +2 Test has been made or deferred.
+  ASI +2 Test applied Ability Score Increases.
+ASI CON Test is due to gain 300 XP at end of day. Total pending: 300
+ASI CON Test officially gains 300 XP. Total XP: 300
+ASI CON Test leveled up to Level 2!
+  ASI CON Test gained 0 HP. Max HP is now 10.
+  ASI CON Test gained 1 skill point. Total skill points to allocate: 1.
+ASI CON Test is due to gain 600 XP at end of day. Total pending: 600
+ASI CON Test officially gains 600 XP. Total XP: 900
+ASI CON Test leveled up to Level 3!
+  ASI CON Test gained 0 HP. Max HP is now 10.
+  ASI CON Test gained 1 skill point. Total skill points to allocate: 2.
+ASI CON Test is due to gain 1800 XP at end of day. Total pending: 1800
+ASI CON Test officially gains 1800 XP. Total XP: 2700
+ASI CON Test leveled up to Level 4!
+  ASI CON Test gained 0 HP. Max HP is now 10.
+  ASI CON Test has an Ability Score Improvement or Feat choice available!
+  CON increased by 2 to 12.
+  Max HP updated by 4 due to CON change. New Max HP: 14.
+Reapplying effects for ASI CON Test's attuned items...
+ASI/Feat choice for ASI CON Test has been made or deferred.
+  ASI CON Test applied Ability Score Increases.
+Feat 'Tough' added to Test Character.
+Applying effects for feat: Tough for Test Character
+  Increased base_max_hp by 5. New base_max_hp: 5
+ASI/Feat choice for Test Character has been made or deferred.
+  Test Character chose feat: tough.
+Feat Skill Novice Test is due to gain 300 XP at end of day. Total pending: 300
+Feat Skill Novice Test officially gains 300 XP. Total XP: 300
+Feat Skill Novice Test leveled up to Level 2!
+  Feat Skill Novice Test gained 0 HP. Max HP is now 10.
+  Feat Skill Novice Test gained 1 skill point. Total skill points to allocate: 1.
+Feat Skill Novice Test is due to gain 600 XP at end of day. Total pending: 600
+Feat Skill Novice Test officially gains 600 XP. Total XP: 900
+Feat Skill Novice Test leveled up to Level 3!
+  Feat Skill Novice Test gained 0 HP. Max HP is now 10.
+  Feat Skill Novice Test gained 1 skill point. Total skill points to allocate: 2.
+Feat Skill Novice Test is due to gain 1800 XP at end of day. Total pending: 1800
+Feat Skill Novice Test officially gains 1800 XP. Total XP: 2700
+Feat Skill Novice Test leveled up to Level 4!
+  Feat Skill Novice Test gained 0 HP. Max HP is now 10.
+  Feat Skill Novice Test has an Ability Score Improvement or Feat choice available!
+Feat 'Skill Novice (Athletics)' added to Feat Skill Novice Test.
+Applying effects for feat: Skill Novice (Athletics) for Feat Skill Novice Test
+  Applied +1 to Athletics from feat skill_novice_athletics.
+ASI/Feat choice for Feat Skill Novice Test has been made or deferred.
+  Feat Skill Novice Test chose feat: skill_novice_athletics.
+Feat Tough Test is due to gain 300 XP at end of day. Total pending: 300
+Feat Tough Test officially gains 300 XP. Total XP: 300
+Feat Tough Test leveled up to Level 2!
+  Feat Tough Test gained 0 HP. Max HP is now 10.
+  Feat Tough Test gained 1 skill point. Total skill points to allocate: 1.
+Feat Tough Test is due to gain 600 XP at end of day. Total pending: 600
+Feat Tough Test officially gains 600 XP. Total XP: 900
+Feat Tough Test leveled up to Level 3!
+  Feat Tough Test gained 0 HP. Max HP is now 10.
+  Feat Tough Test gained 1 skill point. Total skill points to allocate: 2.
+Feat Tough Test is due to gain 1800 XP at end of day. Total pending: 1800
+Feat Tough Test officially gains 1800 XP. Total XP: 2700
+Feat Tough Test leveled up to Level 4!
+  Feat Tough Test gained 0 HP. Max HP is now 10.
+  Feat Tough Test has an Ability Score Improvement or Feat choice available!
+Feat 'Tough' added to Feat Tough Test.
+Applying effects for feat: Tough for Feat Tough Test
+  Increased base_max_hp by 5. New base_max_hp: 15
+ASI/Feat choice for Feat Tough Test has been made or deferred.
+  Feat Tough Test chose feat: tough.
+Error: Invalid ASI point distribution. Choose +2 to one stat, or +1 to two different stats, or +1 to one stat.
+Error: Invalid ASI point distribution. Choose +2 to one stat, or +1 to two different stats, or +1 to one stat.
+Error: Invalid ASI point distribution. Choose +2 to one stat, or +1 to two different stats, or +1 to one stat.
+  DEX increased by 1 to 11.
+  CON increased by 1 to 12.
+  Max HP updated by 4 due to CON change. New Max HP: 14.
+Reapplying effects for Test Character's attuned items...
+ASI/Feat choice for Test Character has been made or deferred.
+  Test Character applied Ability Score Increases.
+  STR increased by 2 to 12.
+Reapplying effects for Test Character's attuned items.....................................
+ASI/Feat choice for Test Character has been made or deferred.
+  Test Character applied Ability Score Increases.
+Applying background: Acolyte for Acolyte Char
+  Applied +1 to Insight from background.
+  Applied +1 to Religion from background.
+Sacred Text Scrap (Qty: 1, Quality: Common) added as new stack to Acolyte Char's inventory.
+  Added starting item: Sacred Text Scrap (Qty: 1)
+  Adjusted starting gold by 5. New total: 105
+Applying background: Urchin for Urchin Char
+  Applied +1 to Sleight of Hand from background.
+  Applied +1 to Stealth from background.
+Small Token (Qty: 1, Quality: Common) added as new stack to Urchin Char's inventory.
+  Added starting item: Small Token (Qty: 1)
+Applying background: Urchin for Urchin Char
+  Applied +1 to Sleight of Hand from background.
+  Applied +1 to Stealth from background.
+Small Token (Qty: 1, Quality: Common) added as new stack to Urchin Char's inventory.
+  Added starting item: Small Token (Qty: 1)
+Test Character has joined The Merchant's Guild with the rank of Applicant.
+Test Character's reputation with The Merchant's Guild changed by 50 to 50.
+Test Character has achieved the rank of Associate with The Merchant's Guild!
+Feat 'Tough' added to Test Character.
+Applying effects for feat: Tough for Test Character
+  Increased base_max_hp by 5. New base_max_hp: 5
+Feat 'Skill Novice (Athletics)' added to Test Character.
+Applying effects for feat: Skill Novice (Athletics) for Test Character
+  Applied +1 to Athletics from feat skill_novice_athletics.
+Iron Ore (Qty: 2, Quality: Common) added as new stack to Test Character's inventory.
+Coal (Qty: 1, Quality: Common) added as new stack to Test Character's inventory.
+CHARACTER: Test Character successfully consumed items: {'Iron Ore': 2, 'Coal': 1}
+Iron Ore (Qty: 1, Quality: Common) added as new stack to Test Character's inventory.
+CHARACTER: Test Character cannot consume items due to insufficient quantities (checked before consumption).
+Iron Ore (Qty: 3, Quality: Common) added as new stack to Test Character's inventory.
+Coal (Qty: 2, Quality: Common) added as new stack to Test Character's inventory.
+CHARACTER: Test Character successfully consumed items: {'Iron Ore': 2, 'Coal': 1}
+Feat 'Skill Novice (Athletics)' added to Test Character.
+Applying effects for feat: Skill Novice (Athletics) for Test Character
+  Applied +1 to Athletics from feat skill_novice_athletics.
+Feat 'Tough' added to Test Character.
+Applying effects for feat: Tough for Test Character
+  Increased base_max_hp by 5. New base_max_hp: 10
+Feat 'Minor Strength Boost' added to Test Character.
+Applying effects for feat: Minor Strength Boost for Test Character
+  Applied +1 to STR from feat stat_boost_str.
+Iron Ore (Qty: 1, Quality: Common) added as new stack to Test Character's inventory.
+Wood (Qty: 5, Quality: Common) added as new stack to Test Character's inventory.
+Iron Ore (Qty: 1, Quality: Common) added as new stack to Test Character's inventory.
+Iron Ore (Qty: 3, Quality: Common) added as new stack to Test Character's inventory.
+Coal (Qty: 1, Quality: Common) added as new stack to Test Character's inventory.
+Error: No ASI/Feat choice is currently pending for Invalid ASI Test.
+Error: Invalid ASI point distribution. Choose +2 to one stat, or +1 to two different stats, or +1 to one stat.
+Error: Invalid ASI point distribution. Choose +2 to one stat, or +1 to two different stats, or +1 to one stat.
+Error: Invalid stat name provided. Valid stats are: ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']
+Error: Stat increase would exceed cap of 20.
+Error: Stat increase would exceed cap of 20.
+Error: No ASI/Feat choice is currently pending for Invalid Feat Test.
+Error: Feat ID 'invalid_feat_id' is not a valid feat definition.
+Feat 'Tough' added to Invalid Feat Test.
+Applying effects for feat: Tough for Invalid Feat Test
+  Increased base_max_hp by 5. New base_max_hp: 5
+ASI/Feat choice for Invalid Feat Test has been made or deferred.
+  Invalid Feat Test chose feat: tough.
+Info: Character Invalid Feat Test already has feat 'tough'.
+Test Character has joined The Merchant's Guild with the rank of Applicant.
+Test Character is already a member of The Merchant's Guild.
+Error: Faction ID 'invalid_faction' not found. Cannot join.
+Test Character is due to gain 1800 XP at end of day. Total pending: 1800
+Test Character officially gains 1800 XP. Total XP: 2700
+Test Character leveled up to Level 4!
+  Test Character gained -10 HP. Max HP is now -10.
+  Test Character has an Ability Score Improvement or Feat choice available!
+Test Character is due to gain 600 XP at end of day. Total pending: 600
+Test Character officially gains 600 XP. Total XP: 900
+Test Character leveled up to Level 3!
+  Test Character gained -5 HP. Max HP is now -5.
+  Test Character gained 1 skill point. Total skill points to allocate: 1.
+ASI Flag Test is due to gain 300 XP at end of day. Total pending: 300
+ASI Flag Test officially gains 300 XP. Total XP: 300
+ASI Flag Test leveled up to Level 2!
+  ASI Flag Test gained 0 HP. Max HP is now 10.
+  ASI Flag Test gained 1 skill point. Total skill points to allocate: 1.
+ASI Flag Test is due to gain 600 XP at end of day. Total pending: 600
+ASI Flag Test officially gains 600 XP. Total XP: 900
+ASI Flag Test leveled up to Level 3!
+  ASI Flag Test gained 0 HP. Max HP is now 10.
+  ASI Flag Test gained 1 skill point. Total skill points to allocate: 2.
+ASI Flag Test is due to gain 300 XP at end of day. Total pending: 300
+ASI Flag Test officially gains 300 XP. Total XP: 300
+ASI Flag Test leveled up to Level 2!
+  ASI Flag Test gained 0 HP. Max HP is now 10.
+  ASI Flag Test gained 1 skill point. Total skill points to allocate: 1.
+ASI Flag Test is due to gain 600 XP at end of day. Total pending: 600
+ASI Flag Test officially gains 600 XP. Total XP: 900
+ASI Flag Test leveled up to Level 3!
+  ASI Flag Test gained 0 HP. Max HP is now 10.
+  ASI Flag Test gained 1 skill point. Total skill points to allocate: 2.
+ASI Flag Test is due to gain 1800 XP at end of day. Total pending: 1800
+ASI Flag Test officially gains 1800 XP. Total XP: 2700
+ASI Flag Test leveled up to Level 4!
+  ASI Flag Test gained 0 HP. Max HP is now 10.
+  ASI Flag Test has an Ability Score Improvement or Feat choice available!
+ASI Flag Test is due to gain 3800 XP at end of day. Total pending: 3800
+ASI Flag Test officially gains 3800 XP. Total XP: 6500
+ASI Flag Test leveled up to Level 5!
+  ASI Flag Test gained 0 HP. Max HP is now 10.
+  ASI Flag Test gained 1 skill point. Total skill points to allocate: 3.
+  Test Character Acrobatics check (DC 10). Roll: 5 + 3 (Attribute Score) = 8. Failure
+  Test Character Acrobatics check (DC 10). Roll: 10 + 3 (Attribute Score) = 13. Success
+  Test Character Arcana check (DC 10). Roll: 8 + 1 (Attribute Score) = 9. Failure
+  Test Character Arcana check (DC 10). Roll: 9 + 1 (Attribute Score) = 10. Success
+  Test Character Arcana check (DC 10). Roll: 5(rolled 5,15 dis, took 5) + 1 (Attribute Score) = 6. Failure
+  Test Character Arcana check (DC 10). Roll: 5(rolled 15,5 dis, took 5) + 1 (Attribute Score) = 6. Failure
+  Test Character Arcana check (DC 10). Roll: 10(rolled 10,15 dis, took 10) + 1 (Attribute Score) = 11. Success
+Test Character has joined The Merchant's Guild with the rank of Applicant.
+Test Character's reputation with The Merchant's Guild changed by 50 to 50.
+Test Character has achieved the rank of Associate with The Merchant's Guild!
+  Test Player Stealth check (DC 5). Roll: 1 + 1 (Attribute Score) = 2. Failure
+  Test Player Stealth check (DC 25). Roll: 20 + 1 (Attribute Score) = 21. Failure
+  Test Player Insight check (DC 10). Roll: 5(rolled 5,15 dis, took 5) + 1 (Attribute Score) = 6. Failure
+Lucky Charm (Weak) (Qty: 1, Quality: Common) added as new stack to Test Player's inventory.
+  Test Player Stealth check (DC 15). Roll: 3 + 1 (Attribute Score) = 4. Failure
+  Test Player has Lucky Charm (Weak)! Using for reroll...
+  Test Player Stealth check (DC 15). Roll: 7 + 1 (Attribute Score) = 8. Failure
+Lucky Charm of the Gods (Qty: 1, Quality: Common) added as new stack to Test Player's inventory.
+  Test Player Stealth check (DC 15). Roll: 5 + 1 (Attribute Score) = 6. Failure
+  Test Player has Lucky Charm of the Gods! Using for reroll..........................
+  Lucky Charm of the Gods consumed.
+  Test Player Stealth check (DC 15). Roll: 15 + 1 (Attribute Score) = 16. Success
+  Test Player Stealth check (DC 15). Roll: 8 + 1 (Attribute Score) = 9. Failure
+  Test Player Stealth check (DC 10). Roll: 10 + 1 (Attribute Score) = 11. Success
+Outcome (Failure - Key: trap_triggered): A trap springs!
+Outcome (Success - Key: traps_disabled): You found and disabled a trap!
+Outcome (Success - Key: traps_disabled): You found and disabled a trap!
+Outcome (Success - Key: success): It happened!
+Error: Invalid choice index (99) or no skill check options for event 'Ancient Tomb'.
+Item 'Scroll of Comprehension' is available.
+Outcome automatically successful due to Scroll of Comprehension.
+Outcome (Success - Key: runes_deciphered): The runes reveal a secret.
+Item 'Crowbar' is available.
+DC reduced from 22 to 19 by Crowbar.
+Outcome (Success - Key: door_opened): The door creaks open.
+Outcome (Failure - Key: door_stuck): The door remains sealed.
+
+--- Event: Ancient Tomb ---
+Description: A dusty tomb entrance.
+
+Player Choices:
+  0. Search for traps (INVESTIGATION). [Investigation DC 17]
+  1. Try to decipher runes (ARCANA). [Arcana DC 20 (Uses: Scroll of Comprehension (auto_success))]
+  2. Force open the stone door (ATHLETICS). [Athletics DC 22 (Uses: Crowbar (dc_reduction) by 3))]
+
+--- Event: Ancient Tomb ---
+Description: A dusty tomb entrance.
+
+Player Choices:
+  0. Search for traps (INVESTIGATION). [Investigation DC 15]
+  1. Try to decipher runes (ARCANA). [Arcana DC 18 (Uses: Scroll of Comprehension (auto_success))]
+  2. Force open the stone door (ATHLETICS). [Athletics DC 20 (Uses: Crowbar (dc_reduction) by 3))]
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+SHOP: Test Player's Emporium's specialization set to: Blacksmith
+Test Player is due to gain 10 XP at end of day. Total pending: 10
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+CHARACTER: Test Player successfully consumed items: {'Iron Ingot': 5, 'Leather Straps': 2}
+SHOP: Added Iron Armor (Qty: 1) to inventory. Inventory slots: 4/20.
+Test Player is due to gain 10 XP at end of day. Total pending: 20
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 08:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 09:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+SHOP: Test Player's Emporium's specialization set to: Alchemist
+Test Player is due to gain 10 XP at end of day. Total pending: 10
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 08:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 09:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Test Player is due to gain 3 XP at end of day. Total pending: 3
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20......
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Test Player is due to gain 7 XP at end of day. Total pending: 7
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+SHOP: Test Player's Emporium's specialization set to: Blacksmith
+Test Player is due to gain 10 XP at end of day. Total pending: 10
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+SHOP: Invalid specialization type 'InvalidSpec'. Shop specialization remains Blacksmith.
+Test Player is due to gain 10 XP at end of day. Total pending: 20
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 08:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 09:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Test Player is due to gain 10 XP at end of day. Total pending: 10
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Test Player is due to gain 15 XP at end of day. Total pending: 25
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 08:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 09:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5....
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+SHOP: Test Player's Emporium upgraded to Level 2!
+  - Max Inventory Slots: 30
+  - Crafting Quality Bonus: +1
+  - Cost for next upgrade (Level 3): 3000g
+Test Player is due to gain 50 XP at end of day. Total pending: 50
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Sunpetal (Qty: 2, Quality: Common) added as new stack to Test Player's inventory.
+Test Player is due to gain 1 XP at end of day. Total pending: 1
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+SHOP: Cannot craft Minor Healing Potion. Missing ingredients for Test Player: 1 Herb Bundle, 1 Clean Water.
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Herb Bundle (Qty: 1, Quality: Common) added as new stack to Test Player's inventory.
+Clean Water (Qty: 1, Quality: Common) added as new stack to Test Player's inventory.
+CHARACTER: Test Player successfully consumed items: {'Herb Bundle': 1, 'Clean Water': 1}
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+Test Player is due to gain 10 XP at end of day. Total pending: 10
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Test Stick (Qty: 1, Quality: Common) added as new stack to Test Player's inventory.
+Test Player is due to gain 8 XP at end of day. Total pending: 8
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s)......
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Test Rock (Qty: 2, Quality: Common) added as new stack to Test Player's inventory.
+Test Player is due to gain 8 XP at end of day. Total pending: 8
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Wild Herb (Qty: 3, Quality: Common) added as new stack to Test Player's inventory.
+Test Player is due to gain 5 XP at end of day. Total pending: 5
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+SHOP: Added NPC Bait (Qty: 1) to inventory. Inventory slots: 1/20.
+Test Player is due to gain 1 XP at end of day. Total pending: 1
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+SHOP: Added NPC Bait (Qty: 1) to inventory. Inventory slots: 1/20.
+Test Player is due to gain 1 XP at end of day. Total pending: 2
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 08:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 09:00. Days passed this call: 0.
+SHOP: Added NPC Bait (Qty: 1) to inventory. Inventory slots: 1/20.
+Test Player is due to gain 1 XP at end of day. Total pending: 3
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 09:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 10:00. Days passed this call: 0.
+SHOP: Added NPC Bait (Qty: 1) to inventory. Inventory slots: 1/20.
+Test Player is due to gain 1 XP at end of day. Total pending: 4
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 10:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 11:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5...............
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Test Player is due to gain 5 XP at end of day. Total pending: 5
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Drink (Qty: 1, Quality: Common) added as new stack to Test Player's inventory.
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 8 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 15:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Food (Qty: 1, Quality: Common) added as new stack to Test Player's inventory.
+Drink (Qty: 1, Quality: Common) added as new stack to Test Player's inventory.
+CHARACTER: Test Player successfully consumed items: {'Food': 1}
+CHARACTER: Test Player successfully consumed items: {'Drink': 1}
+Test Player is due to gain 5 XP at end of day. Total pending: 5
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 8 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 15:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Starting Village' established.
+Town 'Steel Flow City' established.
+
+--- Character: Test Player ---
+Level: 1, XP: 0 (Pending: 0)
+HP: 0/0, HD: 1/1
+Gold: 20000
+Exhaustion: 0 (No effect)
+Speed: 30
+Base Stats: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Stat Bonuses: {'STR': 0, 'DEX': 0, 'CON': 0, 'INT': 0, 'WIS': 0, 'CHA': 0}
+Effective Stats: {'STR':0, 'DEX':0, 'CON':0, 'INT':0, 'WIS':0, 'CHA':0}
+Attributes:
+  Acrobatics: -5
+  Animal Handling: -5
+  Arcana: -5
+  Athletics: -5
+  Deception: -5
+  History: -5
+  Insight: -5
+  Intimidation: -5
+  Investigation: -5
+  Medicine: -5
+  Nature: -5
+  Perception: -5
+  Performance: -5
+  Persuasion: -5
+  Religion: -5
+  Sleight of Hand: -5
+  Stealth: -5
+  Survival: -5
+AC Bonus: 0
+Attunement Slots Used: 0/3
+Attuned Items: None
+Inventory: Empty
+-------------------------
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Simple Dagger (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added Stale Ale (Qty: 1) to inventory. Inventory slots: 3/20.
+Iron Ingot (Qty: 20, Quality: Common) added as new stack to Test Player's inventory.
+Leather Straps (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Steel Ingot (Qty: 10, Quality: Common) added as new stack to Test Player's inventory.
+Oak Wood (Qty: 5, Quality: Common) added as new stack to Test Player's inventory.
+Test Player is due to gain 1 XP at end of day. Total pending: 1
+  DEBUG GameTime.advance_hour: Start. Current: Day 1, 07:00. Advancing by 1 hour(s).
+  DEBUG GameTime.advance_hour: End. New time: Day 1, 08:00. Days passed this call: 0.
+Town 'Test Town' established.
+SHOP: The Test Shop's specialization set to: Blacksmith
+SHOP: The Test Shop's specialization set to: Alchemist
+SHOP: The Test Shop's specialization set to: General Store
+Town 'Test Town' established.
+SHOP: Critical Failure! Crafted Minor Healing Potion resulted in Common quality (down from Uncommon).
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+Town 'Test Town' established.
+SHOP: Critical Success! Crafted Minor Healing Potion resulted in Uncommon quality (up from Common)................
+----------------------------------------------------------------------
+Ran 142 tests in 3.779s
+
+OK
+
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+Town 'Test Town' established.
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+Town 'Test Town' established.
+SHOP: The Test Shop's specialization set to: Blacksmith
+SHOP: Added Iron Armor (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: The Test Shop's specialization set to: Alchemist
+Town 'Test Town' established.
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: The Test Shop upgraded to Level 2!
+  - Max Inventory Slots: 30
+  - Crafting Quality Bonus: +1
+  - Cost for next upgrade (Level 3): 3000g
+SHOP: Added Minor Healing Potion (Qty: 1) to inventory. Inventory slots: 1/30.
+Town 'Test Town' established.
+SHOP: Added TestItem0 (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added TestItem1 (Qty: 1) to inventory. Inventory slots: 2/20.
+SHOP: Added TestItem2 (Qty: 1) to inventory. Inventory slots: 3/20.
+SHOP: Added TestItem3 (Qty: 1) to inventory. Inventory slots: 4/20.
+SHOP: Added TestItem4 (Qty: 1) to inventory. Inventory slots: 5/20.
+SHOP: Added TestItem5 (Qty: 1) to inventory. Inventory slots: 6/20.
+SHOP: Added TestItem6 (Qty: 1) to inventory. Inventory slots: 7/20.
+SHOP: Added TestItem7 (Qty: 1) to inventory. Inventory slots: 8/20.
+SHOP: Added TestItem8 (Qty: 1) to inventory. Inventory slots: 9/20.
+SHOP: Added TestItem9 (Qty: 1) to inventory. Inventory slots: 10/20.
+SHOP: Added TestItem10 (Qty: 1) to inventory. Inventory slots: 11/20.
+SHOP: Added TestItem11 (Qty: 1) to inventory. Inventory slots: 12/20.
+SHOP: Added TestItem12 (Qty: 1) to inventory. Inventory slots: 13/20.
+SHOP: Added TestItem13 (Qty: 1) to inventory. Inventory slots: 14/20.
+SHOP: Added TestItem14 (Qty: 1) to inventory. Inventory slots: 15/20.
+SHOP: Added TestItem15 (Qty: 1) to inventory. Inventory slots: 16/20.
+SHOP: Added TestItem16 (Qty: 1) to inventory. Inventory slots: 17/20.
+SHOP: Added TestItem17 (Qty: 1) to inventory. Inventory slots: 18/20.
+SHOP: Added TestItem18 (Qty: 1) to inventory. Inventory slots: 19/20.
+SHOP: Added LastNewItem (Qty: 1) to inventory. Inventory slots: 20/20.
+SHOP: Cannot add OverflowItem. Inventory is full (20/20 slots).
+SHOP: Stacked 5x LastNewItem (Total: 6). Inventory slots: 20/20.
+Town 'Test Town' established.
+SHOP: Added Legendary Helm (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Selling Legendary Legendary Helm improved your shop's reputation to 100 (+1).
+Town 'Test Town' established.
+SHOP: Added Test Gem (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Added Test Gem (Qty: 1) to inventory. Inventory slots: 1/20.
+Town 'Test Town' established.
+SHOP: Added Exquisite Sword (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Selling Legendary Exquisite Sword improved your shop's reputation to 4 (+4).
+Town 'Test Town' established.
+SHOP: The Test Shop's specialization set to: Blacksmith
+SHOP: Added Iron Armor (Qty: 1) to inventory. Inventory slots: 1/20.
+SHOP: Selling Common Iron Armor improved your shop's reputation to 1 (+1).
+Town 'Test Town' established.
+SHOP: The Test Shop's specialization set to: Blacksmith
+SHOP: Invalid specialization type 'InvalidSpec'. Shop specialization remains Blacksmith.
+Town 'Test Town' established.
+Town 'Test Town' established.
+SHOP: Added Potion of Strength (Qty: 1) to inventory. Inventory slots: 1/30.
+Town 'Test Town' established.
+Town 'Test Town' established.
+SHOP: The Test Shop upgraded to Level 2!
+  - Max Inventory Slots: 30
+  - Crafting Quality Bonus: +1
+  - Cost for next upgrade (Level 3): 3000g
+Town 'Test Town' established.
+SHOP: The Test Shop upgraded to Level 2!
+  - Max Inventory Slots: 30
+  - Crafting Quality Bonus: +1
+  - Cost for next upgrade (Level 3): 3000g
+SHOP: The Test Shop upgraded to Level 3!
+  - Max Inventory Slots: 40
+  - Crafting Quality Bonus: +2
+SHOP: The Test Shop is already at the maximum level (3).
+Migrating user data for user 'olduser1' to new format.
+Migrating user data for user 'olduser2' to new format.
