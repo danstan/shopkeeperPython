@@ -1,0 +1,299 @@
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopkeeper Adventure UI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="js-loaded">
+
+
+
+
+
+            <div class="flashes-container">
+
+                <p class="flash-success flash-message-default">Character slot 1 selected.</p>
+
+            </div>
+
+
+    <div class="game-container">
+        <div id="top-right-menu-button" aria-haspopup="true" aria-expanded="false" aria-controls="settings-popup">Menu</div>
+
+        <!-- Left Info Column -->
+        <div id="left-info-column" class="info-column">
+            <div class="mini-panel" id="mini-stats-panel" tabindex="0" role="button" aria-controls="full-stats-panel-container" aria-expanded="false">
+                <h4>Stats</h4>
+                <p>HP: <span class="mini-hp-value">10/10</span></p>
+                <p>Gold: <span class="mini-gold-value">100 G</span></p>
+            </div>
+            <div class="full-panel-container" id="full-stats-panel-container" role="dialog" aria-labelledby="stats-panel-title" style="display: none;">
+                <div class="full-panel-content">
+                    <button class="close-full-panel" aria-label="Close Stats Panel">×</button>
+                    <h2 id="stats-panel-title">Player Status</h2>
+                    <p><strong>Name:</strong> TakenName</p>
+                    <p><strong>HP:</strong> <span class="full-hp-value">10</span> / <span class="full-max-hp-value">10</span></p>
+                    <p><strong>Gold:</strong> <span class="full-gold-value">100 G</span></p>
+                    <p><strong>Stats:</strong></p>
+                    <ul>
+
+                        <li><strong>STR:</strong> 10</li>
+
+                        <li><strong>DEX:</strong> 10</li>
+
+                        <li><strong>CON:</strong> 10</li>
+
+                        <li><strong>INT:</strong> 10</li>
+
+                        <li><strong>WIS:</strong> 10</li>
+
+                        <li><strong>CHA:</strong> 10</li>
+
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mini-panel" id="mini-info-panel" tabindex="0" role="button" aria-controls="full-info-panel-container" aria-expanded="false">
+                <h4>Info</h4>
+                <p>Time: <span class="mini-time-value">Day 1, 07:00</span></p>
+                <p>Town: <span class="mini-town-value">Starting Village</span></p>
+            </div>
+            <div class="full-panel-container" id="full-info-panel-container" role="dialog" aria-labelledby="info-panel-title" style="display: none;">
+                <div class="full-panel-content">
+                    <button class="close-full-panel" aria-label="Close Info Panel">×</button>
+                    <h2 id="info-panel-title">Game Info</h2>
+                    <p><strong>Current Time:</strong> <span class="full-time-value">Day 1, 07:00</span></p>
+                    <p><strong>Current Town:</strong> <span class="full-town-value">Starting Village</span></p>
+                </div>
+            </div>
+
+            <div class="mini-panel" id="mini-shop-mgt-panel" tabindex="0" role="button" aria-controls="full-shop-mgt-panel-container" aria-expanded="false">
+                <h4>Shop Mgt</h4>
+                <p>Level: <span class="mini-shop-level-value"></span></p>
+            </div>
+            <div class="full-panel-container" id="full-shop-mgt-panel-container" role="dialog" aria-labelledby="shop-mgt-panel-title" style="display: none;">
+                <div class="full-panel-content">
+                    <button class="close-full-panel" aria-label="Close Shop Management Panel">×</button>
+                    <h2 id="shop-mgt-panel-title">Shop Management</h2>
+                    <div id="shop-management-details"><h3>TakenName's Emporium</h3><p>Level: 1 (Quality Bonus: +0)</p><p>Specialization: General Store</p><p>Inventory: 3 / 20 slots</p><p>Player Gold: 100</p><h4>Change Specialization</h4><select id="shop-specialization-select" class="themed-select"><option value="General Store" selected="">General Store</option><option value="Blacksmith">Blacksmith</option><option value="Alchemist">Alchemist</option></select><button type="button" id="submit-change-specialization" class="action-button">Set Specialization</button><h4>Upgrade Shop</h4><p>Next Level: 2</p><p>Cost: 1500 Gold</p><p>Max Inventory Slots: 30</p><p>Crafting Quality Bonus: +1</p><button type="button" id="submit-upgrade-shop" class="action-button">Upgrade Shop</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Map Area -->
+        <div id="map-container">
+            <svg width="100%" height="100%" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+              <rect width="100%" height="100%" fill="#cccccc"></rect>
+              <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="24px" fill="#333333">Overworld Map</text>
+            </svg>
+        </div>
+
+        <!-- Right Inventory Column -->
+        <div id="right-inventory-column" class="info-column">
+            <div class="mini-panel" id="mini-inventory-panel" tabindex="0" role="button" aria-controls="full-inventory-panel-container" aria-expanded="false">
+                <h4>Inventory</h4>
+                <p>Player: <span class="mini-player-item-count">0</span> items</p>
+                <p>Shop: <span class="mini-shop-item-count">3</span> items</p>
+            </div>
+            <div class="full-panel-container" id="full-inventory-panel-container" role="dialog" aria-labelledby="inventory-panel-title" style="display: none;">
+                <div class="full-panel-content">
+                    <button class="close-full-panel" aria-label="Close Inventory Panel">×</button>
+                    <h2 id="inventory-panel-title">Inventory</h2>
+                    <h3>Shop Stock</h3>
+
+                    <div class="inventory-grid shop-inventory-grid">
+
+                        <div class="inventory-item-card shop-item-card">
+                            <div class="item-icon-placeholder"></div>
+                            <div class="item-name">
+                                Minor Healing Potion (x1)
+                            </div>
+                            <button type="button" class="buy-item-button action-button" data-item-name="Minor Healing Potion (x1)">Buy</button>
+                        </div>
+
+                        <div class="inventory-item-card shop-item-card">
+                            <div class="item-icon-placeholder"></div>
+                            <div class="item-name">
+                                Simple Dagger (x1)
+                            </div>
+                            <button type="button" class="buy-item-button action-button" data-item-name="Simple Dagger (x1)">Buy</button>
+                        </div>
+
+                        <div class="inventory-item-card shop-item-card">
+                            <div class="item-icon-placeholder"></div>
+                            <div class="item-name">
+                                Stale Ale (x1)
+                            </div>
+                            <button type="button" class="buy-item-button action-button" data-item-name="Stale Ale (x1)">Buy</button>
+                        </div>
+
+                    </div>
+
+
+                    <h3>Player Items</h3>
+
+                    <p>Player inventory is empty.</p>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Actions/Log Bar -->
+        <div id="bottom-bar">
+            <div class="actions-log-tab-buttons" role="tablist">
+                <button id="actions-tab-button" role="tab" aria-controls="actions-panel-content" aria-selected="true" class="tab-button active-tab-button">Actions</button>
+                <button id="log-tab-button" role="tab" aria-controls="log-panel-content" aria-selected="false" class="tab-button">Log</button>
+            </div>
+            <div id="bottom-panel-content-area">
+                <div id="actions-panel-content" class="panel-content tab-content panel-visible" role="tabpanel" aria-labelledby="actions-tab-button" style="display: block;">
+                    <div id="action-controls-wrapper">
+                        <form id="actionForm" action="/action" method="post">
+                            <input type="hidden" id="action_name_hidden" name="action_name" value="">
+                            <input type="hidden" id="action_details" name="action_details" value="{}">
+
+                            <div id="travel-actions-container" class="action-section" style="display: block;">
+                                <h4>Travel</h4>
+                                <div id="map-destinations">
+
+                                        <p>Choose a destination:</p>
+                                        <ul class="button-list">
+
+                                            <li><button type="button" class="map-destination-button action-button" data-town-name="Starting Village">Starting Village</button></li>
+
+                                            <li><button type="button" class="map-destination-button action-button" data-town-name="Steel Flow City">Steel Flow City</button></li>
+
+                                        </ul>
+
+                                </div>
+                            </div>
+
+                            <div id="location-interactions-container" class="action-section" style="display: block;">
+                                <h4>Current Location: <span id="current-town-display-actions">Starting Village</span></h4>
+                                <div id="sub-locations-list" class="button-list"><ul class="button-list"><li><button type="button" class="action-button sub-location-button" data-subloc-name="Village Shop">Village Shop</button></li><li><button type="button" class="action-button sub-location-button" data-subloc-name="Village Square">Village Square</button></li><li><button type="button" class="action-button sub-location-button" data-subloc-name="Old Man Hemlock's Hut">Old Man Hemlock's Hut</button></li></ul></div>
+                                <div id="current-sub-location-actions-container">
+                                    <h5 id="current-sub-location-name-display" style="display:none;"></h5>
+                                    <div id="current-sub-location-actions-list" class="button-list"></div>
+                                </div>
+                            </div>
+
+                            <div id="general-actions-container" class="action-section" style="display: block;">
+                                <h4>General</h4>
+                                <ul class="button-list">
+                                    <li><button type="button" id="gatherResourcesButton" class="action-button">Gather Resources</button></li>
+                                </ul>
+                            </div>
+
+                            <!-- Dynamic Action Forms Area (sibling to other action sections) -->
+                            <div id="dynamic-action-forms-container" class="action-section" style="display: none;">
+                                <!-- JS will inject forms like craft, buy, sell, NPC interactions here -->
+                                <div id="div_craft_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Craft Item</h4><button type="button" class="close-dynamic-form" aria-label="Close Craft Form">×</button></div>
+                                    <label for="craft_item_name">Item Name to Craft:</label>
+                                    <input type="text" id="craft_item_name" name="craft_item_name_detail_input" placeholder="e.g., Minor Healing Potion">
+                                    <button type="button" class="submit-details-button action-button" data-action="craft">Craft It!</button>
+                                </div>
+
+                                <div id="div_buy_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Buy from Your Shop</h4><button type="button" class="close-dynamic-form" aria-label="Close Buy Form">×</button></div>
+                                    <label for="buy_item_name">Item Name to Buy:</label>
+                                    <input type="text" id="buy_item_name" name="buy_item_name_detail_input" placeholder="e.g., Simple Dagger">
+                                    <label for="buy_quantity">Quantity:</label>
+                                    <input type="number" id="buy_quantity" name="buy_quantity_detail_input" value="1" min="1">
+                                    <button type="button" class="submit-details-button action-button" data-action="buy_from_own_shop">Buy Item(s)</button>
+                                </div>
+
+                                <div id="div_sell_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Sell to Your Shop</h4><button type="button" class="close-dynamic-form" aria-label="Close Sell Form">×</button></div>
+                                    <label for="sell_item_dropdown">Select Item from Inventory:</label>
+                                    <select id="sell_item_dropdown" name="sell_item_dropdown_select"><option value="">-- Select an item to sell --</option><option value="Empty">Empty</option></select>
+                                    <label for="sell_item_name">Or Type Item Name to Sell:</label>
+                                    <input type="text" id="sell_item_name" name="sell_item_name_detail_input" placeholder="e.g., Stale Ale (or select from above)">
+                                    <button type="button" class="submit-details-button action-button" data-action="sell_to_own_shop">Sell Item</button>
+                                </div>
+
+                                <div id="div_hemlock_herbs_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Buy Herbs from Hemlock</h4><button type="button" class="close-dynamic-form" aria-label="Close Hemlock Form">×</button></div>
+                                    <div id="hemlock-herbs-list"></div>
+                                    <label for="hemlock_quantity_dynamic">Quantity:</label>
+                                    <input type="number" id="hemlock_quantity_dynamic" value="1" min="1">
+                                    <button type="button" id="submit_buy_hemlock_herb_button" class="action-button">Buy Selected Herb</button>
+                                </div>
+
+                                <div id="div_borin_items_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Buy from Borin Stonebeard</h4><button type="button" class="close-dynamic-form" aria-label="Close Borin Buy Form">×</button></div>
+                                    <div id="borin-items-list"></div>
+                                    <label for="borin_quantity_dynamic">Quantity:</label>
+                                    <input type="number" id="borin_quantity_dynamic" value="1" min="1">
+                                    <button type="button" id="submit_buy_borin_item_button" class="action-button">Buy Selected Item</button>
+                                </div>
+
+                                <div id="div_borin_repair_details" class="dynamic-form details-section" style="display: none;">
+                                    <div class="form-header"><h4>Repair Gear with Borin</h4><button type="button" class="close-dynamic-form" aria-label="Close Borin Repair Form">×</button></div>
+                                    <label for="borin-repair-item-select">Item to Repair:</label>
+                                    <select id="borin-repair-item-select" name="borin_repair_item_select_input"></select>
+                                    <p>Repair Cost: <span id="borin-repair-cost-display">N/A</span></p>
+                                    <button type="button" id="submit-borin-repair-button" class="action-button">Repair Selected Item</button>
+                                </div>
+                            </div> <!-- End dynamic-action-forms-container -->
+                        </form>
+                    </div> <!-- End action-controls-wrapper -->
+                </div> <!-- End actions-panel-content -->
+
+                <div id="log-panel-content" class="panel-content tab-content" role="tabpanel" aria-labelledby="log-tab-button" style="display: none;">
+                    <div class="log-box">
+                        <h2>Journal</h2>
+
+                        <p>No journal entries yet.</p>
+
+                    </div>
+                </div> <!-- End log-panel-content -->
+            </div> <!-- End bottom-panel-content-area -->
+        </div> <!-- End bottom-bar -->
+
+        <div id="settings-popup" role="menu" style="display: none;">
+            <ul>
+                <li id="settings-option" role="menuitem">Settings</li>
+                <li role="menuitem"><a href="/logout" id="logout-option">Logout</a></li>
+                <li role="menuitem"><button type="button" id="save-game-button" class="popup-menu-button">Save Game</button></li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Pass Jinja variables to JavaScript
+        window.gameConfig = {
+            currentTownSubLocationsJson: [{"name": "Village Shop", "description": "Your humble shop.", "actions": ["buy_from_own_shop", "sell_to_own_shop", "check_shop_inventory", "craft"]}, {"name": "Village Square", "description": "The central gathering point of the village.", "actions": ["explore_town", "talk_to_villager", "research_market"]}, {"name": "Old Man Hemlock's Hut", "description": "A small, smoky hut belonging to the local herbalist.", "actions": ["talk_to_hemlock", "buy_from_npc"]}],
+            allTownsDataJson: {"Starting Village": {"sub_locations": [{"name": "Village Shop", "description": "Your humble shop.", "actions": ["buy_from_own_shop", "sell_to_own_shop", "check_shop_inventory", "craft"]}, {"name": "Village Square", "description": "The central gathering point of the village.", "actions": ["explore_town", "talk_to_villager", "research_market"]}, {"name": "Old Man Hemlock's Hut", "description": "A small, smoky hut belonging to the local herbalist.", "actions": ["talk_to_hemlock", "buy_from_npc"]}]}, "Steel Flow City": {"sub_locations": [{"name": "City Market", "description": "A bustling marketplace.", "actions": ["explore_town", "research_market", "visit_general_store_sfc"]}, {"name": "The Rusty Pickaxe Tavern", "description": "A rowdy place favored by miners.", "actions": ["buy_drink_tavern", "gather_rumors_tavern"]}, {"name": "Borin Stonebeard's Smithy", "description": "The workshop of the renowned blacksmith.", "actions": ["talk_to_borin", "repair_gear_borin"]}]}},
+            hemlockHerbsData: "{\"Sunpetal\": {\"description\": \"A bright, sun-shaped flower that aids recovery.\", \"base_value\": 5, \"item_type\": \"herb\", \"quality\": \"Common\", \"price\": 8}, \"Moonleaf\": {\"description\": \"A silvery leaf that glows faintly, used in calming draughts.\", \"base_value\": 7, \"item_type\": \"herb\", \"quality\": \"Common\", \"price\": 12}, \"Bitterroot\": {\"description\": \"A pungent root known for its purifying qualities.\", \"base_value\": 4, \"item_type\": \"herb\", \"quality\": \"Common\", \"price\": 6}}",
+            borinItemsData: "{\"Iron Ingot\": {\"name\": \"Iron Ingot\", \"description\": \"A bar of refined iron.\", \"base_value\": 10, \"item_type\": \"component\", \"quality\": \"Common\", \"price\": 15}, \"Scrap Metal\": {\"name\": \"Scrap Metal\", \"description\": \"A piece of discarded metal, useful for basic smithing.\", \"base_value\": 1, \"item_type\": \"component\", \"quality\": \"Common\", \"price\": 2}, \"Simple Mace\": {\"name\": \"Simple Mace\", \"description\": \"A basic but sturdy mace.\", \"base_value\": 8, \"item_type\": \"weapon\", \"quality\": \"Common\", \"price\": 12, \"effects\": {\"damage\": \"1d6\"}}}",
+            playerInventory: ["Empty"],
+            awaitingEventChoice: false,
+            pendingEventDataJson: null, // Line 260 - Changed to tojson
+            lastSkillRollStr: null,
+            popupActionResult: null,
+            shopData: {"name": "TakenName's Emporium", "level": 1, "specialization": "General Store", "inventory_count": 3, "max_inventory_slots": 20, "current_quality_bonus": 0, "next_level_cost": 1500, "next_level_slots": 30, "next_level_quality_bonus": 1, "max_level_reached": false},
+            shopConfig: {"specialization_types": ["General Store", "Blacksmith", "Alchemist"], "max_shop_level": 3},
+            playerGold: 100,
+            performActionUrl: "/action",
+            submitEventChoiceUrl: "/submit_event_choice"
+        };
+    </script>
+    <script src="/static/js/main_ui.js" defer=""></script>
+
+
+    <div id="subLocationActionsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="subLocationActionsModalTitle">
+        <div class="modal-content">
+            <span class="close-button">×</span>
+            <h3 id="subLocationActionsModalTitle">Actions</h3>
+            <div id="modal-actions-list">
+                <!-- Action buttons will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+
+
+    <div id="toast-container"></div>
+
+
+</body></html>
