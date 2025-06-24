@@ -83,6 +83,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // General Actions
     const gatherResourcesButton = document.getElementById('gatherResourcesButton');
+    const studyLocalHistoryButton = document.getElementById('studyLocalHistoryButton');
+    const organizeInventoryButton = document.getElementById('organizeInventoryButton');
+    const postAdvertisementsButton = document.getElementById('postAdvertisementsButton');
     // const craftingRecipesList = document.getElementById('crafting-recipes-list'); // If this element still exists and is used.
 
     // Event Popup
@@ -355,6 +358,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (gatherResourcesButton) {
             gatherResourcesButton.addEventListener('click', function() {
                 handleActionClick('gather_resources', gatherResourcesButton);
+            });
+        }
+        if (studyLocalHistoryButton) {
+            studyLocalHistoryButton.addEventListener('click', function() {
+                handleActionClick('study_local_history', studyLocalHistoryButton);
+            });
+        }
+        if (organizeInventoryButton) {
+            organizeInventoryButton.addEventListener('click', function() {
+                handleActionClick('organize_inventory', organizeInventoryButton);
+            });
+        }
+        if (postAdvertisementsButton) {
+            postAdvertisementsButton.addEventListener('click', function() {
+                handleActionClick('post_advertisements', postAdvertisementsButton);
             });
         }
 
