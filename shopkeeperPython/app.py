@@ -882,6 +882,13 @@ def display_game_output():
         app.logger.warning(f"CRITICAL WARNING: active_haggling_session was not None and not a dict. Type: {type(haggling_data_for_template)}, Value: {haggling_data_for_template}. Forcing to None for template.")
         haggling_data_for_template = None
 
+    # --- Temporary Debugging for Haggling ---
+    app.logger.info(f"DEBUG_DISPLAY_OUTPUT: g.game_manager.active_haggling_session = {g.game_manager.active_haggling_session if hasattr(g, 'game_manager') and g.game_manager else 'GM_NOT_AVAILABLE'}")
+    temp_haggling_pending = bool(haggling_data_for_template)
+    temp_pending_haggling_json = json.dumps(haggling_data_for_template) if haggling_data_for_template else None
+    app.logger.info(f"DEBUG_DISPLAY_OUTPUT: Values for template -> haggling_pending: {temp_haggling_pending}, pending_haggling_data_json: {temp_pending_haggling_json}")
+    # --- End Temporary Debugging ---
+
     return render_template('index.html',
                            user_logged_in=user_logged_in,
                            show_character_selection=show_character_selection,
