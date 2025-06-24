@@ -669,35 +669,52 @@ class GameManager:
         if not self.character.is_dead:
             # --- Event System ---
             skill_for_action = self.ACTION_SKILL_MAP.get(action_name)
-            event_triggered_by_skill = False
-            possible_events_for_skill = []
-            possible_generic_events = []
+            action_allows_generic_event = self.ACTIONS_ALLOWING_GENERIC_EVENTS.get(action_name, True)
 
+            event_to_process_name = None
+            event_choices_for_ui = None
+            event_object_to_process = None
+
+            # Determine if a skill-specific event is attempted
             if skill_for_action and random.random() < self.SKILL_EVENT_CHANCE_PER_HOUR:
-                # Filter events that have at least one skill_check_option matching the skill_for_action
-                # and are not explicitly typed as "generic" if we want skill-specific ones.
-                # Or, more simply, any event that *can* use the skill.
-                for event_obj in self.skill_check_events:
-                    if any(choice.get('skill') == skill_for_action for choice in event_obj.skill_check_options):
-                        possible_events_for_skill.append(event_obj)
+                possible_skill_events = [
+                    ev for ev in self.skill_check_events
+                    if any(choice.get('skill') == skill_for_action for choice in ev.skill_check_options)
+                ]
+                if possible_skill_events:
+                    self._print(f"  Considering {len(possible_skill_events)} skill-related events for '{skill_for_action}'.")
+                    event_to_process_name = self.event_manager.trigger_random_event(possible_events=possible_skill_events)
 
-                if possible_events_for_skill:
-                    self._print(f"  Considering {len(possible_events_for_skill)} skill-related events for '{skill_for_action}'.")
-                    event_data_for_return = self.event_manager.trigger_random_event(possible_events=possible_events_for_skill)
-                    if event_data_for_return and event_data_for_return.get("type") == "event_pending": return event_data_for_return
-                    if event_data_for_return: event_triggered_by_skill = True
-
-            if not event_triggered_by_skill and self.ACTIONS_ALLOWING_GENERIC_EVENTS.get(action_name, True) and random.random() < self.BASE_EVENT_CHANCE_PER_HOUR:
-                # Filter for events explicitly marked as "generic" or those without specific skill associations
-                # if a distinction is needed. For now, let's assume generic means event_type == "generic".
-                for event_obj in self.skill_check_events:
-                    if event_obj.event_type == "generic": # Assuming Event class has event_type attribute
-                        possible_generic_events.append(event_obj)
-
+            # If no skill event was triggered, try a generic event
+            if not event_to_process_name and action_allows_generic_event and random.random() < self.BASE_EVENT_CHANCE_PER_HOUR:
+                possible_generic_events = [ev for ev in self.skill_check_events if ev.event_type == "generic"]
                 if possible_generic_events:
                     self._print(f"  Considering {len(possible_generic_events)} generic events.")
-                    event_data_for_return = self.event_manager.trigger_random_event(possible_events=possible_generic_events)
-                    if event_data_for_return and event_data_for_return.get("type") == "event_pending": return event_data_for_return
+                    event_to_process_name = self.event_manager.trigger_random_event(possible_events=possible_generic_events)
+
+            # Process the triggered event, if any
+            if event_to_process_name:
+                event_object_to_process = next((ev for ev in self.skill_check_events if ev.name == event_to_process_name), None)
+                if event_object_to_process:
+                    # Call resolve_event to get choices for GameManager (redundant as trigger_random_event also calls it)
+                    # This also handles printing choices to console again.
+                    event_choices_for_ui = self.event_manager.resolve_event(event_object_to_process)
+
+                    if event_choices_for_ui: # Event has choices, so it's pending for UI
+                        self._print(f"  Event '{event_to_process_name}' is pending player choice.")
+                        return {
+                            "type": "event_pending",
+                            "event_data": {
+                                "name": event_to_process_name,
+                                "description": event_object_to_process.description,
+                                "choices": event_choices_for_ui
+                            }
+                        }
+                    else: # Event has no choices (direct outcome)
+                        self._print(f"  Event '{event_to_process_name}' triggered with no UI choices. Attempting direct execution.")
+                        self.event_manager.execute_skill_choice(event_object_to_process, 0) # Assuming 0 for direct/default
+                        # Event effects are applied. Action is complete for this turn regarding this event.
+                        # Flow continues to NPC sales, etc.
 
             # --- NPC Sales Logic ---
             if self.shop and self.shop.inventory and action_name not in ["buy_from_own_shop", "sell_to_own_shop", "buy_from_npc", "set_shop_specialization", "upgrade_shop", "craft"]:
