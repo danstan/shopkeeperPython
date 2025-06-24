@@ -285,11 +285,18 @@ class Shop:
 
         initial_npc_offer = int(initial_offer_value_float)
 
+        # Ensure item_to_sell has a quantity attribute, defaulting to 1 if missing (though it should always exist)
+        quantity_for_sale = getattr(item_to_sell, 'quantity', 1)
+        if quantity_for_sale <= 0:
+            print(f"SHOP: Cannot initiate haggling for {item_to_sell.name}, quantity is {quantity_for_sale}.")
+            return None
+
 
         haggling_state = {
             "item_name": item_to_sell.name,
             "item_quality": item_to_sell.quality,
             "item_base_value": item_to_sell.base_value, # For reference
+            "quantity": quantity_for_sale, # Added quantity
             "item_id_in_shop_inventory": self.inventory.index(item_to_sell), # To identify the exact item
             "npc_name": npc_name,
             "initial_offer": initial_npc_offer,
@@ -301,7 +308,7 @@ class Shop:
             "context": "player_selling", # Player's shop is selling
             "can_still_haggle": True
         }
-        print(f"SHOP: Initiating haggling with {npc_name} for {item_to_sell.name}. Initial NPC offer: {initial_npc_offer}g (Shop's ideal price: {standard_shop_price}g).")
+        print(f"SHOP: Initiating haggling with {npc_name} for {quantity_for_sale}x {item_to_sell.name}. Initial NPC offer: {initial_npc_offer}g (Shop's ideal price: {standard_shop_price}g).")
         return haggling_state
 
     def finalize_haggled_sale(self, item_instance_to_sell: Item, final_selling_price: int) -> bool:
