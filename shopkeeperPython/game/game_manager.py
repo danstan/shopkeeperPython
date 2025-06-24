@@ -1181,17 +1181,21 @@ class GameManager:
 
                 if random.random() < final_npc_buy_chance:
                     eligible_items_for_npc_purchase = [item for item in self.shop.inventory if item.item_type not in ["quest_item", "special_currency"] and item.quantity > 0]
-                    if eligible_items_for_npc_purchase:
+                    if not eligible_items_for_npc_purchase:
+                        self._print(f"  DEBUG: No eligible items in shop for NPC purchase attempt.")
+                    else:
                         item_to_sell_to_npc_instance = random.choice(eligible_items_for_npc_purchase)
-                        npc_buyer_name = "Wandering Customer"
-
-                        haggling_data = self.shop.initiate_haggling_for_item_sale(item_to_sell_to_npc_instance, npc_name=npc_buyer_name)
-                        if haggling_data:
-                            self._print(f"  A {npc_buyer_name} is interested in buying {item_to_sell_to_npc_instance.name}. They offer {haggling_data['initial_offer']}g.")
-                            self.active_haggling_session = haggling_data
-                            return {"type": "haggling_pending", "haggling_data": haggling_data}
+                        if not item_to_sell_to_npc_instance or not isinstance(item_to_sell_to_npc_instance, Item):
+                            self._print(f"  DEBUG: Invalid item selected for NPC purchase: {item_to_sell_to_npc_instance}")
                         else:
-                            self._print(f"  DEBUG: Failed to initiate haggling for {item_to_sell_to_npc_instance.name}")
+                            npc_buyer_name = "Wandering Customer"
+                            haggling_data = self.shop.initiate_haggling_for_item_sale(item_to_sell_to_npc_instance, npc_name=npc_buyer_name)
+                            if haggling_data:
+                                self._print(f"  A {npc_buyer_name} is interested in buying {item_to_sell_to_npc_instance.name}. They offer {haggling_data['initial_offer']}g.")
+                                self.active_haggling_session = haggling_data
+                                return {"type": "haggling_pending", "haggling_data": haggling_data}
+                            else:
+                                self._print(f"  DEBUG: Failed to initiate haggling for {item_to_sell_to_npc_instance.name} (shop.initiate_haggling_for_item_sale returned None).")
                 else: # No NPC buy attempt this hour
                     if random.random() < self.CUSTOMER_INTERACTION_CHANCE_PER_HOUR / 2:
                          self._handle_customer_interaction()
@@ -1202,23 +1206,25 @@ class GameManager:
 
         # After all actions, clear any stale haggling session if the action wasn't a haggle response
         # and no new haggling session was initiated by NPC Sales Logic.
-        # This check ensures that if a haggling_pending was returned above, active_haggling_session is NOT cleared here.
-        if action_name not in ["PROCESS_PLAYER_HAGGLE_CHOICE_SELL", "PROCESS_PLAYER_HAGGLE_CHOICE_BUY"]:
-            # Check if a new haggling session was just started by NPC sales logic
-            # If `perform_hourly_action` is about to return `haggling_pending`, `self.active_haggling_session` would be set.
-            # We only clear if it's truly stale from a *previous* turn and this turn didn't involve haggling.
-            # This logic is tricky. A simpler way: if the return type ISN'T haggling_pending, clear it.
-            # This is implicitly handled: if a haggle action returns "haggling_pending", it returns early.
-            # If it's action_complete, then we check.
-            if hasattr(self, 'active_haggling_session') and self.active_haggling_session is not None:
-                # Check if the current action_name should have cleared it or if it's a new one
-                # This is getting complex. The most important thing is that PROCESS_PLAYER_HAGGLE_CHOICE actions
-                # correctly use and then clear self.active_haggling_session.
-                # And that NPC sales logic correctly sets it up.
-                # For other actions, if a session was somehow stuck, it should be cleared.
-                # Let's assume that if an action completes and it wasn't a haggle continuation, the session is over.
-                # This is now done at the end of PROCESS_PLAYER_HAGGLE_CHOICE_SELL/BUY when they complete/decline.
-                pass # Rely on specific actions to clear it.
+        if action_name not in ["PROCESS_PLAYER_HAGGLE_CHOICE_SELL", "PROCESS_PLAYER_HAGGLE_CHOICE_BUY"] and \
+           not (hasattr(self, 'active_haggling_session') and self.active_haggling_session and \
+                (self.active_haggling_session.get("context") == "player_selling" or self.active_haggling_session.get("context") == "player_buying")):
+            # This condition is to clear a session ONLY if it's not a new one just set up by this turn's NPC interaction
+            # and the current action is not a haggle continuation.
+            # A simpler approach might be needed if this becomes too complex.
+            # For now, if the return type is not "haggling_pending", any active session might be stale.
+            # However, the return type is only known at the very end.
+            # Let's rely on the specific haggling actions to clear their own sessions on completion/decline.
+            # If a non-haggling action occurs, and a session is still active, it's likely stale from an interruption.
+            if self.active_haggling_session:
+                 # Check if perform_hourly_action is about to return haggling_pending. If so, don't clear.
+                 # This is tricky. A robust way is to check the return value of this function.
+                 # For now, let's assume if an action that *isn't* a haggle choice completes,
+                 # any prior haggle session should be considered void.
+                 # This might be too aggressive if an event interrupts a haggle and then the haggle should resume.
+                 # The current logic for events already clears active_haggling_session.
+                 pass
+
 
         if self.character and hasattr(self.character, 'pending_asi_feat_choice') and self.character.pending_asi_feat_choice:
             self._print(f"  ATTENTION: {self.character.name} has an Ability Score Improvement or Feat choice pending!")

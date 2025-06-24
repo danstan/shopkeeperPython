@@ -1203,9 +1203,41 @@ const UIHaggling = {
         }
 
         this.currentHagglingData = data;
-        if (!DOM.hagglingPopupWrapper || !this.currentHagglingData) {
-            console.error("Haggling modal elements or data missing.");
-            this.closeModal();
+
+        if (!DOM.hagglingPopupWrapper) {
+            console.error("Haggling modal wrapper element missing. Cannot display haggling popup.");
+            return; // Critical DOM element missing
+        }
+
+        // Ensure the modal itself is shown, as it might have display:none from .modal class
+        if (DOM.hagglingPopup) {
+            DOM.hagglingPopup.style.display = 'block';
+        }
+        DOM.hagglingPopupWrapper.classList.remove('hidden');
+        DOM.hagglingPopup.setAttribute('aria-hidden', 'false');
+
+
+        if (!this.currentHagglingData || typeof this.currentHagglingData !== 'object') {
+            console.error("Haggling data is missing, null, or not an object.", this.currentHagglingData);
+            if (DOM.haggleItemName) DOM.haggleItemName.textContent = 'Error';
+            if (DOM.haggleItemQuality) DOM.haggleItemQuality.textContent = 'N/A';
+            if (DOM.haggleItemQuantity) DOM.haggleItemQuantity.textContent = 'N/A';
+            if (DOM.haggleNpcName) DOM.haggleNpcName.textContent = 'Error';
+            if (DOM.haggleNpcMood) DOM.haggleNpcMood.textContent = 'N/A';
+            if (DOM.haggleCurrentOffer) DOM.haggleCurrentOffer.textContent = '0g';
+            if (DOM.hagglingPopupTitle) DOM.hagglingPopupTitle.textContent = "Trade Error";
+            if (DOM.haggleLastCheckResult) DOM.haggleLastCheckResult.classList.add('hidden');
+            if (DOM.haggleRoundsInfo) DOM.haggleRoundsInfo.classList.add('hidden');
+            if (DOM.haggleFinalOfferNotice) DOM.haggleFinalOfferNotice.classList.remove('hidden');
+            if (DOM.haggleFinalOfferNotice) DOM.haggleFinalOfferNotice.textContent = "A problem occurred with this trade. Please decline.";
+
+
+            // Disable all action buttons
+            if (DOM.haggleAcceptButton) DOM.haggleAcceptButton.disabled = true;
+            if (DOM.hagglePersuadeButton) DOM.hagglePersuadeButton.disabled = true;
+            // Decline button should remain active to close the broken modal.
+            if (DOM.haggleDeclineButton) DOM.haggleDeclineButton.disabled = false;
+            showToast("Error with trade data. Please decline.", "error");
             return;
         }
 
@@ -1215,26 +1247,59 @@ const UIHaggling = {
             max_haggle_rounds, can_still_haggle, last_skill_check_result, context
         } = this.currentHagglingData;
 
+        // Validate essential data fields
+        if (item_name === undefined || npc_name === undefined || current_offer === undefined) {
+            console.error("Essential haggling data (item_name, npc_name, current_offer) is undefined.", this.currentHagglingData);
+            // Populate with error messages and disable buttons as above
+            if (DOM.haggleItemName) DOM.haggleItemName.textContent = item_name === undefined ? 'Item Error' : (item_name || 'N/A');
+            if (DOM.haggleItemQuality) DOM.haggleItemQuality.textContent = item_quality || 'N/A';
+            if (DOM.haggleItemQuantity) DOM.haggleItemQuantity.textContent = quantity !== undefined ? quantity : 'N/A';
+            if (DOM.haggleNpcName) DOM.haggleNpcName.textContent = npc_name === undefined ? 'NPC Error' : (npc_name || 'Mysterious Figure');
+            if (DOM.haggleNpcMood) DOM.haggleNpcMood.textContent = npc_mood || 'Neutral';
+            if (DOM.haggleCurrentOffer) DOM.haggleCurrentOffer.textContent = `${current_offer === undefined ? 'Price Error' : (current_offer || 0)}g`;
+            if (DOM.hagglingPopupTitle) DOM.hagglingPopupTitle.textContent = "Trade Data Error";
+            if (DOM.haggleFinalOfferNotice) DOM.haggleFinalOfferNotice.classList.remove('hidden');
+            if (DOM.haggleFinalOfferNotice) DOM.haggleFinalOfferNotice.textContent = "A problem occurred with trade details. Please decline.";
+
+            if (DOM.haggleAcceptButton) DOM.haggleAcceptButton.disabled = true;
+            if (DOM.hagglePersuadeButton) DOM.hagglePersuadeButton.disabled = true;
+            if (DOM.haggleDeclineButton) DOM.haggleDeclineButton.disabled = false;
+            showToast("Error in trade details. Please decline.", "error");
+            return;
+        }
+
+
         if (DOM.haggleItemName) DOM.haggleItemName.textContent = item_name || 'N/A';
         if (DOM.haggleItemQuality) DOM.haggleItemQuality.textContent = item_quality || 'N/A';
-        if (DOM.haggleItemQuantity) DOM.haggleItemQuantity.textContent = quantity !== undefined ? quantity : (context === "player_selling" ? "1" : "N/A"); // Assume 1 if player selling and not specified
+        // Use quantity from haggling_state, ensure it's displayed. Default to 1 if not present (though it should be now).
+        if (DOM.haggleItemQuantity) DOM.haggleItemQuantity.textContent = quantity !== undefined ? quantity : '1';
         if (DOM.haggleNpcName) DOM.haggleNpcName.textContent = npc_name || 'Mysterious Figure';
         if (DOM.haggleNpcMood) DOM.haggleNpcMood.textContent = npc_mood || 'Neutral';
         if (DOM.haggleCurrentOffer) DOM.haggleCurrentOffer.textContent = `${current_offer || 0}g`;
 
+
         if (DOM.haggleTargetPriceInfo) { // Optional display logic for target prices
+            DOM.haggleTargetPriceInfo.classList.remove('hidden'); // Ensure parent is visible first
+            const playerTargetEl = DOM.hagglePlayerTargetPrice ? DOM.hagglePlayerTargetPrice.parentElement : null;
+            const shopTargetEl = DOM.haggleShopTargetPrice ? DOM.haggleShopTargetPrice.parentElement : null;
+
             if (context === "player_buying" && player_target_price !== undefined) {
                 if (DOM.hagglePlayerTargetPrice) DOM.hagglePlayerTargetPrice.textContent = `${player_target_price}g`;
-                if (DOM.haggleShopTargetPrice) DOM.haggleShopTargetPrice.parentElement.classList.add('hidden'); // Hide shop target if player buying
-                DOM.haggleTargetPriceInfo.classList.remove('hidden');
+                if (playerTargetEl) playerTargetEl.classList.remove('hidden');
+                if (shopTargetEl) shopTargetEl.classList.add('hidden');
             } else if (context === "player_selling" && shop_target_price !== undefined) {
                 if (DOM.haggleShopTargetPrice) DOM.haggleShopTargetPrice.textContent = `${shop_target_price}g`;
-                 if (DOM.hagglePlayerTargetPrice) DOM.hagglePlayerTargetPrice.parentElement.classList.add('hidden'); // Hide player target if shop selling
-                DOM.haggleTargetPriceInfo.classList.remove('hidden');
+                if (shopTargetEl) shopTargetEl.classList.remove('hidden');
+                if (playerTargetEl) playerTargetEl.classList.add('hidden');
             } else {
-                DOM.haggleTargetPriceInfo.classList.add('hidden');
+                // If context or prices are undefined, hide both specific price displays
+                if (playerTargetEl) playerTargetEl.classList.add('hidden');
+                if (shopTargetEl) shopTargetEl.classList.add('hidden');
+                // And potentially hide the whole target price info section if neither context is clear
+                 DOM.haggleTargetPriceInfo.classList.add('hidden');
             }
         }
+
 
         if (DOM.haggleLastCheckResult && DOM.haggleLastCheckText) {
             if (last_skill_check_result) {
@@ -1245,18 +1310,25 @@ const UIHaggling = {
             }
         }
 
-        if (DOM.haggleCurrentRound) DOM.haggleCurrentRound.textContent = haggle_rounds_attempted || 0;
-        if (DOM.haggleMaxRounds) DOM.haggleMaxRounds.textContent = max_haggle_rounds || 3;
+        if (DOM.haggleCurrentRound) DOM.haggleCurrentRound.textContent = haggle_rounds_attempted !== undefined ? haggle_rounds_attempted : 0;
+        if (DOM.haggleMaxRounds) DOM.haggleMaxRounds.textContent = max_haggle_rounds !== undefined ? max_haggle_rounds : 3;
+        if (DOM.haggleRoundsInfo) DOM.haggleRoundsInfo.classList.remove('hidden');
+
 
         const finalOffer = !can_still_haggle || (haggle_rounds_attempted >= max_haggle_rounds);
         if (DOM.hagglePersuadeButton) DOM.hagglePersuadeButton.disabled = finalOffer;
+        if (DOM.haggleAcceptButton) DOM.haggleAcceptButton.disabled = false; // Ensure accept is enabled unless other logic disables it
+        if (DOM.haggleDeclineButton) DOM.haggleDeclineButton.disabled = false; // Ensure decline is enabled
         if (DOM.haggleFinalOfferNotice) DOM.haggleFinalOfferNotice.classList.toggle('hidden', !finalOffer);
+        if (DOM.haggleFinalOfferNotice && !finalOffer) DOM.haggleFinalOfferNotice.textContent = "This is their final offer."; // Reset default text if not final offer
+
 
         if (DOM.hagglingPopupTitle) {
-            DOM.hagglingPopupTitle.textContent = context === "player_buying" ? `Buy from ${npc_name}` : `Sell to ${npc_name}`;
+            DOM.hagglingPopupTitle.textContent = context === "player_buying" ? `Buy from ${npc_name || 'NPC'}` : `Sell to ${npc_name || 'NPC'}`;
         }
 
-        DOM.hagglingPopupWrapper.classList.remove('hidden');
+        // This was already here, ensure it's at the end after all content is set.
+        // DOM.hagglingPopupWrapper.classList.remove('hidden');
         DOM.hagglingPopup.setAttribute('aria-hidden', 'false');
         // Ensure the modal itself is displayed, as it has display:none from .modal class
         if (DOM.hagglingPopup) { // Check if DOM.hagglingPopup is cached and exists
