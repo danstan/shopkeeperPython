@@ -2,3 +2,4 @@ Flask
 Flask-Dance
 blinker
 selenium
+webdriver-manager

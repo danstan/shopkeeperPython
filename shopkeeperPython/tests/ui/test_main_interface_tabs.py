@@ -50,7 +50,7 @@ class TestMainInterfaceTabs(BaseUITest):
 
         # Click the 'Menu' button
         menu_button.click()
-        time.sleep(0.1) # Short delay for JS to execute style change
+        # time.sleep(0.1) # Short delay for JS to execute style change - Replaced by explicit wait below
 
         # Wait for the menu popup to become visible by waiting for an item within it
         settings_option_li = self.wait_for_element((By.ID, "settings-option"))
@@ -71,7 +71,7 @@ class TestMainInterfaceTabs(BaseUITest):
         # First, open the menu popup
         menu_button = self.wait_for_element((By.ID, "top-right-menu-button")) # Corrected ID
         menu_button.click()
-        time.sleep(0.1) # Short delay for JS to execute style change
+        # time.sleep(0.1) # Short delay for JS to execute style change - Replaced by explicit wait below
         # Wait for an item within the popup to ensure it's open
         self.wait_for_element((By.ID, "settings-option"))
         settings_popup = self.driver.find_element(By.ID, "settings-popup") # Get popup for visibility check
