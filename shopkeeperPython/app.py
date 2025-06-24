@@ -1102,23 +1102,36 @@ def perform_action():
         else:
             action_result_data = g.game_manager.perform_hourly_action(action_name, details_dict)
 
-            if isinstance(action_result_data, dict) and action_result_data.get('type') == 'event_pending':
-                    event_details = action_result_data.get('event_data', {}) # Get the nested dict, default to empty dict
+            # --- Handle action result (event, haggle, or complete) ---
+            if isinstance(action_result_data, dict):
+                result_type = action_result_data.get('type')
+                if result_type == 'haggling_pending':
+                    # Haggling takes precedence. Clear any generic event session flags.
+                    # GameManager has already set g.game_manager.active_haggling_session.
+                    # display_game_output will pick up active_haggling_session.
+                    session.pop('awaiting_event_choice', None)
+                    session.pop('pending_event_data', None)
+                    flash("A potential transaction requires your attention!", "info")
+                elif result_type == 'event_pending':
+                    event_details = action_result_data.get('event_data', {})
                     session['awaiting_event_choice'] = True
                     session['pending_event_data'] = {
-                        'name': event_details.get('name'), # Access from event_details
-                        'description': event_details.get('description'), # Access from event_details
-                        'choices': event_details.get('choices') # Access from event_details
+                        'name': event_details.get('name'),
+                        'description': event_details.get('description'),
+                        'choices': event_details.get('choices')
                     }
-                    # Use event_details for flash and print as well
-                    event_name_for_flash = event_details.get('name', 'An event') # Fallback name
+                    event_name_for_flash = event_details.get('name', 'An event')
                     flash(f"EVENT: {event_name_for_flash}! Check Journal or Game Log for details.", "info")
-                    g.game_manager._print(f"EVENT: {event_name_for_flash} requires your attention!")
-            else:
+                    # g.game_manager._print already handled by GameManager
+                else: # 'action_complete' or other types
+                    session.pop('awaiting_event_choice', None)
+                    session.pop('pending_event_data', None)
+                    flash(f"Action '{action_name_display}' performed. Check Journal or Game Log for details.", "info")
+            else: # Should not happen if perform_hourly_action always returns a dict
                 session.pop('awaiting_event_choice', None)
                 session.pop('pending_event_data', None)
-                # Default success message for actions that don't trigger an event
-                flash(f"Action '{action_name_display}' performed. Check Journal or Game Log for details.", "info")
+                flash(f"Action '{action_name_display}' processed (unknown result type). Check Journal or Game Log.", "warning")
+
 
         # ---- START SAVE LOGIC (using g.player_char and g.game_manager) ----
         if g.player_char and g.player_char.name and not g.player_char.is_dead:
