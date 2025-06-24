@@ -368,6 +368,7 @@ function cacheDomElements() {
     DOM.haggleCurrentRound = document.getElementById('haggle-current-round');
     DOM.haggleMaxRounds = document.getElementById('haggle-max-rounds');
     DOM.haggleFinalOfferNotice = document.getElementById('haggle-final-offer-notice');
+    console.log('[cacheDomElements] DOM.hagglingChoicesContainer:', DOM.hagglingChoicesContainer); // Added log
 
 
     // Toast Container
@@ -1501,11 +1502,21 @@ const UIHaggling = {
     },
 
     init() {
+        console.log("[UIHaggling.init] Called."); // Added log
         if (DOM.hagglingChoicesContainer) {
+            console.log("[UIHaggling.init] Found DOM.hagglingChoicesContainer, attaching listener:", DOM.hagglingChoicesContainer);
             DOM.hagglingChoicesContainer.addEventListener('click', (event) => {
+                console.log("[UIHaggling.init] Click detected on hagglingChoicesContainer. Event target:", event.target);
                 const button = event.target.closest('.haggle-choice-button');
+                console.log("[UIHaggling.init] Button found by .closest():", button);
                 if (button && button.dataset.choice) {
+                    console.log("[UIHaggling.init] Button has .haggle-choice-button class and data-choice. Calling handleChoice with:", button.dataset.choice);
                     this.handleChoice(button.dataset.choice);
+                } else {
+                    console.log("[UIHaggling.init] Clicked, but not on a valid haggle-choice-button or button missing data-choice.");
+                    if (button) {
+                        console.log("[UIHaggling.init] Button was found, but missing data-choice. Button:", button, "Dataset:", button.dataset);
+                    }
                 }
             });
         }
