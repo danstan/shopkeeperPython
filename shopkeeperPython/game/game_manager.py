@@ -775,32 +775,45 @@ class GameManager:
                 has_drink, _ = self.character.has_items(drink_needed)
 
                 if has_food and has_drink:
-                    self.character.consume_items(food_needed)
-                    self.character.consume_items(drink_needed)
+                    # Call the modified character.attempt_long_rest() which checks time, food, drink
+                    # It no longer handles interruptions or applies benefits directly.
+                    rest_attempt_result = self.character.attempt_long_rest(
+                        food_available=has_food,
+                        drink_available=has_drink,
+                        hours_of_rest=8 # Standard long rest duration
+                    )
 
-                    self.character.hp = self.character.get_effective_max_hp() # Corrected
-                    self.character.hit_dice = self.character.level # Recover all hit dice
+                    if not rest_attempt_result.get("conditions_met", False):
+                        # Basic conditions (food, drink, time) not met. Message already printed by character method.
+                        self.add_journal_entry(action_type="Long Rest Attempt", summary="Failed pre-conditions for long rest.", outcome=rest_attempt_result.get("message", "Failed."))
+                        action_xp_reward = 0 # No XP if basic conditions fail
+                        # Exhaustion already handled by character.attempt_long_rest if supplies were missing
+                    else:
+                        # Basic conditions met, now check for event interruptions
+                        was_interrupted, interrupting_event_obj = self.event_manager.trigger_long_rest_interruption_event(self.skill_check_events)
 
-                    exhaustion_removed = 0
-                    if self.character.exhaustion_level > 0:
-                        self.character.exhaustion_level -= 1
-                        exhaustion_removed = 1
+                        if was_interrupted and interrupting_event_obj:
+                            # Event manager already printed about the interruption.
+                            # Now, resolve the event to get choices for the UI.
+                            current_event_choices = self.event_manager.resolve_event(interrupting_event_obj)
+                            self.add_journal_entry(action_type="Long Rest Interruption", summary=f"Rest interrupted by event: {interrupting_event_obj.name}", outcome="Event pending.")
+                            action_xp_reward = 2 # Small XP for encountering an event during rest
+                            # Return event_pending to UI. Benefits are NOT applied yet.
+                            # Event outcome will determine rest_quality and call apply_long_rest_benefits.
+                            self.active_haggling_session = None # Clear any haggling session if an event interrupts
+                            return {"type": "event_pending", "event_data": {"name": interrupting_event_obj.name, "description": interrupting_event_obj.description, "choices": current_event_choices}}
+                        else:
+                            # No interruption, or interruption chance failed. Proceed with a successful rest.
+                            # Event manager would have printed "Long rest proceeds without event interruption".
+                            self.character.apply_long_rest_benefits(rest_quality="successful")
+                            outcome_summary = f"Completed a full, uninterrupted long rest. HP, HD, and Exhaustion benefits applied."
+                            self.add_journal_entry(action_type="Long Rest", summary="Completed a long rest.", outcome=outcome_summary)
+                            action_xp_reward = 5 # Standard XP for successful long rest
+                else: # Should not happen if items are named "Food" and "Drink"
+                    self._print(f"  {self.character.name} cannot rest: Generic 'Food' or 'Drink' item definitions not found for consumption check.")
+                    self.add_journal_entry(action_type="Long Rest Attempt", summary="Failed long rest.", outcome="System error: Food/Drink item definitions missing.")
+                    action_xp_reward = 0
 
-                    outcome_summary = f"HP fully restored. All Hit Dice recovered. Exhaustion reduced by {exhaustion_removed} (Current: {self.character.exhaustion_level}). Consumed 1 Food and 1 Drink."
-                    self._print(f"  {self.character.name} completes a long rest. {outcome_summary}")
-                    self.add_journal_entry(action_type="Long Rest", summary="Completed a long rest.", outcome=outcome_summary, details={"food_consumed": 1, "drink_consumed": 1, "exhaustion_removed": exhaustion_removed})
-                    action_xp_reward = 5
-                else:
-                    missing_supplies = []
-                    if not has_food: missing_supplies.append("Food")
-                    if not has_drink: missing_supplies.append("Drink")
-
-                    # GDD: Failed long rest can lead to exhaustion
-                    self.character.exhaustion_level = min(6, self.character.exhaustion_level + 1)
-                    outcome_summary = f"Failed to complete long rest. Missing: {', '.join(missing_supplies)}. Gained 1 level of exhaustion (Current: {self.character.exhaustion_level})."
-                    self._print(f"  {self.character.name} attempts a long rest but fails. {outcome_summary}")
-                    self.add_journal_entry(action_type="Long Rest", summary="Attempted long rest.", outcome=outcome_summary, details={"missing_supplies": missing_supplies})
-                    action_xp_reward = 0 # No XP for failed rest
                 time_advanced_by_action_hours = 8
 
             elif action_name == "gather_rumors_tavern":
@@ -914,6 +927,50 @@ class GameManager:
                     self._print(f"  Invalid choice_type '{choice_type}' for ASI/Feat.")
                 action_xp_reward = 0
                 time_advanced_by_action_hours = 0
+
+            elif action_name == "USE_ITEM":
+                item_name_to_use = action_details.get("item_name")
+                if not item_name_to_use:
+                    self._print("  No item_name provided for using an item.")
+                elif not self.character:
+                    self._print("  Cannot use item: No character loaded.")
+                else:
+                    if self.character.use_consumable_item(item_name_to_use):
+                        # Message is printed by use_consumable_item
+                        self.add_journal_entry(action_type="Use Item", summary=f"Used item: {item_name_to_use}.", outcome="Success")
+                    else:
+                        # Message is printed by use_consumable_item
+                        self.add_journal_entry(action_type="Use Item", summary=f"Failed to use item: {item_name_to_use}.", outcome="Failure")
+                action_xp_reward = 0
+                time_advanced_by_action_hours = 0 # Using an item is typically a free action or part of another action
+
+            elif action_name == "ATTUNE_ITEM":
+                item_name_to_attune = action_details.get("item_name")
+                if not item_name_to_attune:
+                    self._print("  No item_name provided for attuning an item.")
+                elif not self.character:
+                    self._print("  Cannot attune item: No character loaded.")
+                else:
+                    if self.character.attune_item(item_name_to_attune):
+                        self.add_journal_entry(action_type="Attune Item", summary=f"Attuned item: {item_name_to_attune}.", outcome="Success")
+                    else:
+                        self.add_journal_entry(action_type="Attune Item", summary=f"Failed to attune item: {item_name_to_attune}.", outcome="Failure")
+                action_xp_reward = 0
+                time_advanced_by_action_hours = 0 # Attuning is typically done during rests or downtime, not an hourly action cost
+
+            elif action_name == "UNATTUNE_ITEM":
+                item_name_to_unattune = action_details.get("item_name")
+                if not item_name_to_unattune:
+                    self._print("  No item_name provided for unattuning an item.")
+                elif not self.character:
+                    self._print("  Cannot unattune item: No character loaded.")
+                else:
+                    if self.character.unattune_item(item_name_to_unattune):
+                        self.add_journal_entry(action_type="Unattune Item", summary=f"Unattuned item: {item_name_to_unattune}.", outcome="Success")
+                    else:
+                        self.add_journal_entry(action_type="Unattune Item", summary=f"Failed to unattune item: {item_name_to_unattune}.", outcome="Failure")
+                action_xp_reward = 0
+                time_advanced_by_action_hours = 0 # Unattuning is typically done during rests or downtime
 
             elif action_name == "PROCESS_PLAYER_HAGGLE_CHOICE_SELL":
                 if not self.active_haggling_session or self.active_haggling_session.get("context") != "player_selling":

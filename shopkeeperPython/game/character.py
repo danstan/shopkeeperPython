@@ -348,25 +348,75 @@ class Character:
     def attempt_long_rest(self, food_available: bool = True, drink_available: bool = True, hours_of_rest: int = 8, interruption_chance: float = 0.1) -> dict:
         print(f"\n{self.name} attempts a long rest...")
         if hours_of_rest < 8: msg = "Not enough time for a full long rest."; print(msg); return {"success": False, "message": msg}
-        if random.random() < interruption_chance:
-            msg = "Long rest interrupted!"; print(msg)
-            if not food_available or not drink_available: self.gain_exhaustion(1)
-            return {"success": False, "message": msg, "interrupted": True}
+        if hours_of_rest < 8:
+            msg = "Not enough time for a full long rest."
+            print(msg)
+            # No exhaustion gain here, just not enough time.
+            return {"success": False, "message": msg, "conditions_met": False, "hours_rested": hours_of_rest}
+
         if not food_available or not drink_available:
-            self.gain_exhaustion(1); msg = "Long rest failed: no food/drink. Gained 1 exhaustion."; print(msg)
-            return {"success": False, "message": msg}
-        # Successful long rest benefits should be applied here before returning
+            self.gain_exhaustion(1) # Still gain exhaustion if attempting full rest without supplies
+            missing_supplies = []
+            if not food_available: missing_supplies.append("Food")
+            if not drink_available: missing_supplies.append("Drink")
+            msg = f"Long rest conditions not met: missing {', '.join(missing_supplies)}. Gained 1 exhaustion."
+            print(msg)
+            return {"success": False, "message": msg, "conditions_met": False, "hours_rested": hours_of_rest}
+
+        # Conditions met (food, drink, time), rest can proceed pending interruptions (handled by GameManager)
+        # Benefits are NOT applied here anymore. They will be applied by a separate method
+        # called by GameManager if no interruption occurs or if an event outcome allows it.
+        print(f"  {self.name} settles down for a long rest. Basic conditions (food/drink/time) are met.")
+        return {"success": True, "message": "Basic conditions for long rest met. Awaiting completion or interruption.", "conditions_met": True, "hours_rested": hours_of_rest}
+
+    def apply_long_rest_benefits(self, rest_quality: str = "successful"):
+        """
+        Applies the mechanical benefits of a long rest, potentially modified by an interruption event's outcome.
+        Called by GameManager after event resolution or if no event occurred.
+        """
+        print(f"  {self.name} is concluding their long rest. Outcome quality: '{rest_quality}'.")
+
+        if rest_quality == "failed":
+            print(f"  Rest was a failure. No benefits gained. Exhaustion may have increased from event.")
+            # Exhaustion gain from the event itself would be handled by the event outcome.
+            # If 'failed' means specifically due to sickness event, exhaustion is already applied.
+            return
+
+        if rest_quality == "poor": # e.g., minor item loss, very disturbed
+            # Partial HD recovery, no exhaustion removal, maybe only partial HP
+            self.hp = min(self.get_effective_max_hp(), self.hp + (self.get_effective_max_hp() - self.hp) // 2) # Recover half of missing HP
+            recovered_hd = max(1, self.max_hit_dice // 4) # Recover 1/4 HD (min 1)
+            self.hit_dice = min(self.max_hit_dice, self.hit_dice + recovered_hd)
+            print(f"  Rest was poor. HP partially restored to {self.hp}. Recovered {recovered_hd} HD. No exhaustion relief.")
+            return
+
+        if rest_quality == "partial": # Disturbed, but some benefit
+            self.hp = min(self.get_effective_max_hp(), self.hp + (self.get_effective_max_hp() - self.hp) * 3 // 4) # Recover 3/4 of missing HP
+            recovered_hd = max(1, self.max_hit_dice // 3) # Recover 1/3 HD (min 1)
+            self.hit_dice = min(self.max_hit_dice, self.hit_dice + recovered_hd)
+            # No exhaustion removal for partial rest, or maybe 1 level if very generous and event didn't add any.
+            # For now, no exhaustion removal on partial.
+            print(f"  Rest was partial. HP significantly restored to {self.hp}. Recovered {recovered_hd} HD. No exhaustion relief.")
+            return
+
+        # "successful" or "mostly_successful" (full benefits)
         self.hp = self.get_effective_max_hp()
-        self.hit_dice = min(self.max_hit_dice, self.hit_dice + max(1, self.max_hit_dice // 2))
+        # D&D 5e: recover half of total HD (max_hit_dice), min 1.
+        recovered_hd = max(1, self.max_hit_dice // 2)
+        self.hit_dice = min(self.max_hit_dice, self.hit_dice + recovered_hd)
+
+        exhaustion_removed_this_rest = 0
         if self.exhaustion_level > 0:
-            self.exhaustion_level -=1 # Reduce exhaustion by 1 on a successful long rest
+            self.exhaustion_level -= 1
+            exhaustion_removed_this_rest = 1
             print(f"  {self.name} feels less exhausted. New level: {self.exhaustion_level} ({self.get_exhaustion_effects()})")
-        else: # Already at 0 exhaustion
-             pass # No change, no message needed unless specific "well rested" buff applies
+        else:
+            pass # No exhaustion to remove.
 
         # Placeholder for other D&D 5e long rest rules like spell slot recovery
-        print(f"  {self.name} completed a long rest. HP restored. Hit Dice recovered. Exhaustion reduced.")
-        return {"success": True, "message": "Long rest completed successfully."}
+        print(f"  {self.name} completed a {'mostly successful' if rest_quality == 'mostly_successful' else 'successful'} long rest.")
+        print(f"  HP fully restored to {self.hp}. Recovered {recovered_hd} HD (Total: {self.hit_dice}/{self.max_hit_dice}). Exhaustion reduced by {exhaustion_removed_this_rest}.")
+
 
     def heal_hp(self, amount_to_heal: int) -> int:
         if amount_to_heal <= 0:
@@ -453,8 +503,22 @@ class Character:
             if type=="heal_hp": old_hp=self.hp; self.hp=min(self.get_effective_max_hp(),self.hp+val); print(f"  Healed {self.hp-old_hp} HP. HP: {self.hp}/{self.get_effective_max_hp()}")
             elif type=="restore_hit_dice": old_hd=self.hit_dice; self.hit_dice=min(self.max_hit_dice,self.hit_dice+val); print(f"  Restored {self.hit_dice-old_hd} HD. HD: {self.hit_dice}/{self.max_hit_dice}")
             elif type=="cast_spell": print(f"  {self.name} casts {val}!")
-        if not self.remove_specific_item_from_inventory(item_to_use): print(f"CRITICAL: Failed to remove consumed {item_name}.")
-        print(f"{item_name} consumed."); return True
+
+        # Handle quantity
+        if item_to_use.quantity > 1:
+            item_to_use.quantity -= 1
+            print(f"  Used one {item_name}. Quantity remaining: {item_to_use.quantity}.")
+        elif item_to_use.quantity == 1:
+            if not self.remove_specific_item_from_inventory(item_to_use): # Removes the item instance
+                print(f"CRITICAL: Failed to remove consumed {item_name} (quantity 1) from inventory.")
+                # Potentially roll back effects or handle error state if removal fails critically
+            else:
+                print(f"  Consumed the last {item_name}.")
+        else: # quantity <= 0, should not happen if item management is correct
+            print(f"Warning: Attempted to use {item_name} with quantity {item_to_use.quantity}. Item not properly removed or state error.")
+            # Still return True if effects were applied, but log this issue.
+
+        return True
 
     def display_character_info(self):
         print(f"\n--- Character: {self.name} ---")

@@ -160,6 +160,59 @@ class EventManager:
         # print(f"DEBUG: Added {selected_event.name} to todays_events_history. History size: {len(self.todays_events_history)}")
         return selected_event.name # Return the name of the triggered event
 
+    def trigger_long_rest_interruption_event(self, all_possible_events: list[Event], base_interruption_chance: float = 0.20) -> tuple[bool, Event | None]:
+        """
+        Attempts to trigger a long rest interruption event.
+        Returns a tuple: (True, triggered_event_object) if an event is triggered, (False, None) otherwise.
+        """
+        if not self.character or not hasattr(self.character, 'level'):
+            self.game_manager._print("EventManager: Cannot trigger rest interruption, character or level info missing.")
+            return False, None
+
+        if random.random() > base_interruption_chance:
+            self.game_manager._print("EventManager: Long rest proceeds without event interruption (chance roll failed).")
+            return False, None
+
+        self.reset_daily_event_history(self.game_manager.time.current_day)
+
+        possible_interruption_events = [
+            event for event in all_possible_events
+            if event.event_type == "rest_interruption" and self.character.level >= event.min_level
+        ]
+
+        if not possible_interruption_events:
+            self.game_manager._print("EventManager: No suitable 'rest_interruption' events found for character level.")
+            return False, None
+
+        # Separate events into seen today and unseen today
+        seen_today_events = []
+        unseen_today_events = []
+        for event in possible_interruption_events:
+            if event.name in self.todays_events_history:
+                seen_today_events.append(event)
+            else:
+                unseen_today_events.append(event)
+
+        selected_event_object = None
+        if unseen_today_events:
+            selected_event_object = random.choice(unseen_today_events)
+        elif seen_today_events:
+            self.game_manager._print("EventManager: All available rest interruption events for this trigger have already occurred today. Repeating one.")
+            # Potentially add logic to avoid immediate repetition if multiple seen events exist
+            selected_event_object = random.choice(seen_today_events)
+        else: # Should not be reached if possible_interruption_events was populated
+            self.game_manager._print("EventManager: No rest interruption events available after filtering (unexpected).")
+            return False, None
+
+        if selected_event_object:
+            self.game_manager._print(f"EventManager: Long rest interrupted by event: {selected_event_object.name}!")
+            # self.resolve_event(selected_event_object) # This prepares choices for UI, GameManager will call it.
+            # The GameManager needs the event object to pass to resolve_event.
+            self.todays_events_history.append(selected_event_object.name)
+            return True, selected_event_object
+
+        return False, None # Should not be reached if logic above is correct
+
     def resolve_event(self, event_instance: Event) -> list[dict]:
         """
         Prepares and returns the list of choices for the player for a given event.
@@ -425,6 +478,16 @@ class EventManager:
             if self.character.hp == 0:
                  print(f"  {self.character.name} has been knocked unconscious or worse!")
                  # Potentially trigger gain_exhaustion or death checks here or in Character class via take_damage method
+
+        # Rest Quality Application (for long rest interruption events)
+        outcome_rest_quality = outcome_effects_to_apply.get("rest_quality")
+        if outcome_rest_quality and hasattr(self.character, 'apply_long_rest_benefits'):
+            print(f"  Event outcome indicates rest quality: '{outcome_rest_quality}'. Applying rest benefits accordingly.")
+            self.character.apply_long_rest_benefits(rest_quality=outcome_rest_quality)
+            applied_effects_summary["rest_outcome_applied"] = outcome_rest_quality
+        elif outcome_rest_quality: # Has rest_quality but character can't apply it
+            print(f"  Warning: Event outcome specified rest_quality '{outcome_rest_quality}', but character cannot apply rest benefits.")
+
 
         # Journal Entry
         if self.game_manager and hasattr(self.game_manager, 'add_journal_entry'):
@@ -1029,6 +1092,111 @@ GAME_EVENTS.extend([
     event_suspicious_onlooker
 ])
 
+# --- Long Rest Interruption Events ---
+event_night_prowler = Event.from_dict({
+    "name": "Night Prowler",
+    "description": "You hear a noise outside your room during your rest. It sounds like someone might be trying to sneak around.",
+    "min_level": 1,
+    "dc_scaling_factor": 0.2,
+    "event_type": "rest_interruption",
+    "skill_check_options": [
+        {
+            "choice_text": "Investigate the noise cautiously (PERCEPTION DC 12).",
+            "skill": "Perception",
+            "base_dc": 12,
+            "success_outcome_key": "prowler_investigate_success",
+            "failure_outcome_key": "prowler_investigate_failure"
+        },
+        {
+            "choice_text": "Yell out to scare them off (INTIMIDATION DC 10).",
+            "skill": "Intimidation",
+            "base_dc": 10,
+            "success_outcome_key": "prowler_intimidate_success",
+            "failure_outcome_key": "prowler_intimidate_failure"
+        },
+        {
+            "choice_text": "Ignore it and try to go back to sleep.",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "prowler_ignore", # Leads to a specific outcome
+            "failure_outcome_key": "prowler_ignore"
+        }
+    ],
+    "outcomes": {
+        "prowler_investigate_success": {"message": "You spot a petty thief trying your door! They flee when they see you. Your rest is disturbed but nothing is lost.", "effects": {"character_xp_gain": 10, "rest_quality": "partial"}},
+        "prowler_investigate_failure": {"message": "You find nothing, but the lingering suspicion makes for a fitful rest. You feel only partially rested.", "effects": {"character_xp_gain": 2, "rest_quality": "partial", "minor_debuff_next_hour": "unease"}},
+        "prowler_intimidate_success": {"message": "Your shout sends the prowler scrambling away! You manage to settle back down.", "effects": {"character_xp_gain": 10, "rest_quality": "mostly_successful"}},
+        "prowler_intimidate_failure": {"message": "Your shout is met with silence. You remain on edge for the rest of the night.", "effects": {"character_xp_gain": 5, "rest_quality": "partial"}},
+        "prowler_ignore": {"message": "You try to ignore it, but sleep fitfully. In the morning, you notice some minor supplies missing.", "effects": {"item_loss": {"type": "random_minor_supply", "value_max": 5}, "rest_quality": "poor"}}
+    }
+})
+
+event_sudden_sickness_rest = Event.from_dict({
+    "name": "Sudden Sickness During Rest",
+    "description": "You wake up in the middle of your rest feeling feverish and unwell.",
+    "min_level": 1,
+    "dc_scaling_factor": 0.15,
+    "event_type": "rest_interruption",
+    "skill_check_options": [
+        {
+            "choice_text": "Push through it and try to rest (CONSTITUTION Save DC 11).",
+            "skill": "CON", # Assuming direct stat check or a generic "Fortitude" if skills are different
+            "base_dc": 11, # This would be a CON save, not a skill typically. Need to see how perform_skill_check handles raw stat.
+            "success_outcome_key": "sickness_con_save_success",
+            "failure_outcome_key": "sickness_con_save_failure"
+        },
+        {
+            "choice_text": "Use a healing potion if you have one.",
+            "skill": None,
+            "base_dc": 0,
+            "item_requirement": {"name": "Minor Healing Potion", "effect": "consume_and_resolve_sickness"}, # Custom effect for event
+            "success_outcome_key": "sickness_use_potion_success",
+            "failure_outcome_key": "sickness_use_potion_fail_no_potion" # If item not present
+        }
+    ],
+    "outcomes": {
+        "sickness_con_save_success": {"message": "You manage to fight off the worst of the fever and get some decent rest.", "effects": {"character_xp_gain": 5, "rest_quality": "mostly_successful"}},
+        "sickness_con_save_failure": {"message": "The sickness lingers, leaving you drained. You gain a level of exhaustion.", "effects": {"character_xp_gain": 2, "exhaustion_gain": 1, "rest_quality": "failed"}},
+        "sickness_use_potion_success": {"message": "The healing potion soothes your ailment, allowing you to rest reasonably well.", "effects": {"character_xp_gain": 5, "rest_quality": "mostly_successful"}}, # Item consumption handled by event logic
+        "sickness_use_potion_fail_no_potion": {"message": "You don't have a potion. The sickness takes its toll, leaving you exhausted.", "effects": {"character_xp_gain": 0, "exhaustion_gain": 1, "rest_quality": "failed"}}
+    }
+})
+
+event_nightmares_rest = Event.from_dict({
+    "name": "Troubled Nightmares",
+    "description": "Your sleep is plagued by vivid, unsettling nightmares.",
+    "min_level": 2,
+    "dc_scaling_factor": 0.25,
+    "event_type": "rest_interruption",
+    "skill_check_options": [
+        {
+            "choice_text": "Try to calm your mind and find peace (WISDOM Save DC 13).",
+            "skill": "WIS", # Similar to CON save, this is a WIS save.
+            "base_dc": 13,
+            "success_outcome_key": "nightmares_wis_save_success",
+            "failure_outcome_key": "nightmares_wis_save_failure"
+        },
+        {
+            "choice_text": "Embrace the chaos of the dream (No check, risky).",
+            "skill": None,
+            "base_dc": 0,
+            "success_outcome_key": "nightmares_embrace_chaos", # Could be good or bad
+            "failure_outcome_key": "nightmares_embrace_chaos"
+        }
+    ],
+    "outcomes": {
+        "nightmares_wis_save_success": {"message": "You manage to steer your thoughts away from the darkness, finding some restful sleep.", "effects": {"character_xp_gain": 10, "rest_quality": "mostly_successful"}},
+        "nightmares_wis_save_failure": {"message": "The nightmares cling to you, leaving you mentally fatigued and only partially rested.", "effects": {"character_xp_gain": 5, "rest_quality": "partial", "temporary_debuff": {"skill": "WIS_checks", "penalty": -1, "duration_hours": 4}}},
+        "nightmares_embrace_chaos": {"message": "You delve into the chaotic dreamscape. It's a whirlwind, and you wake up feeling strangely energized but also a bit shaken.", "effects": {"character_xp_gain": 15, "rest_quality": "partial", "temporary_buff": {"skill": "CHA_checks", "bonus": 1, "duration_hours": 2}, "temporary_debuff": {"skill": "WIS_saves", "penalty": -1, "duration_hours": 2}}}
+    }
+})
+
+
+GAME_EVENTS.extend([
+    event_night_prowler,
+    event_sudden_sickness_rest,
+    event_nightmares_rest
+])
 
 if __name__ == "__main__":
     import datetime # Added for MockGameManager timestamping
