@@ -1,790 +1,877 @@
 // Main game interface script
-document.addEventListener('DOMContentLoaded', function() {
-    document.body.classList.add('js-loaded'); // For testing JS execution
 
-    // --- CONFIG DATA ---
-    const allTownsData = window.gameConfig.allTownsDataJson || {};
-    const hemlockHerbsData = window.gameConfig.hemlockHerbsData || {};
-    const borinItemsData = window.gameConfig.borinItemsData || {};
-    const shopData = window.gameConfig.shopData; // Already an object or null
-    const shopConfig = window.gameConfig.shopConfig; // Already an object or null
-    const playerInventoryForSellDropdown = window.gameConfig.playerInventory || [];
+// --- CONSTANTS ---
+const CONSTANTS = {
+    ACTION_NAMES: {
+        TRAVEL_TO_TOWN: 'travel_to_town',
+        CRAFT: 'craft',
+        BUY_FROM_OWN_SHOP: 'buy_from_own_shop',
+        SELL_TO_OWN_SHOP: 'sell_to_own_shop',
+        BUY_FROM_NPC: 'buy_from_npc',
+        TALK_TO_BORIN: 'talk_to_borin', // Might be combined with BUY_FROM_NPC logic
+        REPAIR_GEAR_BORIN: 'repair_gear_borin',
+        GATHER_RESOURCES: 'gather_resources',
+        STUDY_LOCAL_HISTORY: 'study_local_history',
+        ORGANIZE_INVENTORY: 'organize_inventory',
+        POST_ADVERTISEMENTS: 'post_advertisements',
+        REST_SHORT: 'rest_short',
+        REST_LONG: 'rest_long',
+        SET_SHOP_SPECIALIZATION: 'set_shop_specialization',
+        UPGRADE_SHOP: 'upgrade_shop',
+    },
+    NPC_NAMES: {
+        HEMLOCK: "Old Man Hemlock",
+        BORIN: "Borin Stonebeard",
+    },
+    SUB_LOCATIONS: {
+        HEMLOCK_HUT: "Old Man Hemlock's Hut",
+        BORIN_SMITHY: "Borin Stonebeard's Smithy",
+    }
+};
 
+// --- GLOBAL STATE (scoped within this IIFE if script becomes a module) ---
+let currentOpenDynamicForm = null;
+let currentSubLocationName = null;
+let selectedHemlockHerbName = null;
+let selectedBorinItemName = null;
 
-    // --- DOM ELEMENT REFERENCES ---
+// --- DOM ELEMENT REFERENCES (grouped by functionality) ---
+// Populated in `cacheDomElements`
+const DOM = {};
+
+function cacheDomElements() {
     // Main Action Form
-    const actionForm = document.getElementById('actionForm');
-    const hiddenActionNameInput = document.getElementById('action_name_hidden');
-    const hiddenDetailsInput = document.getElementById('action_details');
+    DOM.actionForm = document.getElementById('actionForm');
+    DOM.hiddenActionNameInput = document.getElementById('action_name_hidden');
+    DOM.hiddenDetailsInput = document.getElementById('action_details');
 
     // Side Info Columns & Panels
-    const miniPanels = document.querySelectorAll('.mini-panel');
-    const fullPanelContainers = document.querySelectorAll('.full-panel-container');
-    const closeFullPanelButtons = document.querySelectorAll('.close-full-panel');
+    DOM.miniPanels = document.querySelectorAll('.mini-panel');
+    DOM.fullPanelContainers = document.querySelectorAll('.full-panel-container');
+    DOM.closeFullPanelButtons = document.querySelectorAll('.close-full-panel');
 
     // Map & Travel
-    const mapDestinationsDiv = document.getElementById('map-destinations'); // Inside #travel-actions-container
+    DOM.mapDestinationsDiv = document.getElementById('map-destinations');
 
     // Location Interactions (Bottom Bar - Actions Panel)
-    const subLocationsListDiv = document.getElementById('sub-locations-list');
-    const currentSubLocationNameDisplay = document.getElementById('current-sub-location-name-display');
-    const currentSubLocationActionsListDiv = document.getElementById('current-sub-location-actions-list');
-    const currentTownDisplayActions = document.getElementById('current-town-display-actions'); // In Actions Panel
+    DOM.subLocationsListDiv = document.getElementById('sub-locations-list');
+    DOM.currentSubLocationNameDisplay = document.getElementById('current-sub-location-name-display');
+    DOM.currentSubLocationActionsListDiv = document.getElementById('current-sub-location-actions-list');
+    DOM.currentTownDisplayActions = document.getElementById('current-town-display-actions');
 
     // Dynamic Action Forms Area (Bottom Bar - Actions Panel)
-    const dynamicActionFormsContainer = document.getElementById('dynamic-action-forms-container');
-    const allDynamicForms = dynamicActionFormsContainer ? dynamicActionFormsContainer.querySelectorAll('.dynamic-form') : [];
-    const closeDynamicFormButtons = dynamicActionFormsContainer ? dynamicActionFormsContainer.querySelectorAll('.close-dynamic-form') : [];
+    DOM.dynamicActionFormsContainer = document.getElementById('dynamic-action-forms-container');
+    DOM.allDynamicForms = DOM.dynamicActionFormsContainer ? DOM.dynamicActionFormsContainer.querySelectorAll('.dynamic-form') : [];
+    DOM.closeDynamicFormButtons = DOM.dynamicActionFormsContainer ? DOM.dynamicActionFormsContainer.querySelectorAll('.close-dynamic-form') : [];
+    DOM.travelActionsContainer = document.getElementById('travel-actions-container');
+    DOM.locationInteractionsContainer = document.getElementById('location-interactions-container');
+    DOM.generalActionsContainer = document.getElementById('general-actions-container');
 
-    // Specific Detail Form Elements (Craft, Buy, Sell, NPCs)
-    const craftDetailsDiv = document.getElementById('div_craft_details');
-    const craftItemNameInput = document.getElementById('craft_item_name');
 
-    const buyDetailsDiv = document.getElementById('div_buy_details');
-    const buyItemNameInput = document.getElementById('buy_item_name');
-    const buyQuantityInput = document.getElementById('buy_quantity');
+    // Specific Detail Form Elements
+    DOM.craftDetailsDiv = document.getElementById('div_craft_details');
+    DOM.craftItemNameInput = document.getElementById('craft_item_name');
 
-    const sellDetailsDiv = document.getElementById('div_sell_details');
-    const sellItemNameInput = document.getElementById('sell_item_name');
-    const sellItemDropdown = document.getElementById('sell_item_dropdown');
+    DOM.buyDetailsDiv = document.getElementById('div_buy_details');
+    DOM.buyItemNameInput = document.getElementById('buy_item_name');
+    DOM.buyQuantityInput = document.getElementById('buy_quantity');
 
-    const hemlockHerbsDetailsDiv = document.getElementById('div_hemlock_herbs_details');
-    const hemlockHerbsListDiv = document.getElementById('hemlock-herbs-list');
-    const hemlockQuantityInput = document.getElementById('hemlock_quantity_dynamic');
-    const submitBuyHemlockHerbButton = document.getElementById('submit_buy_hemlock_herb_button');
+    DOM.sellDetailsDiv = document.getElementById('div_sell_details');
+    DOM.sellItemNameInput = document.getElementById('sell_item_name');
+    DOM.sellItemDropdown = document.getElementById('sell_item_dropdown');
 
-    const borinItemsDetailsDiv = document.getElementById('div_borin_items_details');
-    const borinItemsListDiv = document.getElementById('borin-items-list'); // Corrected ID
-    const borinQuantityInput = document.getElementById('borin_quantity_dynamic');
-    const submitBuyBorinItemButton = document.getElementById('submit_buy_borin_item_button');
+    // Hemlock (NPC)
+    DOM.hemlockHerbsDetailsDiv = document.getElementById('div_hemlock_herbs_details');
+    DOM.hemlockHerbsListDiv = document.getElementById('hemlock-herbs-list');
+    DOM.hemlockQuantityInput = document.getElementById('hemlock_quantity_dynamic');
+    // DOM.submitBuyHemlockHerbButton = document.getElementById('submit_buy_hemlock_herb_button'); // Covered by delegation
 
-    const borinRepairDetailsDiv = document.getElementById('div_borin_repair_details');
-    const borinRepairItemSelect = document.getElementById('borin-repair-item-select');
-    const borinRepairCostDisplay = document.getElementById('borin-repair-cost-display');
-    const submitBorinRepairButton = document.getElementById('submit-borin-repair-button');
+    // Borin (NPC)
+    DOM.borinItemsDetailsDiv = document.getElementById('div_borin_items_details');
+    DOM.borinItemsListDiv = document.getElementById('borin-items-list');
+    DOM.borinQuantityInput = document.getElementById('borin_quantity_dynamic');
+    // DOM.submitBuyBorinItemButton = document.getElementById('submit_buy_borin_item_button'); // Covered by delegation
+    DOM.borinRepairDetailsDiv = document.getElementById('div_borin_repair_details');
+    DOM.borinRepairItemSelect = document.getElementById('borin-repair-item-select');
+    DOM.borinRepairCostDisplay = document.getElementById('borin-repair-cost-display');
+    // DOM.submitBorinRepairButton = document.getElementById('submit-borin-repair-button'); // Covered by delegation
 
-    // Shop Management (inside full panel)
-    const shopManagementDetailsDiv = document.getElementById('shop-management-details');
+    // Shop Management
+    DOM.shopManagementDetailsDiv = document.getElementById('shop-management-details');
+    DOM.fullShopMgtPanelContainer = document.getElementById('full-shop-mgt-panel-container'); // Assuming this is the outer container
+    DOM.miniShopMgtPanel = document.getElementById('mini-shop-mgt-panel'); // Assuming this is the trigger
 
-    // Inventory (Player and Shop, inside full panel)
-    const fullInventoryPanel = document.getElementById('full-inventory-panel'); // The content area
+    // Inventory
+    DOM.fullInventoryPanel = document.getElementById('full-inventory-panel'); // Content area
+    DOM.fullInventoryPanelContainer = document.getElementById('full-inventory-panel-container');
+    DOM.miniInventoryPanel = document.getElementById('mini-inventory-panel');
+
 
     // Bottom Bar Tabs
-    const actionsTabButton = document.getElementById('actions-tab-button');
-    const logTabButton = document.getElementById('log-tab-button');
-    const actionsPanelContent = document.getElementById('actions-panel-content');
-    const logPanelContent = document.getElementById('log-panel-content');
+    DOM.actionsTabButton = document.getElementById('actions-tab-button');
+    DOM.logTabButton = document.getElementById('log-tab-button');
+    DOM.actionsPanelContent = document.getElementById('actions-panel-content');
+    DOM.logPanelContent = document.getElementById('log-panel-content');
 
     // Top Right Menu
-    const topRightMenuButton = document.getElementById('top-right-menu-button');
-    const settingsPopup = document.getElementById('settings-popup');
-    const settingsOption = document.getElementById('settings-option'); // May not be used if "Settings" is just a label
-    const saveGameButton = document.getElementById('save-game-button');
+    DOM.topRightMenuButton = document.getElementById('top-right-menu-button');
+    DOM.settingsPopup = document.getElementById('settings-popup');
+    // DOM.settingsOption = document.getElementById('settings-option'); // Potentially unused
+    DOM.saveGameButton = document.getElementById('save-game-button');
 
-    // General Actions
-    const gatherResourcesButton = document.getElementById('gatherResourcesButton');
-    const studyLocalHistoryButton = document.getElementById('studyLocalHistoryButton');
-    const organizeInventoryButton = document.getElementById('organizeInventoryButton');
-    const postAdvertisementsButton = document.getElementById('postAdvertisementsButton');
-    const shortRestButton = document.getElementById('shortRestButton'); // Added
-    const longRestButton = document.getElementById('longRestButton'); // Added
-    // const craftingRecipesList = document.getElementById('crafting-recipes-list'); // If this element still exists and is used.
+    // General Action Buttons
+    DOM.gatherResourcesButton = document.getElementById('gatherResourcesButton');
+    DOM.studyLocalHistoryButton = document.getElementById('studyLocalHistoryButton');
+    DOM.organizeInventoryButton = document.getElementById('organizeInventoryButton');
+    DOM.postAdvertisementsButton = document.getElementById('postAdvertisementsButton');
+    DOM.shortRestButton = document.getElementById('shortRestButton');
+    DOM.longRestButton = document.getElementById('longRestButton');
 
     // Event Popup
-    const eventPopup = document.getElementById('event-choice-popup');
+    DOM.eventPopup = document.getElementById('event-choice-popup');
+    DOM.eventPopupNameEl = document.getElementById('event-popup-name');
+    DOM.eventPopupDescriptionEl = document.getElementById('event-popup-description');
+    DOM.eventPopupChoicesContainer = document.getElementById('event-popup-choices');
+
+    // Toast Container
+    DOM.toastContainer = document.getElementById('toast-container');
+}
 
 
-    // --- STATE VARIABLES ---
-    let currentOpenDynamicForm = null; // Track which dynamic form (craft, buy, etc.) is open
-    let currentSubLocationName = null; // Track selected sub-location for context
-    let selectedHemlockHerbName = null;
-    let selectedBorinItemName = null;
+// --- CONFIG DATA (scoped) ---
+let gameConfigData = {};
+function loadConfigData() {
+    gameConfigData.allTownsData = window.gameConfig.allTownsDataJson || {};
+    gameConfigData.hemlockHerbsData = window.gameConfig.hemlockHerbsData || {};
+    gameConfigData.borinItemsData = window.gameConfig.borinItemsData || {};
+    gameConfigData.shopData = window.gameConfig.shopData;
+    gameConfigData.shopConfig = window.gameConfig.shopConfig;
+    gameConfigData.playerInventoryForSellDropdown = window.gameConfig.playerInventory || [];
+    gameConfigData.playerGold = window.gameConfig.playerGold;
+    gameConfigData.popupActionResult = window.gameConfig.popupActionResult;
+    gameConfigData.awaitingEventChoice = window.gameConfig.awaitingEventChoice;
+    gameConfigData.pendingEventDataJson = window.gameConfig.pendingEventDataJson;
+    gameConfigData.lastSkillRollStr = window.gameConfig.lastSkillRollStr;
+    gameConfigData.submitEventChoiceUrl = window.gameConfig.submitEventChoiceUrl;
+
+}
 
 
-    // --- HELPER FUNCTIONS ---
-    window.showToast = function(message, type = 'info', duration = 5000) {
-        const container = document.getElementById('toast-container');
-        if (!container) {
-            console.error('Toast container not found!');
-            return;
-        }
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        let iconHtml = '';
-        if (type === 'success') iconHtml = '<span class="toast-icon">✔️</span>';
-        else if (type === 'error') iconHtml = '<span class="toast-icon">❌</span>';
-        else if (type === 'warning') iconHtml = '<span class="toast-icon">⚠️</span>';
-        else iconHtml = '<span class="toast-icon">ℹ️</span>';
-        toast.innerHTML = `${iconHtml} <span class="toast-message">${message}</span>`;
-        container.appendChild(toast);
-        setTimeout(() => toast.classList.add('show'), 100);
-        setTimeout(() => {
-            toast.classList.remove('show');
-            toast.addEventListener('transitionend', () => toast.parentElement?.removeChild(toast));
-        }, duration);
-    };
-
-    function hideAllDynamicForms() {
-        if (dynamicActionFormsContainer) dynamicActionFormsContainer.style.display = 'none';
-        allDynamicForms.forEach(form => form.style.display = 'none');
-        currentOpenDynamicForm = null;
-        // Make other action sections visible again if they were hidden
-        document.getElementById('travel-actions-container').style.display = 'block';
-        document.getElementById('location-interactions-container').style.display = 'block';
-        document.getElementById('general-actions-container').style.display = 'block';
-
+// --- HELPER FUNCTIONS ---
+function showToast(message, type = 'info', duration = 5000) {
+    if (!DOM.toastContainer) {
+        console.error('Toast container not found!');
+        return;
     }
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    let iconHtml = '';
+    if (type === 'success') iconHtml = '<span class="toast-icon">✔️</span>';
+    else if (type === 'error') iconHtml = '<span class="toast-icon">❌</span>';
+    else if (type === 'warning') iconHtml = '<span class="toast-icon">⚠️</span>';
+    else iconHtml = '<span class="toast-icon">ℹ️</span>';
+    toast.innerHTML = `${iconHtml} <span class="toast-message">${message}</span>`;
+    DOM.toastContainer.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100); // Delay for CSS transition
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.addEventListener('transitionend', () => toast.parentElement?.removeChild(toast));
+    }, duration);
+}
+// Make showToast globally accessible if needed by other scripts or inline event handlers (though ideally not)
+window.showToast = showToast;
 
-    function showDynamicForm(formElement) {
-        hideAllDynamicForms(); // Hide any currently open form
-        if (formElement) {
-            // Hide other action sections to focus on the form
-            document.getElementById('travel-actions-container').style.display = 'none';
-            document.getElementById('location-interactions-container').style.display = 'none';
-            document.getElementById('general-actions-container').style.display = 'none';
 
-            if (dynamicActionFormsContainer) dynamicActionFormsContainer.style.display = 'block';
-            formElement.style.display = 'block';
-            currentOpenDynamicForm = formElement;
-            formElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        } else {
-             // If no form to show, ensure main action sections are visible
-            document.getElementById('travel-actions-container').style.display = 'block';
-            document.getElementById('location-interactions-container').style.display = 'block';
-            document.getElementById('general-actions-container').style.display = 'block';
-        }
+function hideAllDynamicForms() {
+    if (DOM.dynamicActionFormsContainer) DOM.dynamicActionFormsContainer.style.display = 'none';
+    if (DOM.allDynamicForms) DOM.allDynamicForms.forEach(form => form.style.display = 'none');
+    currentOpenDynamicForm = null;
+
+    // Make other action sections visible again
+    if (DOM.travelActionsContainer) DOM.travelActionsContainer.style.display = 'block';
+    if (DOM.locationInteractionsContainer) DOM.locationInteractionsContainer.style.display = 'block';
+    if (DOM.generalActionsContainer) DOM.generalActionsContainer.style.display = 'block';
+}
+
+function showDynamicForm(formElement) {
+    hideAllDynamicForms(); // Hide any currently open form
+    if (formElement) {
+        // Hide other action sections to focus on the form
+        if (DOM.travelActionsContainer) DOM.travelActionsContainer.style.display = 'none';
+        if (DOM.locationInteractionsContainer) DOM.locationInteractionsContainer.style.display = 'none';
+        if (DOM.generalActionsContainer) DOM.generalActionsContainer.style.display = 'none';
+
+        if (DOM.dynamicActionFormsContainer) DOM.dynamicActionFormsContainer.style.display = 'block';
+        formElement.style.display = 'block';
+        currentOpenDynamicForm = formElement;
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        // If no form to show, ensure main action sections are visible (handled by hideAllDynamicForms)
     }
+}
 
 
-    // --- INITIALIZATION FUNCTIONS ---
+// --- INITIALIZATION MODULES ---
 
-    function initializeSidePanelInteractions() {
-        miniPanels.forEach(miniPanel => {
+const UIPanels = {
+    init() {
+        if (!DOM.miniPanels || !DOM.closeFullPanelButtons || !DOM.fullPanelContainers) return;
+
+        DOM.miniPanels.forEach(miniPanel => {
             const fullPanelId = miniPanel.getAttribute('aria-controls');
             const fullPanelContainer = document.getElementById(fullPanelId);
 
             if (fullPanelContainer) {
-                miniPanel.addEventListener('click', () => {
-                    fullPanelContainer.style.display = 'flex'; // Show the panel
+                const openPanel = () => {
+                    fullPanelContainer.style.display = 'flex';
                     miniPanel.setAttribute('aria-expanded', 'true');
-                });
-                miniPanel.addEventListener('keydown', (event) => { // Keyboard accessibility
+                };
+                miniPanel.addEventListener('click', openPanel);
+                miniPanel.addEventListener('keydown', (event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        fullPanelContainer.style.display = 'flex';
-                        miniPanel.setAttribute('aria-expanded', 'true');
+                        openPanel();
                     }
                 });
             }
         });
 
-        closeFullPanelButtons.forEach(button => {
+        DOM.closeFullPanelButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const fullPanelContainer = button.closest('.full-panel-container');
                 if (fullPanelContainer) {
-                    fullPanelContainer.style.display = 'none'; // Hide the panel
-                    // Find the corresponding mini-panel to update aria-expanded
+                    fullPanelContainer.style.display = 'none';
                     const miniPanel = document.querySelector(`[aria-controls="${fullPanelContainer.id}"]`);
-                    if (miniPanel) {
-                        miniPanel.setAttribute('aria-expanded', 'false');
-                    }
+                    if (miniPanel) miniPanel.setAttribute('aria-expanded', 'false');
                 }
             });
         });
 
-        // Clicking outside the full-panel-content should also close it
-        fullPanelContainers.forEach(container => {
+        DOM.fullPanelContainers.forEach(container => {
             container.addEventListener('click', function(event) {
-                if (event.target === container) { // Only if the click is on the overlay itself
+                if (event.target === container) {
                     container.style.display = 'none';
                     const miniPanel = document.querySelector(`[aria-controls="${container.id}"]`);
-                    if (miniPanel) {
-                        miniPanel.setAttribute('aria-expanded', 'false');
-                    }
+                    if (miniPanel) miniPanel.setAttribute('aria-expanded', 'false');
                 }
             });
         });
     }
+};
 
-    function initializeBottomBarTabs() {
-        if (actionsTabButton && logTabButton && actionsPanelContent && logPanelContent) {
-            actionsTabButton.addEventListener('click', () => {
-                actionsPanelContent.style.display = 'block'; // Use .panel-visible class if preferred
-                actionsPanelContent.classList.add('panel-visible');
-                logPanelContent.style.display = 'none';
-                logPanelContent.classList.remove('panel-visible');
+const UIBottomTabs = {
+    init() {
+        if (!DOM.actionsTabButton || !DOM.logTabButton || !DOM.actionsPanelContent || !DOM.logPanelContent) return;
 
-                actionsTabButton.classList.add('active-tab-button');
-                logTabButton.classList.remove('active-tab-button');
-                actionsTabButton.setAttribute('aria-selected', 'true');
-                logTabButton.setAttribute('aria-selected', 'false');
-            });
+        const switchTab = (activeTab, inactiveTab, activePanel, inactivePanel) => {
+            activePanel.style.display = 'block';
+            activePanel.classList.add('panel-visible');
+            inactivePanel.style.display = 'none';
+            inactivePanel.classList.remove('panel-visible');
 
-            logTabButton.addEventListener('click', () => {
-                logPanelContent.style.display = 'block';
-                logPanelContent.classList.add('panel-visible');
-                actionsPanelContent.style.display = 'none';
-                actionsPanelContent.classList.remove('panel-visible');
+            activeTab.classList.add('active-tab-button');
+            inactiveTab.classList.remove('active-tab-button');
+            activeTab.setAttribute('aria-selected', 'true');
+            inactiveTab.setAttribute('aria-selected', 'false');
+        };
 
-                logTabButton.classList.add('active-tab-button');
-                actionsTabButton.classList.remove('active-tab-button');
-                logTabButton.setAttribute('aria-selected', 'true');
-                actionsTabButton.setAttribute('aria-selected', 'false');
-            });
-
-            // Initial state: Actions tab is active
-            actionsTabButton.click(); // Simulate a click to set initial state
-        }
-    }
-
-    function initializeSellFunctionality() {
-        function populateSellDropdown() {
-            if (!sellItemDropdown || !playerInventoryForSellDropdown) return;
-            sellItemDropdown.innerHTML = '<option value="">-- Select an item to sell --</option>';
-            playerInventoryForSellDropdown.forEach(item => {
-                const option = document.createElement('option');
-                const itemName = (typeof item === 'string') ? item : (item && item.name);
-                if (!itemName) return;
-                option.value = itemName;
-                option.textContent = itemName;
-                sellItemDropdown.appendChild(option);
-            });
-        }
-
-        if (sellItemDropdown && sellItemNameInput) {
-            sellItemDropdown.addEventListener('change', function() {
-                if (this.value && sellItemNameInput) {
-                    sellItemNameInput.value = this.value;
-                }
-            });
-        }
-        if (sellItemDropdown) populateSellDropdown(); // Initial population
-    }
-
-    function initializeCoreGameActions() {
-        function displaySubLocations() {
-            if (!subLocationsListDiv || !currentTownDisplayActions) return;
-            subLocationsListDiv.innerHTML = ''; // Clear previous sub-locations
-            if (currentSubLocationActionsListDiv) currentSubLocationActionsListDiv.innerHTML = ''; // Clear previous actions
-            if (currentSubLocationNameDisplay) currentSubLocationNameDisplay.style.display = 'none'; // Hide name display
-            hideAllDynamicForms();
-
-            const currentTownName = currentTownDisplayActions.textContent;
-            const townData = allTownsData[currentTownName];
-
-            if (townData && townData.sub_locations && townData.sub_locations.length > 0) {
-                const ul = document.createElement('ul');
-                ul.className = 'button-list'; // Use the new class for styling
-                townData.sub_locations.forEach(subLoc => {
-                    const li = document.createElement('li');
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = 'action-button sub-location-button'; // General action button style
-                    button.dataset.sublocName = subLoc.name;
-                    button.textContent = subLoc.name;
-                    li.appendChild(button);
-                    // Optional: Add description if needed, though might clutter
-                    // if (subLoc.description) li.append(` - ${subLoc.description}`);
-                    ul.appendChild(li);
-                });
-                subLocationsListDiv.appendChild(ul);
-            } else {
-                subLocationsListDiv.innerHTML = '<p>No sub-locations here.</p>';
-            }
-        }
-
-        function displaySubLocationActions(subLocName) {
-            if (!currentSubLocationActionsListDiv || !currentSubLocationNameDisplay) return;
-            currentSubLocationActionsListDiv.innerHTML = ''; // Clear previous actions
-            hideAllDynamicForms();
-
-            currentSubLocationName = subLocName;
-            currentSubLocationNameDisplay.textContent = subLocName;
-            currentSubLocationNameDisplay.style.display = 'block';
-
-            const currentTownName = currentTownDisplayActions.textContent;
-            const townData = allTownsData[currentTownName];
-            const selectedSubLocation = townData?.sub_locations?.find(sl => sl.name === subLocName);
-
-            if (selectedSubLocation && selectedSubLocation.actions && selectedSubLocation.actions.length > 0) {
-                const ul = document.createElement('ul');
-                ul.className = 'button-list';
-                selectedSubLocation.actions.forEach(actionStr => {
-                    const li = document.createElement('li');
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = 'action-button subloc-action-button'; // Specific class if needed
-                    button.dataset.actionName = actionStr;
-                    button.textContent = actionStr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    li.appendChild(button);
-                    ul.appendChild(li);
-                });
-                currentSubLocationActionsListDiv.appendChild(ul);
-            } else {
-                currentSubLocationActionsListDiv.innerHTML = '<p>No actions available here.</p>';
-            }
-        }
-
-        // Event listener for sub-location buttons
-        if (subLocationsListDiv) {
-            subLocationsListDiv.addEventListener('click', function(event) {
-                if (event.target.classList.contains('sub-location-button')) {
-                    const subLocName = event.target.dataset.sublocName;
-                    displaySubLocationActions(subLocName);
-                }
-            });
-        }
-
-        // Event listener for actions within a selected sub-location
-        if (currentSubLocationActionsListDiv) {
-            currentSubLocationActionsListDiv.addEventListener('click', function(event) {
-                if (event.target.classList.contains('subloc-action-button')) { // Or general 'action-button'
-                    handleActionClick(event.target.dataset.actionName, event.target);
-                }
-            });
-        }
-
-        // Event listener for map destination buttons
-        if (mapDestinationsDiv) {
-            mapDestinationsDiv.addEventListener('click', function(event) {
-                if (event.target.classList.contains('map-destination-button')) {
-                    const townName = event.target.dataset.townName;
-                    if (hiddenActionNameInput) hiddenActionNameInput.value = 'travel_to_town';
-                    if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({ town_name: townName });
-                    if (actionForm) actionForm.submit();
-                }
-            });
-        }
-
-        // Event listener for general action buttons (like Gather Resources)
-        if (gatherResourcesButton) {
-            gatherResourcesButton.addEventListener('click', function() {
-                handleActionClick('gather_resources', gatherResourcesButton);
-            });
-        }
-        if (studyLocalHistoryButton) {
-            studyLocalHistoryButton.addEventListener('click', function() {
-                handleActionClick('study_local_history', studyLocalHistoryButton);
-            });
-        }
-        if (organizeInventoryButton) {
-            organizeInventoryButton.addEventListener('click', function() {
-                handleActionClick('organize_inventory', organizeInventoryButton);
-            });
-        }
-        if (postAdvertisementsButton) {
-            postAdvertisementsButton.addEventListener('click', function() {
-                handleActionClick('post_advertisements', postAdvertisementsButton);
-            });
-        }
-        if (shortRestButton) { // Added
-            shortRestButton.addEventListener('click', function() {
-                handleActionClick('rest_short', shortRestButton);
-            });
-        }
-        if (longRestButton) { // Added
-            longRestButton.addEventListener('click', function() {
-                handleActionClick('rest_long', longRestButton);
-            });
-        }
-
-        // Centralized handler for most action initiations
-        function handleActionClick(actionName, buttonElement) {
-            if (hiddenActionNameInput) hiddenActionNameInput.value = actionName;
-            // currentSubLocationName is already set if this is a sub-location action
-
-            // Logic to show specific forms based on actionName
-            if (actionName === 'craft') {
-                showDynamicForm(craftDetailsDiv);
-            } else if (actionName === 'buy_from_own_shop') {
-                showDynamicForm(buyDetailsDiv);
-            } else if (actionName === 'sell_to_own_shop') {
-                populateSellDropdown();
-                showDynamicForm(sellDetailsDiv);
-            } else if (actionName === 'buy_from_npc' && currentSubLocationName === "Old Man Hemlock's Hut") {
-                selectedHemlockHerbName = null; // Reset selection
-                if (hemlockHerbsListDiv) {
-                    hemlockHerbsListDiv.innerHTML = ''; // Clear previous list
-                    if (hemlockHerbsData && Object.keys(hemlockHerbsData).length > 0) {
-                        const ul = document.createElement('ul');
-                        ul.style.listStyleType = 'none'; ul.style.paddingLeft = '0';
-                        for (const herbKey in hemlockHerbsData) {
-                            const herb = hemlockHerbsData[herbKey];
-                            const li = document.createElement('li');
-                            li.style.marginBottom = '10px';
-                            li.innerHTML = `<strong>${herb.name}</strong> - ${herb.price}G<br><em>${herb.description}</em><br><button type="button" class="action-button select-hemlock-herb-button" data-herb-name="${herb.name}">Select</button>`;
-                            ul.appendChild(li);
-                        }
-                        hemlockHerbsListDiv.appendChild(ul);
-                    } else {
-                        hemlockHerbsListDiv.innerHTML = '<p>No herbs available from Hemlock.</p>';
-                    }
-                }
-                showDynamicForm(hemlockHerbsDetailsDiv);
-            } else if ((actionName === 'talk_to_borin' || actionName === 'buy_from_npc') && currentSubLocationName === "Borin Stonebeard's Smithy") {
-                 // Assuming 'talk_to_borin' might lead to buy options. If 'buy_from_npc' is a direct action here:
-                selectedBorinItemName = null; // Reset selection
-                if (borinItemsListDiv) { // Ensure this is the correct ID from HTML
-                    borinItemsListDiv.innerHTML = ''; // Clear previous list
-                    if (borinItemsData && Object.keys(borinItemsData).length > 0) {
-                        const ul = document.createElement('ul');
-                        ul.style.listStyleType = 'none'; ul.style.paddingLeft = '0';
-                        for (const itemKey in borinItemsData) {
-                            const item = borinItemsData[itemKey];
-                            const li = document.createElement('li');
-                            li.style.marginBottom = '10px';
-                            li.innerHTML = `<strong>${item.name}</strong> - ${item.price}G<br><em>${item.description}</em><br><button type="button" class="action-button select-borin-item-button" data-item-name="${item.name}">Select</button>`;
-                            ul.appendChild(li);
-                        }
-                        borinItemsListDiv.appendChild(ul);
-                    } else {
-                        borinItemsListDiv.innerHTML = '<p>Borin has nothing to sell right now.</p>';
-                    }
-                }
-                showDynamicForm(borinItemsDetailsDiv);
-            } else if (actionName === 'repair_gear_borin' && currentSubLocationName === "Borin Stonebeard's Smithy") {
-                if (borinRepairItemSelect) {
-                    borinRepairItemSelect.innerHTML = '<option value="">-- Select Item --</option>';
-                    if (window.gameConfig.playerInventory && window.gameConfig.playerInventory.length > 0) {
-                        window.gameConfig.playerInventory.forEach(item => {
-                            const itemName = (typeof item === 'string') ? item : item.name;
-                            if(itemName) {
-                                const option = document.createElement('option');
-                                option.value = itemName;
-                                option.textContent = itemName;
-                                borinRepairItemSelect.appendChild(option);
-                            }
-                        });
-                    } else {
-                         borinRepairItemSelect.innerHTML = '<option value="">-- No items to repair --</option>';
-                    }
-                    borinRepairItemSelect.onchange = function() {
-                        if(borinRepairCostDisplay) borinRepairCostDisplay.textContent = this.value ? "Cost determined by Borin" : "N/A";
-                    };
-                    if(borinRepairCostDisplay) borinRepairCostDisplay.textContent = "N/A";
-                }
-                showDynamicForm(borinRepairDetailsDiv);
-            } else {
-                // Action does not require a dynamic form, submit directly
-                if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify({}); // Empty details
-                if (actionForm) {
-                    if (buttonElement) buttonElement.classList.add('button-processing');
-                    actionForm.submit();
-                }
-            }
-        }
-
-        // Event listeners for "Select" buttons within NPC forms
-        if (hemlockHerbsListDiv) {
-            hemlockHerbsListDiv.addEventListener('click', function(event) {
-                if (event.target.classList.contains('select-hemlock-herb-button')) {
-                    selectedHemlockHerbName = event.target.dataset.herbName;
-                    hemlockHerbsListDiv.querySelectorAll('.select-hemlock-herb-button').forEach(btn => {
-                        btn.style.fontWeight = 'normal'; btn.style.backgroundColor = ''; // Reset others
-                    });
-                    event.target.style.fontWeight = 'bold'; event.target.style.backgroundColor = '#a0d2a0'; // Highlight selected
-                }
-            });
-        }
-        if (borinItemsListDiv) {
-            borinItemsListDiv.addEventListener('click', function(event) {
-                if (event.target.classList.contains('select-borin-item-button')) {
-                    selectedBorinItemName = event.target.dataset.itemName;
-                     borinItemsListDiv.querySelectorAll('.select-borin-item-button').forEach(btn => {
-                        btn.style.fontWeight = 'normal'; btn.style.backgroundColor = ''; // Reset others
-                    });
-                    event.target.style.fontWeight = 'bold'; event.target.style.backgroundColor = '#a0d2a0'; // Highlight selected
-                }
-            });
-        }
-
-
-        // Event listeners for SUBMIT buttons within each dynamic form
-        // This uses event delegation on the dynamicActionFormsContainer for submit buttons
-        if (dynamicActionFormsContainer) {
-            dynamicActionFormsContainer.addEventListener('click', function(event) {
-                const targetButton = event.target.closest('.submit-details-button, #submit_buy_hemlock_herb_button, #submit_buy_borin_item_button, #submit-borin-repair-button');
-                if (!targetButton) return;
-
-                let details = {};
-                let actionName = hiddenActionNameInput.value; // Should be set by handleActionClick
-
-                if (currentOpenDynamicForm === craftDetailsDiv) {
-                    if (craftItemNameInput && craftItemNameInput.value) details.item_name = craftItemNameInput.value;
-                    actionName = 'craft'; // Ensure action name is correct
-                } else if (currentOpenDynamicForm === buyDetailsDiv) {
-                    if (buyItemNameInput && buyItemNameInput.value) details.item_name = buyItemNameInput.value;
-                    if (buyQuantityInput && buyQuantityInput.value) details.quantity = parseInt(buyQuantityInput.value, 10);
-                    actionName = 'buy_from_own_shop';
-                } else if (currentOpenDynamicForm === sellDetailsDiv) {
-                    if (sellItemNameInput && sellItemNameInput.value) details.item_name = sellItemNameInput.value;
-                    // sellItemDropdown value is already in sellItemNameInput via its own change listener
-                    actionName = 'sell_to_own_shop';
-                } else if (currentOpenDynamicForm === hemlockHerbsDetailsDiv) {
-                    if (!selectedHemlockHerbName) { showToast("Please select an herb to buy.", "warning"); return; }
-                    const quantity = parseInt(hemlockQuantityInput.value, 10);
-                    if (isNaN(quantity) || quantity < 1) { showToast("Please enter a valid quantity.", "warning"); return; }
-                    details = { npc_name: "Old Man Hemlock", item_name: selectedHemlockHerbName, quantity: quantity };
-                    actionName = 'buy_from_npc';
-                } else if (currentOpenDynamicForm === borinItemsDetailsDiv) {
-                    if (!selectedBorinItemName) { showToast("Please select an item to buy from Borin.", "warning"); return; }
-                    const quantity = parseInt(borinQuantityInput.value, 10);
-                    if (isNaN(quantity) || quantity < 1) { showToast("Please enter a valid quantity.", "warning"); return; }
-                    details = { npc_name: "Borin Stonebeard", item_name: selectedBorinItemName, quantity: quantity };
-                    actionName = 'buy_from_npc';
-                } else if (currentOpenDynamicForm === borinRepairDetailsDiv) {
-                    const selectedItemToRepair = borinRepairItemSelect ? borinRepairItemSelect.value : null;
-                    if (!selectedItemToRepair) { showToast("Please select an item to repair.", "warning"); return; }
-                    details = { item_name_to_repair: selectedItemToRepair };
-                    actionName = 'repair_gear_borin';
-                }
-
-                if (hiddenActionNameInput) hiddenActionNameInput.value = actionName;
-                if (hiddenDetailsInput) hiddenDetailsInput.value = JSON.stringify(details);
-                if (actionForm) {
-                    targetButton.classList.add('button-processing');
-                    actionForm.submit();
-                }
-            });
-        }
-
-        // Add listeners for close buttons on dynamic forms
-        closeDynamicFormButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                hideAllDynamicForms();
-                // Optionally, re-display sub-locations if that was the previous state
-                if (currentTownDisplayActions && currentTownDisplayActions.textContent) {
-                     displaySubLocations(); // Re-render sub-locations for the current town
-                }
-            });
+        DOM.actionsTabButton.addEventListener('click', () => {
+            switchTab(DOM.actionsTabButton, DOM.logTabButton, DOM.actionsPanelContent, DOM.logPanelContent);
         });
 
-        // Initial population of sub-locations
-        if (currentTownDisplayActions && currentTownDisplayActions.textContent) {
-            displaySubLocations();
-        } else {
-            if(subLocationsListDiv) subLocationsListDiv.innerHTML = '<p>No town context.</p>';
-        }
-    } // End of initializeCoreGameActions
+        DOM.logTabButton.addEventListener('click', () => {
+            switchTab(DOM.logTabButton, DOM.actionsTabButton, DOM.logPanelContent, DOM.actionsPanelContent);
+        });
 
-    function initializeShopManagementInterface() {
-        // This function now assumes it's populating content within a full-panel
-        // The #shop-management-details div is inside #full-shop-mgt-panel
-        function populateShopManagementUI() {
-            if (!shopManagementDetailsDiv || !shopData || !shopConfig) {
-                if(shopManagementDetailsDiv) shopManagementDetailsDiv.innerHTML = '<p>Shop data not available.</p>';
-                return;
-            }
-            // ... (rest of the shop UI population logic remains the same) ...
-             let html = `<h3>${shopData.name}</h3>`; // HTML already has H2, so use H3 or P
-            html += `<p>Level: ${shopData.level} (Quality Bonus: +${shopData.current_quality_bonus})</p>`;
-            html += `<p>Specialization: ${shopData.specialization}</p>`;
-            html += `<p>Inventory: ${shopData.inventory_count} / ${shopData.max_inventory_slots} slots</p>`;
-            html += `<p>Player Gold: ${window.gameConfig.playerGold !== undefined ? window.gameConfig.playerGold : 'N/A'}</p>`;
-
-            html += `<h4>Change Specialization</h4><select id="shop-specialization-select" class="themed-select">`;
-            shopConfig.specialization_types.forEach(specType => {
-                html += `<option value="${specType}" ${shopData.specialization === specType ? 'selected' : ''}>${specType.replace(/_/g, ' ')}</option>`;
-            });
-            html += `</select><button type="button" id="submit-change-specialization" class="action-button">Set Specialization</button>`;
-
-            html += `<h4>Upgrade Shop</h4>`;
-            if (shopData.max_level_reached) {
-                html += `<p>Shop is at maximum level (${shopConfig.max_shop_level}).</p>`;
-            } else {
-                html += `<p>Next Level: ${shopData.level + 1}</p><p>Cost: ${shopData.next_level_cost} Gold</p>`;
-                html += `<p>Max Inventory Slots: ${shopData.next_level_slots}</p><p>Crafting Quality Bonus: +${shopData.next_level_quality_bonus}</p>`;
-                html += `<button type="button" id="submit-upgrade-shop" class="action-button">Upgrade Shop</button>`;
-            }
-            shopManagementDetailsDiv.innerHTML = html;
-
-            const changeSpecButton = document.getElementById('submit-change-specialization');
-            if (changeSpecButton && actionForm && hiddenActionNameInput && hiddenDetailsInput) {
-                changeSpecButton.addEventListener('click', function() {
-                    const selectElement = document.getElementById('shop-specialization-select');
-                    hiddenActionNameInput.value = 'set_shop_specialization';
-                    hiddenDetailsInput.value = JSON.stringify({ specialization_name: selectElement.value });
-                    actionForm.submit();
-                });
-            }
-            const upgradeShopButton = document.getElementById('submit-upgrade-shop');
-            if (upgradeShopButton && actionForm && hiddenActionNameInput && hiddenDetailsInput) {
-                upgradeShopButton.addEventListener('click', function() {
-                    hiddenActionNameInput.value = 'upgrade_shop';
-                    hiddenDetailsInput.value = JSON.stringify({});
-                    actionForm.submit();
-                });
-            }
-        }
-        // Populate if data is available (e.g., when its full panel is opened, or on load if always available)
-        if (shopManagementDetailsDiv && shopData) { // Check shopData as well
-            populateShopManagementUI();
-        }
+        // Initial state: Actions tab is active
+        DOM.actionsTabButton.click();
     }
+};
 
-    function initializeShopBuyButtonFunctionality() {
-        // This listener is on the #full-inventory-panel which contains the shop items.
-        if (fullInventoryPanel && buyItemNameInput && buyDetailsDiv) {
-            fullInventoryPanel.addEventListener('click', function(event) {
+const UIShopAndInventory = {
+    populateSellDropdown() {
+        if (!DOM.sellItemDropdown || !gameConfigData.playerInventoryForSellDropdown) return;
+        DOM.sellItemDropdown.innerHTML = '<option value="">-- Select an item to sell --</option>';
+        gameConfigData.playerInventoryForSellDropdown.forEach(item => {
+            const option = document.createElement('option');
+            const itemName = (typeof item === 'string') ? item : (item && item.name);
+            if (!itemName) return;
+            option.value = itemName;
+            option.textContent = itemName; // Consider adding quantity if available: e.g., `${itemName} (x${item.quantity})`
+            DOM.sellItemDropdown.appendChild(option);
+        });
+    },
+
+    initSellFunctionality() {
+        if (DOM.sellItemDropdown && DOM.sellItemNameInput) {
+            DOM.sellItemDropdown.addEventListener('change', function() {
+                if (this.value && DOM.sellItemNameInput) {
+                    DOM.sellItemNameInput.value = this.value;
+                }
+            });
+        }
+        if (DOM.sellItemDropdown) this.populateSellDropdown();
+    },
+
+    initShopBuyButtonFunctionality() {
+        if (DOM.fullInventoryPanel && DOM.buyItemNameInput && DOM.buyDetailsDiv) {
+            DOM.fullInventoryPanel.addEventListener('click', (event) => {
                 if (event.target.classList.contains('buy-item-button')) {
                     const itemName = event.target.dataset.itemName;
-                    if (buyItemNameInput) buyItemNameInput.value = itemName;
+                    if (DOM.buyItemNameInput) DOM.buyItemNameInput.value = itemName;
 
-                    // Close the inventory full panel
-                    const inventoryFullPanel = document.getElementById('full-inventory-panel-container');
-                    if (inventoryFullPanel) inventoryFullPanel.style.display = 'none';
-                     const miniInvPanel = document.getElementById('mini-inventory-panel');
-                    if(miniInvPanel) miniInvPanel.setAttribute('aria-expanded', 'false');
+                    if (DOM.fullInventoryPanelContainer) DOM.fullInventoryPanelContainer.style.display = 'none';
+                    if (DOM.miniInventoryPanel) DOM.miniInventoryPanel.setAttribute('aria-expanded', 'false');
 
-
-                    // Switch to Actions tab and show the buy form
-                    if (actionsTabButton) actionsTabButton.click(); // Activate actions tab
-                    showDynamicForm(buyDetailsDiv); // Show the buy form
-                    if (buyItemNameInput) buyItemNameInput.focus();
+                    if (DOM.actionsTabButton) DOM.actionsTabButton.click();
+                    showDynamicForm(DOM.buyDetailsDiv);
+                    if (DOM.buyItemNameInput) DOM.buyItemNameInput.focus();
                 }
             });
         }
-    }
+    },
 
-    function initializeTopRightMenu() {
-        if (topRightMenuButton && settingsPopup) {
-            topRightMenuButton.addEventListener('click', (event) => {
-                event.stopPropagation(); // Prevent click from immediately closing via document listener
-                const isHidden = settingsPopup.style.display === 'none' || settingsPopup.style.display === '';
-                settingsPopup.style.display = isHidden ? 'block' : 'none';
-                topRightMenuButton.setAttribute('aria-expanded', isHidden.toString());
+    populateShopManagementUI() {
+        if (!DOM.shopManagementDetailsDiv || !gameConfigData.shopData || !gameConfigData.shopConfig) {
+            if (DOM.shopManagementDetailsDiv) DOM.shopManagementDetailsDiv.innerHTML = '<p>Shop data not available.</p>';
+            return;
+        }
+        const { shopData, shopConfig, playerGold } = gameConfigData;
+        let html = `<h3>${shopData.name}</h3>`;
+        html += `<p>Level: ${shopData.level} (Quality Bonus: +${shopData.current_quality_bonus})</p>`;
+        html += `<p>Specialization: ${shopData.specialization}</p>`;
+        html += `<p>Inventory: ${shopData.inventory_count} / ${shopData.max_inventory_slots} slots</p>`;
+        html += `<p>Player Gold: ${playerGold !== undefined ? playerGold : 'N/A'}</p>`;
+
+        html += `<h4>Change Specialization</h4><select id="shop-specialization-select" class="themed-select">`;
+        shopConfig.specialization_types.forEach(specType => {
+            html += `<option value="${specType}" ${shopData.specialization === specType ? 'selected' : ''}>${specType.replace(/_/g, ' ')}</option>`;
+        });
+        html += `</select><button type="button" id="submit-change-specialization" class="action-button">Set Specialization</button>`;
+
+        html += `<h4>Upgrade Shop</h4>`;
+        if (shopData.max_level_reached) {
+            html += `<p>Shop is at maximum level (${shopConfig.max_shop_level}).</p>`;
+        } else {
+            html += `<p>Next Level: ${shopData.level + 1}</p><p>Cost: ${shopData.next_level_cost} Gold</p>`;
+            html += `<p>Max Inventory Slots: ${shopData.next_level_slots}</p><p>Crafting Quality Bonus: +${shopData.next_level_quality_bonus}</p>`;
+            html += `<button type="button" id="submit-upgrade-shop" class="action-button">Upgrade Shop</button>`;
+        }
+        DOM.shopManagementDetailsDiv.innerHTML = html;
+
+        // Re-attach event listeners after innerHTML overwrite
+        this.attachShopManagementActionListeners();
+    },
+
+    attachShopManagementActionListeners() {
+        const changeSpecButton = document.getElementById('submit-change-specialization');
+        if (changeSpecButton && DOM.actionForm && DOM.hiddenActionNameInput && DOM.hiddenDetailsInput) {
+            changeSpecButton.addEventListener('click', () => {
+                const selectElement = document.getElementById('shop-specialization-select');
+                DOM.hiddenActionNameInput.value = CONSTANTS.ACTION_NAMES.SET_SHOP_SPECIALIZATION;
+                DOM.hiddenDetailsInput.value = JSON.stringify({ specialization_name: selectElement.value });
+                DOM.actionForm.submit();
             });
         }
-        // Settings option might be just a header or future functionality.
-        // if (settingsOption) {
-        //     settingsOption.addEventListener('click', () => {
-        //         showToast("Settings panel coming soon!", "info");
-        //         if (settingsPopup) settingsPopup.style.display = 'none';
-        //         topRightMenuButton.setAttribute('aria-expanded', 'false');
-        //     });
-        // }
-        if (saveGameButton) {
-            saveGameButton.addEventListener('click', function() {
+        const upgradeShopButton = document.getElementById('submit-upgrade-shop');
+        if (upgradeShopButton && DOM.actionForm && DOM.hiddenActionNameInput && DOM.hiddenDetailsInput) {
+            upgradeShopButton.addEventListener('click', () => {
+                DOM.hiddenActionNameInput.value = CONSTANTS.ACTION_NAMES.UPGRADE_SHOP;
+                DOM.hiddenDetailsInput.value = JSON.stringify({});
+                DOM.actionForm.submit();
+            });
+        }
+    },
+
+    initShopManagementInterface() {
+        if (DOM.shopManagementDetailsDiv && gameConfigData.shopData) {
+            this.populateShopManagementUI();
+            // If the panel is opened dynamically, populateShopManagementUI should be called then.
+            // For now, assuming it might be visible on load or its content is prepped.
+        }
+    },
+
+    init() {
+        this.initSellFunctionality();
+        this.initShopBuyButtonFunctionality();
+        this.initShopManagementInterface();
+    }
+};
+
+
+const UIActionsAndEvents = {
+    displaySubLocations() {
+        if (!DOM.subLocationsListDiv || !DOM.currentTownDisplayActions) return;
+        DOM.subLocationsListDiv.innerHTML = '';
+        if (DOM.currentSubLocationActionsListDiv) DOM.currentSubLocationActionsListDiv.innerHTML = '';
+        if (DOM.currentSubLocationNameDisplay) DOM.currentSubLocationNameDisplay.style.display = 'none';
+        hideAllDynamicForms();
+
+        const currentTownName = DOM.currentTownDisplayActions.textContent;
+        const townData = gameConfigData.allTownsData[currentTownName];
+
+        if (townData && townData.sub_locations && townData.sub_locations.length > 0) {
+            const ul = document.createElement('ul');
+            ul.className = 'button-list';
+            townData.sub_locations.forEach(subLoc => {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'action-button sub-location-button';
+                button.dataset.sublocName = subLoc.name;
+                button.textContent = subLoc.name;
+                li.appendChild(button);
+                ul.appendChild(li);
+            });
+            DOM.subLocationsListDiv.appendChild(ul);
+        } else {
+            DOM.subLocationsListDiv.innerHTML = '<p>No sub-locations here.</p>';
+        }
+    },
+
+    displaySubLocationActions(subLocName) {
+        if (!DOM.currentSubLocationActionsListDiv || !DOM.currentSubLocationNameDisplay) return;
+        DOM.currentSubLocationActionsListDiv.innerHTML = '';
+        hideAllDynamicForms();
+
+        currentSubLocationName = subLocName; // Update global state
+        DOM.currentSubLocationNameDisplay.textContent = subLocName;
+        DOM.currentSubLocationNameDisplay.style.display = 'block';
+
+        const currentTownName = DOM.currentTownDisplayActions.textContent;
+        const townData = gameConfigData.allTownsData[currentTownName];
+        const selectedSubLocation = townData?.sub_locations?.find(sl => sl.name === subLocName);
+
+        if (selectedSubLocation && selectedSubLocation.actions && selectedSubLocation.actions.length > 0) {
+            const ul = document.createElement('ul');
+            ul.className = 'button-list';
+            selectedSubLocation.actions.forEach(actionStr => {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'action-button subloc-action-button';
+                button.dataset.actionName = actionStr;
+                button.textContent = actionStr.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                li.appendChild(button);
+                ul.appendChild(li);
+            });
+            DOM.currentSubLocationActionsListDiv.appendChild(ul);
+        } else {
+            DOM.currentSubLocationActionsListDiv.innerHTML = '<p>No actions available here.</p>';
+        }
+    },
+
+    handleDirectActionSubmit(actionName, details = {}, buttonElement = null) {
+        if (DOM.hiddenActionNameInput) DOM.hiddenActionNameInput.value = actionName;
+        if (DOM.hiddenDetailsInput) DOM.hiddenDetailsInput.value = JSON.stringify(details);
+        if (DOM.actionForm) {
+            if (buttonElement) buttonElement.classList.add('button-processing');
+            DOM.actionForm.submit();
+        }
+    },
+
+    // More complex handler for actions that might open forms
+    handleActionClick(actionName, buttonElement = null) {
+        if (DOM.hiddenActionNameInput) DOM.hiddenActionNameInput.value = actionName;
+
+        switch (actionName) {
+            case CONSTANTS.ACTION_NAMES.CRAFT:
+                showDynamicForm(DOM.craftDetailsDiv);
+                break;
+            case CONSTANTS.ACTION_NAMES.BUY_FROM_OWN_SHOP:
+                showDynamicForm(DOM.buyDetailsDiv);
+                break;
+            case CONSTANTS.ACTION_NAMES.SELL_TO_OWN_SHOP:
+                UIShopAndInventory.populateSellDropdown();
+                showDynamicForm(DOM.sellDetailsDiv);
+                break;
+            case CONSTANTS.ACTION_NAMES.BUY_FROM_NPC:
+                if (currentSubLocationName === CONSTANTS.SUB_LOCATIONS.HEMLOCK_HUT) {
+                    this.populateNpcShopUI(CONSTANTS.NPC_NAMES.HEMLOCK);
+                    showDynamicForm(DOM.hemlockHerbsDetailsDiv);
+                } else if (currentSubLocationName === CONSTANTS.SUB_LOCATIONS.BORIN_SMITHY) {
+                    this.populateNpcShopUI(CONSTANTS.NPC_NAMES.BORIN);
+                    showDynamicForm(DOM.borinItemsDetailsDiv);
+                }
+                break;
+            case CONSTANTS.ACTION_NAMES.TALK_TO_BORIN: // Assuming this might lead to buy options
+                 if (currentSubLocationName === CONSTANTS.SUB_LOCATIONS.BORIN_SMITHY) {
+                    this.populateNpcShopUI(CONSTANTS.NPC_NAMES.BORIN);
+                    showDynamicForm(DOM.borinItemsDetailsDiv);
+                }
+                break;
+            case CONSTANTS.ACTION_NAMES.REPAIR_GEAR_BORIN:
+                if (currentSubLocationName === CONSTANTS.SUB_LOCATIONS.BORIN_SMITHY) {
+                    this.populateBorinRepairUI();
+                    showDynamicForm(DOM.borinRepairDetailsDiv);
+                }
+                break;
+            // Direct submit actions:
+            case CONSTANTS.ACTION_NAMES.GATHER_RESOURCES:
+            case CONSTANTS.ACTION_NAMES.STUDY_LOCAL_HISTORY:
+            case CONSTANTS.ACTION_NAMES.ORGANIZE_INVENTORY:
+            case CONSTANTS.ACTION_NAMES.POST_ADVERTISEMENTS:
+            case CONSTANTS.ACTION_NAMES.REST_SHORT:
+            case CONSTANTS.ACTION_NAMES.REST_LONG:
+                this.handleDirectActionSubmit(actionName, {}, buttonElement);
+                break;
+            default:
+                console.warn(`Unhandled action: ${actionName}`);
+                // Optionally submit with empty details if it's a generic action not listed
+                // this.handleDirectActionSubmit(actionName, {}, buttonElement);
+                break;
+        }
+    },
+
+    populateNpcShopUI(npcName) {
+        let targetListDiv, itemsData, selectedItemStateKey, itemNameField;
+        if (npcName === CONSTANTS.NPC_NAMES.HEMLOCK) {
+            targetListDiv = DOM.hemlockHerbsListDiv;
+            itemsData = gameConfigData.hemlockHerbsData;
+            selectedItemStateKey = 'selectedHemlockHerbName';
+            itemNameField = 'herb-name';
+        } else if (npcName === CONSTANTS.NPC_NAMES.BORIN) {
+            targetListDiv = DOM.borinItemsListDiv;
+            itemsData = gameConfigData.borinItemsData;
+            selectedItemStateKey = 'selectedBorinItemName';
+            itemNameField = 'item-name';
+        } else {
+            return;
+        }
+
+        window[selectedItemStateKey] = null; // Reset global state for selection, e.g., selectedHemlockHerbName = null;
+        if (targetListDiv) {
+            targetListDiv.innerHTML = '';
+            if (itemsData && Object.keys(itemsData).length > 0) {
+                const ul = document.createElement('ul');
+                ul.className = 'npc-item-list'; // Add class for styling
+                for (const itemKey in itemsData) {
+                    const item = itemsData[itemKey];
+                    const li = document.createElement('li');
+                    // Using template literals for cleaner HTML string construction
+                    li.innerHTML = `
+                        <strong>${item.name}</strong> - ${item.price}G<br>
+                        <em>${item.description}</em><br>
+                        <button type="button" class="action-button select-npc-item-button" data-${itemNameField}="${item.name}" data-npc="${npcName}">Select</button>
+                    `;
+                    ul.appendChild(li);
+                }
+                targetListDiv.appendChild(ul);
+            } else {
+                targetListDiv.innerHTML = `<p>No items available from ${npcName}.</p>`;
+            }
+        }
+    },
+
+    populateBorinRepairUI() {
+        if (DOM.borinRepairItemSelect) {
+            DOM.borinRepairItemSelect.innerHTML = '<option value="">-- Select Item --</option>';
+            if (gameConfigData.playerInventoryForSellDropdown && gameConfigData.playerInventoryForSellDropdown.length > 0) {
+                gameConfigData.playerInventoryForSellDropdown.forEach(item => {
+                    const itemName = (typeof item === 'string') ? item : item.name;
+                    if (itemName) {
+                        const option = document.createElement('option');
+                        option.value = itemName;
+                        option.textContent = itemName;
+                        DOM.borinRepairItemSelect.appendChild(option);
+                    }
+                });
+            } else {
+                DOM.borinRepairItemSelect.innerHTML = '<option value="">-- No items to repair --</option>';
+            }
+            DOM.borinRepairItemSelect.onchange = function() {
+                if (DOM.borinRepairCostDisplay) DOM.borinRepairCostDisplay.textContent = this.value ? "Cost determined by Borin" : "N/A";
+            };
+            if (DOM.borinRepairCostDisplay) DOM.borinRepairCostDisplay.textContent = "N/A";
+        }
+    },
+
+
+    handleDynamicFormSubmit(event) {
+        const targetButton = event.target.closest('.submit-details-button, #submit_buy_hemlock_herb_button, #submit_buy_borin_item_button, #submit-borin-repair-button');
+        if (!targetButton) return;
+
+        let details = {};
+        let actionName = DOM.hiddenActionNameInput.value; // Should be set by handleActionClick
+
+        if (currentOpenDynamicForm === DOM.craftDetailsDiv) {
+            if (DOM.craftItemNameInput && DOM.craftItemNameInput.value) details.item_name = DOM.craftItemNameInput.value;
+            actionName = CONSTANTS.ACTION_NAMES.CRAFT;
+        } else if (currentOpenDynamicForm === DOM.buyDetailsDiv) {
+            if (DOM.buyItemNameInput && DOM.buyItemNameInput.value) details.item_name = DOM.buyItemNameInput.value;
+            if (DOM.buyQuantityInput && DOM.buyQuantityInput.value) details.quantity = parseInt(DOM.buyQuantityInput.value, 10);
+            actionName = CONSTANTS.ACTION_NAMES.BUY_FROM_OWN_SHOP;
+        } else if (currentOpenDynamicForm === DOM.sellDetailsDiv) {
+            if (DOM.sellItemNameInput && DOM.sellItemNameInput.value) details.item_name = DOM.sellItemNameInput.value;
+            actionName = CONSTANTS.ACTION_NAMES.SELL_TO_OWN_SHOP;
+        } else if (currentOpenDynamicForm === DOM.hemlockHerbsDetailsDiv) {
+            if (!selectedHemlockHerbName) { showToast("Please select an herb to buy.", "warning"); return; }
+            const quantity = parseInt(DOM.hemlockQuantityInput.value, 10);
+            if (isNaN(quantity) || quantity < 1) { showToast("Please enter a valid quantity.", "warning"); return; }
+            details = { npc_name: CONSTANTS.NPC_NAMES.HEMLOCK, item_name: selectedHemlockHerbName, quantity: quantity };
+            actionName = CONSTANTS.ACTION_NAMES.BUY_FROM_NPC;
+        } else if (currentOpenDynamicForm === DOM.borinItemsDetailsDiv) {
+            if (!selectedBorinItemName) { showToast("Please select an item to buy from Borin.", "warning"); return; }
+            const quantity = parseInt(DOM.borinQuantityInput.value, 10);
+            if (isNaN(quantity) || quantity < 1) { showToast("Please enter a valid quantity.", "warning"); return; }
+            details = { npc_name: CONSTANTS.NPC_NAMES.BORIN, item_name: selectedBorinItemName, quantity: quantity };
+            actionName = CONSTANTS.ACTION_NAMES.BUY_FROM_NPC;
+        } else if (currentOpenDynamicForm === DOM.borinRepairDetailsDiv) {
+            const selectedItemToRepair = DOM.borinRepairItemSelect ? DOM.borinRepairItemSelect.value : null;
+            if (!selectedItemToRepair) { showToast("Please select an item to repair.", "warning"); return; }
+            details = { item_name_to_repair: selectedItemToRepair };
+            actionName = CONSTANTS.ACTION_NAMES.REPAIR_GEAR_BORIN;
+        }
+
+        this.handleDirectActionSubmit(actionName, details, targetButton);
+    },
+
+    initEventListeners() {
+        // Sub-location selection
+        if (DOM.subLocationsListDiv) {
+            DOM.subLocationsListDiv.addEventListener('click', (event) => {
+                if (event.target.classList.contains('sub-location-button')) {
+                    this.displaySubLocationActions(event.target.dataset.sublocName);
+                }
+            });
+        }
+
+        // Actions within a sub-location
+        if (DOM.currentSubLocationActionsListDiv) {
+            DOM.currentSubLocationActionsListDiv.addEventListener('click', (event) => {
+                if (event.target.classList.contains('subloc-action-button')) {
+                    this.handleActionClick(event.target.dataset.actionName, event.target);
+                }
+            });
+        }
+
+        // Map travel
+        if (DOM.mapDestinationsDiv) {
+            DOM.mapDestinationsDiv.addEventListener('click', (event) => {
+                if (event.target.classList.contains('map-destination-button')) {
+                    this.handleDirectActionSubmit(CONSTANTS.ACTION_NAMES.TRAVEL_TO_TOWN, { town_name: event.target.dataset.townName });
+                }
+            });
+        }
+
+        // General action buttons
+        const generalActionButtons = [
+            { el: DOM.gatherResourcesButton, name: CONSTANTS.ACTION_NAMES.GATHER_RESOURCES },
+            { el: DOM.studyLocalHistoryButton, name: CONSTANTS.ACTION_NAMES.STUDY_LOCAL_HISTORY },
+            { el: DOM.organizeInventoryButton, name: CONSTANTS.ACTION_NAMES.ORGANIZE_INVENTORY },
+            { el: DOM.postAdvertisementsButton, name: CONSTANTS.ACTION_NAMES.POST_ADVERTISEMENTS },
+            { el: DOM.shortRestButton, name: CONSTANTS.ACTION_NAMES.REST_SHORT },
+            { el: DOM.longRestButton, name: CONSTANTS.ACTION_NAMES.REST_LONG },
+        ];
+        generalActionButtons.forEach(pair => {
+            if (pair.el) {
+                pair.el.addEventListener('click', () => this.handleActionClick(pair.name, pair.el));
+            }
+        });
+
+        // NPC item selection (delegated)
+        const handleNpcItemSelect = (event) => {
+            const button = event.target.closest('.select-npc-item-button');
+            if (!button) return;
+
+            const npcName = button.dataset.npc;
+            let selectedItemNameKey, listContainer;
+
+            if (npcName === CONSTANTS.NPC_NAMES.HEMLOCK) {
+                selectedHemlockHerbName = button.dataset.herbName;
+                listContainer = DOM.hemlockHerbsListDiv;
+            } else if (npcName === CONSTANTS.NPC_NAMES.BORIN) {
+                selectedBorinItemName = button.dataset.itemName;
+                listContainer = DOM.borinItemsListDiv;
+            } else {
+                return;
+            }
+
+            if (listContainer) {
+                listContainer.querySelectorAll('.select-npc-item-button').forEach(btn => {
+                    btn.style.fontWeight = 'normal'; btn.style.backgroundColor = ''; // Reset others
+                    btn.classList.remove('selected-item-button'); // CSS class instead of inline style
+                });
+                button.style.fontWeight = 'bold'; // Or use a class:
+                button.classList.add('selected-item-button');
+            }
+        };
+
+        if (DOM.hemlockHerbsListDiv) DOM.hemlockHerbsListDiv.addEventListener('click', handleNpcItemSelect);
+        if (DOM.borinItemsListDiv) DOM.borinItemsListDiv.addEventListener('click', handleNpcItemSelect);
+
+
+        // Submit buttons in dynamic forms (delegated)
+        if (DOM.dynamicActionFormsContainer) {
+            DOM.dynamicActionFormsContainer.addEventListener('click', (event) => this.handleDynamicFormSubmit(event));
+        }
+
+        // Close buttons on dynamic forms
+        if (DOM.closeDynamicFormButtons) {
+            DOM.closeDynamicFormButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    hideAllDynamicForms();
+                    if (DOM.currentTownDisplayActions && DOM.currentTownDisplayActions.textContent) {
+                        this.displaySubLocations();
+                    }
+                });
+            });
+        }
+    },
+
+    init() {
+        this.initEventListeners();
+        // Initial population of sub-locations if town context exists
+        if (DOM.currentTownDisplayActions && DOM.currentTownDisplayActions.textContent) {
+            this.displaySubLocations();
+        } else {
+            if (DOM.subLocationsListDiv) DOM.subLocationsListDiv.innerHTML = '<p>No town context.</p>';
+        }
+    }
+};
+
+
+const UITopMenu = {
+    init() {
+        if (DOM.topRightMenuButton && DOM.settingsPopup) {
+            DOM.topRightMenuButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const isHidden = DOM.settingsPopup.style.display === 'none' || DOM.settingsPopup.style.display === '';
+                DOM.settingsPopup.style.display = isHidden ? 'block' : 'none';
+                DOM.topRightMenuButton.setAttribute('aria-expanded', isHidden.toString());
+            });
+        }
+
+        if (DOM.saveGameButton) {
+            DOM.saveGameButton.addEventListener('click', () => {
                 showToast("Game progress is automatically saved after each action.", "info", 7000);
-                if (settingsPopup) settingsPopup.style.display = 'none';
-                if (topRightMenuButton) topRightMenuButton.setAttribute('aria-expanded', 'false');
+                if (DOM.settingsPopup) DOM.settingsPopup.style.display = 'none';
+                if (DOM.topRightMenuButton) DOM.topRightMenuButton.setAttribute('aria-expanded', 'false');
             });
         }
-        // Close popup if clicking outside
-        document.addEventListener('click', function(event) {
-            if (settingsPopup && settingsPopup.style.display === 'block') {
-                if (!settingsPopup.contains(event.target) && !topRightMenuButton.contains(event.target)) {
-                    settingsPopup.style.display = 'none';
-                    if (topRightMenuButton) topRightMenuButton.setAttribute('aria-expanded', 'false');
+
+        document.addEventListener('click', (event) => {
+            if (DOM.settingsPopup && DOM.settingsPopup.style.display === 'block') {
+                if (!DOM.settingsPopup.contains(event.target) && DOM.topRightMenuButton && !DOM.topRightMenuButton.contains(event.target)) {
+                    DOM.settingsPopup.style.display = 'none';
+                    if (DOM.topRightMenuButton) DOM.topRightMenuButton.setAttribute('aria-expanded', 'false');
                 }
             }
         });
     }
+};
 
-    function processInitialGameDataPopups() {
-        const popupActionResult = window.gameConfig.popupActionResult;
-        if (popupActionResult && popupActionResult.trim() !== "") {
-            const toastMessage = popupActionResult.replace(/<br\s*\/?>/gi, " ");
-            let actionResultType = 'info';
-            if (toastMessage.toLowerCase().includes('success')) actionResultType = 'success';
-            else if (toastMessage.toLowerCase().includes('fail') || toastMessage.toLowerCase().includes('error') || toastMessage.toLowerCase().includes('not possible')) actionResultType = 'error';
-            else if (toastMessage.toLowerCase().includes('warning')) actionResultType = 'warning';
-            showToast(toastMessage, actionResultType, 7000);
-        }
-
-        const awaitingEventChoice = window.gameConfig.awaitingEventChoice;
-        const pendingEventDataJson = window.gameConfig.pendingEventDataJson;
-        if (awaitingEventChoice && pendingEventDataJson && eventPopup) {
+const UIInitialPopups = {
+    processEventPopup() {
+        const { awaitingEventChoice, pendingEventDataJson } = gameConfigData;
+        if (awaitingEventChoice && pendingEventDataJson && DOM.eventPopup) {
             try {
-                const eventData = pendingEventDataJson; // Already an object
-                const eventPopupNameEl = document.getElementById('event-popup-name');
-                const eventPopupDescriptionEl = document.getElementById('event-popup-description');
-                const choicesContainer = document.getElementById('event-popup-choices');
+                const eventData = pendingEventDataJson; // Assuming it's already an object
+                if (DOM.eventPopupNameEl) DOM.eventPopupNameEl.textContent = eventData.name || "An Event Occurs!";
+                if (DOM.eventPopupDescriptionEl) DOM.eventPopupDescriptionEl.innerHTML = eventData.description || "You must make a choice.";
 
-                if (eventPopupNameEl) eventPopupNameEl.textContent = eventData.name || "An Event Occurs!";
-                if (eventPopupDescriptionEl) eventPopupDescriptionEl.innerHTML = eventData.description || "You must make a choice."; // Use innerHTML if desc can have HTML
-
-                if (choicesContainer) {
-                    choicesContainer.innerHTML = ''; // Clear previous choices
+                if (DOM.eventPopupChoicesContainer) {
+                    DOM.eventPopupChoicesContainer.innerHTML = ''; // Clear
                     if (eventData.choices && eventData.choices.length > 0) {
-                        eventData.choices.forEach(function(choice, index) {
+                        eventData.choices.forEach((choice, index) => {
                             const button = document.createElement('button');
-                            button.className = 'event-choice-button action-button'; // Themed button
+                            button.className = 'event-choice-button action-button';
                             button.dataset.choiceIndex = index;
                             let buttonText = choice.text;
                             if (choice.skill && choice.dc) buttonText += ` <span class="skill-check-indicator">[${choice.skill} DC ${choice.dc}]</span>`;
                             if (choice.item_requirement_desc) buttonText += ` <span class="item-req-indicator">(${choice.item_requirement_desc})</span>`;
-                            button.innerHTML = buttonText; // Use innerHTML for spans
-                            choicesContainer.appendChild(button);
+                            button.innerHTML = buttonText;
+                            DOM.eventPopupChoicesContainer.appendChild(button);
                         });
-                        // Add event listener to choices container (delegation)
-                         if (!choicesContainer.dataset.listenerAttached) { // Prevent multiple listeners
-                            choicesContainer.addEventListener('click', function(event) {
+
+                        // Event listener for choices (delegated, one-time attach)
+                        if (!DOM.eventPopupChoicesContainer.dataset.listenerAttached) {
+                            DOM.eventPopupChoicesContainer.addEventListener('click', (event) => {
                                 if (event.target.classList.contains('event-choice-button')) {
                                     const choiceIndex = event.target.dataset.choiceIndex;
-                                    const currentEventName = eventData.name; // Or get from a data attribute if eventData changes scope
+                                    const currentEventName = eventData.name; // Capture from closure
 
                                     if (choiceIndex === undefined || !currentEventName) {
-                                        console.error("Error: Missing choice index or event name.");
+                                        console.error("Error: Missing choice index or event name for event submission.");
                                         showToast("Error processing your choice.", "error");
                                         return;
                                     }
                                     // Submit choice via a dynamically created form
                                     const form = document.createElement('form');
                                     form.method = 'POST';
-                                    form.action = window.gameConfig.submitEventChoiceUrl; // URL from gameConfig
-                                    const eventNameInput = document.createElement('input');
-                                    eventNameInput.type = 'hidden'; eventNameInput.name = 'event_name'; eventNameInput.value = currentEventName;
-                                    form.appendChild(eventNameInput);
-                                    const choiceIndexInput = document.createElement('input');
-                                    choiceIndexInput.type = 'hidden'; choiceIndexInput.name = 'choice_index'; choiceIndexInput.value = choiceIndex;
-                                    form.appendChild(choiceIndexInput);
+                                    form.action = gameConfigData.submitEventChoiceUrl;
+                                    form.innerHTML = `
+                                        <input type="hidden" name="event_name" value="${currentEventName}">
+                                        <input type="hidden" name="choice_index" value="${choiceIndex}">
+                                    `;
                                     document.body.appendChild(form);
                                     form.submit();
-                                    if (eventPopup) eventPopup.style.display = 'none';
+                                    if (DOM.eventPopup) DOM.eventPopup.style.display = 'none';
                                 }
                             });
-                            choicesContainer.dataset.listenerAttached = 'true';
+                            DOM.eventPopupChoicesContainer.dataset.listenerAttached = 'true';
                         }
                     } else {
-                        choicesContainer.innerHTML = '<p>No choices available for this event.</p>';
+                        DOM.eventPopupChoicesContainer.innerHTML = '<p>No choices available for this event.</p>';
                     }
                 }
-                if (eventPopup) eventPopup.style.display = 'block'; // Show the modal
+                if (DOM.eventPopup) DOM.eventPopup.style.display = 'block';
             } catch (e) {
                 console.error("Error processing event data for popup:", e);
-                if (eventPopup) eventPopup.style.display = 'none';
+                if (DOM.eventPopup) DOM.eventPopup.style.display = 'none';
             }
         }
+    },
 
-        const lastSkillRollStr = window.gameConfig.lastSkillRollStr;
+    processActionResultToast() {
+        const { popupActionResult } = gameConfigData;
+        if (popupActionResult && popupActionResult.trim() !== "") {
+            const toastMessage = popupActionResult.replace(/<br\s*\/?>/gi, " "); // Flatten <br>
+            let actionResultType = 'info';
+            const lowerMessage = toastMessage.toLowerCase();
+            if (lowerMessage.includes('success')) actionResultType = 'success';
+            else if (lowerMessage.includes('fail') || lowerMessage.includes('error') || lowerMessage.includes('not possible')) actionResultType = 'error';
+            else if (lowerMessage.includes('warning')) actionResultType = 'warning';
+            showToast(toastMessage, actionResultType, 7000);
+        }
+    },
+
+    processSkillRollToast() {
+        const { lastSkillRollStr } = gameConfigData;
         if (lastSkillRollStr && lastSkillRollStr.trim() !== "") {
             let skillRollType = 'info';
-            if (lastSkillRollStr.toLowerCase().includes('success')) skillRollType = 'success';
-            else if (lastSkillRollStr.toLowerCase().includes('fail') || lastSkillRollStr.toLowerCase().includes('failure')) skillRollType = 'error';
+            const lowerMessage = lastSkillRollStr.toLowerCase();
+            if (lowerMessage.includes('success')) skillRollType = 'success';
+            else if (lowerMessage.includes('fail') || lowerMessage.includes('failure')) skillRollType = 'error';
             showToast(lastSkillRollStr, skillRollType, 7000);
         }
+    },
+
+    init() {
+        this.processActionResultToast();
+        this.processEventPopup();
+        this.processSkillRollToast();
+    }
+};
+
+
+// --- MAIN INITIALIZATION ---
+function main() {
+    document.body.classList.add('js-loaded');
+    cacheDomElements(); // Populate DOM object
+    loadConfigData(); // Populate gameConfigData object
+
+    UIPanels.init();
+    UIBottomTabs.init();
+    UITopMenu.init();
+
+    if (DOM.actionForm) { // Core game interactions are available
+        UIActionsAndEvents.init();
+        UIShopAndInventory.init();
     }
 
-    // --- EXECUTE INITIALIZERS ---
-    initializeSidePanelInteractions();
-    initializeBottomBarTabs();
-    initializeTopRightMenu();
+    UIInitialPopups.init();
+}
 
-    if (actionForm) { // Core game actions only if logged in and character selected
-        initializeCoreGameActions();
-        initializeSellFunctionality(); // Depends on sellItemDropdown created in HTML
-        initializeShopBuyButtonFunctionality(); // Depends on inventory items being present
-    }
-
-    if (shopManagementDetailsDiv && shopData) { // Shop management if data exists
-        initializeShopManagementInterface();
-    }
-
-    processInitialGameDataPopups(); // Toasts for results, event popups
-
-    // Final check: Ensure the default view is correct (e.g., Actions tab visible)
-    if (actionsTabButton) {
-        // actionsTabButton.click(); // This is now handled in initializeBottomBarTabs
-    }
-});
+// --- STARTUP ---
+document.addEventListener('DOMContentLoaded', main);
