@@ -888,8 +888,8 @@ def display_game_output():
                            character_creation_stats=character_creation_stats_display,
                            stat_names_ordered=Character.STAT_NAMES, # Class attribute
                            pending_char_name=pending_char_name_display,
-                           awaiting_event_choice=awaiting_event_choice,
-                           pending_event_data_json=json.dumps(pending_event_data_for_template) if pending_event_data_for_template else None,
+                           awaiting_event_choice=awaiting_event_choice_for_template, # Use the conditioned variable
+                           pending_event_data_json=json.dumps(pending_event_data_for_template) if pending_event_data_for_template else None, # Use the conditioned variable
                            last_skill_roll_str=last_skill_roll_str
                            )
 
