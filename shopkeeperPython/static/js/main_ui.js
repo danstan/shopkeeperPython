@@ -1170,12 +1170,31 @@ const UIInitialPopups = {
     },
 
     processHagglingPopup() {
+        console.log("[UIInitialPopups] processHagglingPopup called.");
         const { hagglingPending, pendingHagglingDataJson } = gameConfigData;
+        console.log("[UIInitialPopups] hagglingPending:", hagglingPending);
+        console.log("[UIInitialPopups] pendingHagglingDataJson:", pendingHagglingDataJson);
+
         if (hagglingPending && pendingHagglingDataJson && DOM.hagglingPopupWrapper) {
+            console.log("[UIInitialPopups] Conditions met, calling UIHaggling.populateAndShowModal.");
             UIHaggling.populateAndShowModal(pendingHagglingDataJson);
-            if (DOM.eventPopup) DOM.eventPopup.style.display = 'none'; // Ensure event popup is hidden
+            if (DOM.eventPopup) {
+                console.log("[UIInitialPopups] Hiding event popup because haggling popup should show.");
+                DOM.eventPopup.style.display = 'none'; // Ensure event popup is hidden
+            }
+            // If haggling popup is being shown, ensure 'event-active' class is removed from body
+            // as haggling should take precedence if it's displayed after an event was processed.
+            if (document.body.classList.contains('event-active')) {
+                console.log("[UIInitialPopups] Removing 'event-active' class from body as haggling popup is shown.");
+                document.body.classList.remove('event-active');
+            }
         } else {
-            if (DOM.hagglingPopupWrapper) DOM.hagglingPopupWrapper.classList.add('hidden');
+            console.log("[UIInitialPopups] Conditions NOT met for haggling popup OR wrapper missing. Ensuring haggling popup is hidden.");
+            if (DOM.hagglingPopupWrapper) {
+                DOM.hagglingPopupWrapper.classList.add('hidden');
+            } else {
+                console.log("[UIInitialPopups] Haggling popup wrapper (DOM.hagglingPopupWrapper) not found.");
+            }
         }
     },
 
@@ -1190,24 +1209,32 @@ const UIInitialPopups = {
 const UIHaggling = {
     currentHagglingData: null,
 
-    populateAndShowModal(data) {
-        this.currentHagglingData = data;
+    populateAndShowModal(jsonData) { // Renamed data to jsonData for clarity
+        console.log("[UIHaggling] populateAndShowModal called with jsonData:", jsonData);
 
         if (!DOM.hagglingPopupWrapper) {
-            console.error("Haggling modal wrapper element missing. Cannot display haggling popup.");
+            console.error("[UIHaggling] Haggling modal wrapper element (DOM.hagglingPopupWrapper) missing. Cannot display haggling popup.");
             return;
         }
 
-        if (DOM.hagglingPopup) {
-            DOM.hagglingPopup.style.display = 'block';
-        }
-        DOM.hagglingPopupWrapper.classList.remove('hidden');
-        DOM.hagglingPopup.setAttribute('aria-hidden', 'false');
-
         try {
+            // Attempt to parse the JSON data first
+            if (typeof jsonData === 'string') {
+                this.currentHagglingData = JSON.parse(jsonData);
+                console.log("[UIHaggling] Successfully parsed jsonData:", this.currentHagglingData);
+            } else if (typeof jsonData === 'object' && jsonData !== null) {
+                // If it's already an object (e.g., if backend directly passes object in future or for testing)
+                this.currentHagglingData = jsonData;
+                 console.log("[UIHaggling] jsonData is already an object:", this.currentHagglingData);
+            } else {
+                // Handles null, undefined, or other non-string/non-object types for jsonData
+                console.error("[UIHaggling] populateAndShowModal: Received invalid jsonData type or null/undefined.", jsonData);
+                this.currentHagglingData = null; // Ensure it's null if data is bad
+            }
+
             // IMPROVED CHECK: If data is not a valid object or is empty, show a clear error state and bail.
             if (!this.currentHagglingData || typeof this.currentHagglingData !== 'object' || Object.keys(this.currentHagglingData).length === 0) {
-                console.error("populateAndShowModal: Received invalid or empty haggling data.", this.currentHagglingData);
+                console.error("[UIHaggling] populateAndShowModal: Parsed haggling data is invalid or empty.", this.currentHagglingData);
                 if (DOM.hagglingPopupTitle) DOM.hagglingPopupTitle.textContent = "Trade Unavailable";
                 if (DOM.haggleItemName) DOM.haggleItemName.textContent = 'Information not available.';
                 if (DOM.haggleItemQuality) DOM.haggleItemQuality.textContent = '';
@@ -1233,7 +1260,21 @@ const UIHaggling = {
                 }
                 // Avoid calling showToast if it was already called by processHagglingPopup for this condition.
                 // showToast("Error with trade data. The trade window cannot be shown correctly.", "error");
-                return;
+                return; // Modal remains hidden if error occurs here
+            }
+
+            // If data is valid, now show the modal
+            if (DOM.hagglingPopup) {
+                DOM.hagglingPopup.style.display = 'block';
+            }
+            DOM.hagglingPopupWrapper.classList.remove('hidden');
+            console.log("[UIHaggling] Haggling popup wrapper 'hidden' class removed.");
+            DOM.hagglingPopup.setAttribute('aria-hidden', 'false');
+
+            // Explicitly remove event-active class from body if haggling modal is successfully shown
+            if (document.body.classList.contains('event-active')) {
+                console.log("[UIHaggling] Removing 'event-active' class from body as haggling popup is shown.");
+                document.body.classList.remove('event-active');
             }
 
             const {
@@ -1244,7 +1285,7 @@ const UIHaggling = {
 
             // Secondary check for essential keys, which might indicate a partially valid object.
             if (item_name === undefined || npc_name === undefined || current_offer === undefined || quantity === undefined || context === undefined) {
-                console.error("populateAndShowModal: Haggling data object is missing essential keys.", this.currentHagglingData);
+                console.error("[UIHaggling] populateAndShowModal: Haggling data object is missing essential keys.", this.currentHagglingData);
                 if (DOM.hagglingPopupTitle) DOM.hagglingPopupTitle.textContent = "Trade Data Error";
                 if (DOM.haggleItemName) DOM.haggleItemName.textContent = item_name === undefined ? 'Item Error' : (item_name || 'N/A');
                 if (DOM.haggleItemQuality) DOM.haggleItemQuality.textContent = item_quality || 'N/A';
