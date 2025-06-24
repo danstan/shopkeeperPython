@@ -676,14 +676,20 @@ class GameManager:
 
             elif action_name == "rest_short":
                 if self.character.hit_dice > 0:
-                    roll = random.randint(1, self.character.hit_die_type)
-                    con_modifier = self.character.get_ability_modifier("CON")
+                    # Assuming d8 for hit dice as Character class does not store hit_die_type
+                    hit_die_roll_value = 8
+                    roll = random.randint(1, hit_die_roll_value)
+                    # con_modifier should be calculated from stats, not get_ability_modifier directly
+                    # get_ability_modifier is not a method on Character from provided code.
+                    # _calculate_modifier from Character takes the stat value.
+                    con_modifier = self.character._calculate_modifier(self.character.stats["CON"], is_base_stat_score=True)
                     hp_recovered = max(1, roll + con_modifier) # Ensure at least 1 HP recovered
 
-                    self.character.current_hp = min(self.character.max_hp, self.character.current_hp + hp_recovered)
+                    # Use .hp and .get_effective_max_hp()
+                    self.character.hp = min(self.character.get_effective_max_hp(), self.character.hp + hp_recovered)
                     self.character.hit_dice -= 1
 
-                    outcome_summary = f"Spent 1 Hit Die, recovered {hp_recovered} HP. Current HP: {self.character.current_hp}/{self.character.max_hp}. Hit Dice remaining: {self.character.hit_dice}."
+                    outcome_summary = f"Spent 1 Hit Die, recovered {hp_recovered} HP. Current HP: {self.character.hp}/{self.character.get_effective_max_hp()}. Hit Dice remaining: {self.character.hit_dice}."
                     self._print(f"  {self.character.name} takes a short rest. {outcome_summary}")
                     self.add_journal_entry(action_type="Short Rest", summary="Took a short rest.", outcome=outcome_summary, details={"hp_recovered": hp_recovered, "hit_dice_spent": 1})
                     action_xp_reward = 1
@@ -703,7 +709,7 @@ class GameManager:
                     self.character.consume_items(food_needed)
                     self.character.consume_items(drink_needed)
 
-                    self.character.current_hp = self.character.max_hp
+                    self.character.hp = self.character.get_effective_max_hp() # Corrected
                     self.character.hit_dice = self.character.level # Recover all hit dice
 
                     exhaustion_removed = 0
