@@ -451,30 +451,37 @@ window.showToast = showToast;
 
 
 function hideAllDynamicForms() {
-    if (DOM.dynamicActionFormsContainer) DOM.dynamicActionFormsContainer.style.display = 'none';
-    if (DOM.allDynamicForms) DOM.allDynamicForms.forEach(form => form.style.display = 'none');
+    if (DOM.dynamicActionFormsContainer) DOM.dynamicActionFormsContainer.classList.add('hidden'); // Add hidden class
+    if (DOM.allDynamicForms) DOM.allDynamicForms.forEach(form => form.classList.add('hidden')); // Add hidden class for all individual dynamic forms
     currentOpenDynamicForm = null;
 
-    // Make other action sections visible again
-    if (DOM.travelActionsContainer) DOM.travelActionsContainer.style.display = 'block';
-    if (DOM.locationInteractionsContainer) DOM.locationInteractionsContainer.style.display = 'block';
-    if (DOM.generalActionsContainer) DOM.generalActionsContainer.style.display = 'block';
+    // Make other action sections visible again by removing 'hidden' class
+    // Assuming these containers might also use the .hidden class convention
+    if (DOM.travelActionsContainer) DOM.travelActionsContainer.classList.remove('hidden');
+    if (DOM.locationInteractionsContainer) DOM.locationInteractionsContainer.classList.remove('hidden');
+    if (DOM.generalActionsContainer) DOM.generalActionsContainer.classList.remove('hidden');
 }
 
 function showDynamicForm(formElement) {
-    hideAllDynamicForms(); // Hide any currently open form
+    hideAllDynamicForms(); // Hide any currently open form and show main action sections
     if (formElement) {
-        // Hide other action sections to focus on the form
-        if (DOM.travelActionsContainer) DOM.travelActionsContainer.style.display = 'none';
-        if (DOM.locationInteractionsContainer) DOM.locationInteractionsContainer.style.display = 'none';
-        if (DOM.generalActionsContainer) DOM.generalActionsContainer.style.display = 'none';
+        // Hide other action sections to focus on the form, by adding 'hidden' class
+        if (DOM.travelActionsContainer) DOM.travelActionsContainer.classList.add('hidden');
+        if (DOM.locationInteractionsContainer) DOM.locationInteractionsContainer.classList.add('hidden');
+        if (DOM.generalActionsContainer) DOM.generalActionsContainer.classList.add('hidden');
 
-        if (DOM.dynamicActionFormsContainer) DOM.dynamicActionFormsContainer.style.display = 'block';
-        formElement.style.display = 'block';
+        // Show the main dynamic forms container and the specific form by removing 'hidden' class
+        if (DOM.dynamicActionFormsContainer) DOM.dynamicActionFormsContainer.classList.remove('hidden');
+        formElement.classList.remove('hidden'); // This is the specific form like DOM.craftDetailsDiv
+
         currentOpenDynamicForm = formElement;
-        formElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Scroll into view after it's made visible
+        requestAnimationFrame(() => { // Ensure DOM update before scrolling
+            formElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
     } else {
-        // If no form to show, ensure main action sections are visible (handled by hideAllDynamicForms)
+        // If no formElement is provided, hideAllDynamicForms has already run,
+        // so the main action sections should be visible.
     }
 }
 
@@ -1073,7 +1080,7 @@ const UIInitialPopups = {
         const { awaitingEventChoice, pendingEventDataJson } = gameConfigData;
         if (awaitingEventChoice && pendingEventDataJson && DOM.eventPopup) {
             try {
-                const eventData = pendingEventDataJson; // Assuming it's already an object
+                const eventData = JSON.parse(pendingEventDataJson); // Parse the JSON string
                 if (DOM.eventPopupNameEl) DOM.eventPopupNameEl.textContent = eventData.name || "An Event Occurs!";
                 if (DOM.eventPopupDescriptionEl) DOM.eventPopupDescriptionEl.innerHTML = eventData.description || "You must make a choice.";
 
@@ -1251,6 +1258,10 @@ const UIHaggling = {
 
         DOM.hagglingPopupWrapper.classList.remove('hidden');
         DOM.hagglingPopup.setAttribute('aria-hidden', 'false');
+        // Ensure the modal itself is displayed, as it has display:none from .modal class
+        if (DOM.hagglingPopup) { // Check if DOM.hagglingPopup is cached and exists
+            DOM.hagglingPopup.style.display = 'block';
+        }
         // Focus first button
         if(DOM.haggleAcceptButton) DOM.haggleAcceptButton.focus();
     },
@@ -1258,7 +1269,10 @@ const UIHaggling = {
     closeModal() {
         if (DOM.hagglingPopupWrapper) {
             DOM.hagglingPopupWrapper.classList.add('hidden');
-            if(DOM.hagglingPopup) DOM.hagglingPopup.setAttribute('aria-hidden', 'true');
+            if(DOM.hagglingPopup) {
+                DOM.hagglingPopup.setAttribute('aria-hidden', 'true');
+                DOM.hagglingPopup.style.display = 'none'; // Also hide it directly
+            }
         }
         this.currentHagglingData = null;
     },
