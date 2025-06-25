@@ -353,7 +353,7 @@ class Shop:
         print(f"SHOP: Initiating haggling with {npc_name} for {quantity_for_sale}x {item_to_sell.name}. Initial NPC offer: {initial_npc_offer}g (Shop's ideal price: {standard_shop_price}g).")
         return haggling_state
 
-    def finalize_haggled_sale(self, item_instance_to_sell: Item, final_selling_price: int) -> bool:
+    def finalize_haggled_sale(self, item_instance_to_sell: Item, final_selling_price: int, quantity_sold: int) -> bool:
         """
         Completes the sale of an item to an NPC after haggling.
         Assumes item_instance_to_sell is the correct instance from inventory.
