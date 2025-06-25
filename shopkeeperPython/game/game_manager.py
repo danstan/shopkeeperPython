@@ -995,15 +995,17 @@ class GameManager:
 
                 if player_choice == "accept":
                     final_price = current_haggle_state["current_offer"]
-                    if self.shop.finalize_haggled_sale(item_instance_to_sell, final_price):
-                        self._print(f"  Sale of {item_instance_to_sell.name} to {current_haggle_state['npc_name']} accepted at {final_price}g.")
-                        self.daily_items_sold_by_shop_to_npcs.append((item_instance_to_sell.name, final_price))
-                        self.daily_gold_earned_from_sales += final_price
-                        self.add_journal_entry("Haggle (Sell)", f"Accepted offer for {item_instance_to_sell.name} from {current_haggle_state['npc_name']}.", outcome=f"Sold for {final_price}g.")
+                    quantity_being_sold = current_haggle_state.get("quantity", 1) # Get quantity from haggle state
+
+                    if self.shop.finalize_haggled_sale(item_instance_to_sell, final_price, quantity_being_sold):
+                        self._print(f"  Sale of {quantity_being_sold}x {item_instance_to_sell.name} to {current_haggle_state['npc_name']} accepted at {final_price}g.")
+                        self.daily_items_sold_by_shop_to_npcs.append((item_instance_to_sell.name, final_price, quantity_being_sold)) # Log quantity
+                        self.daily_gold_earned_from_sales += final_price # This price is for the total quantity sold
+                        self.add_journal_entry("Haggle (Sell)", f"Accepted offer for {quantity_being_sold}x {item_instance_to_sell.name} from {current_haggle_state['npc_name']}.", outcome=f"Sold for {final_price}g.")
                         action_xp_reward = 5 # XP for successful sale after haggle
                     else:
-                        self._print(f"  Error finalizing sale of {item_instance_to_sell.name} after accepting haggle.")
-                        self.add_journal_entry("Haggle (Sell)", f"Error finalizing sale of {item_instance_to_sell.name}.", outcome="Sale Failed")
+                        self._print(f"  Error finalizing sale of {quantity_being_sold}x {item_instance_to_sell.name} after accepting haggle.")
+                        self.add_journal_entry("Haggle (Sell)", f"Error finalizing sale of {quantity_being_sold}x {item_instance_to_sell.name}.", outcome="Sale Failed")
                     self.active_haggling_session = None
                     return {"type": "action_complete"}
 

@@ -127,6 +127,48 @@ class Shop:
             pass
         return item_to_remove
 
+    def remove_item_from_inventory(self, item_name: str, quantity_to_remove: int = None, specific_item_to_remove: Item = None) -> Item | None:
+        item_instance_in_inventory = None
+
+        if specific_item_to_remove and specific_item_to_remove in self.inventory:
+            item_instance_in_inventory = specific_item_to_remove
+        else: # Fallback to finding by name if specific instance isn't directly provided or matched
+            item_instance_in_inventory = next((item for item in self.inventory if item.name == item_name), None)
+
+        if not item_instance_in_inventory:
+            # print(f"SHOP: Item '{item_name}' not found in inventory for removal.")
+            return None
+
+        if quantity_to_remove is None or quantity_to_remove >= item_instance_in_inventory.quantity:
+            # Remove the whole stack
+            self.inventory.remove(item_instance_in_inventory)
+            # print(f"SHOP: Removed entire stack of {item_instance_in_inventory.quantity}x {item_instance_in_inventory.name} from inventory.")
+            return item_instance_in_inventory # Return the original item instance (which includes its original full quantity)
+        elif quantity_to_remove > 0 and quantity_to_remove < item_instance_in_inventory.quantity:
+            # Decrement quantity from the stack
+            item_instance_in_inventory.quantity -= quantity_to_remove
+            # print(f"SHOP: Decremented {quantity_to_remove}x from {item_instance_in_inventory.name} stack. New quantity: {item_instance_in_inventory.quantity}.")
+            # Return a new Item instance representing the quantity removed
+            # This is important so the calling function knows what was "taken out"
+            # The original item in inventory remains, but with reduced quantity.
+            removed_item_portion = Item(
+                name=item_instance_in_inventory.name,
+                description=item_instance_in_inventory.description,
+                base_value=item_instance_in_inventory.base_value,
+                item_type=item_instance_in_inventory.item_type,
+                quality=item_instance_in_inventory.quality,
+                effects=item_instance_in_inventory.effects.copy(),
+                is_magical=item_instance_in_inventory.is_magical,
+                is_attunement=item_instance_in_inventory.is_attunement,
+                is_consumable=item_instance_in_inventory.is_consumable,
+                quantity=quantity_to_remove # This is the key part for the returned item
+            )
+            return removed_item_portion
+        else: # quantity_to_remove is 0 or invalid (e.g. negative, though not expected)
+            # print(f"SHOP: Invalid quantity ({quantity_to_remove}) to remove for {item_name}. No items removed.")
+            return None
+
+
     def can_craft(self, item_name: str, character_skills=None) -> bool:
         if item_name in self.BASIC_RECIPES:
             return True
@@ -315,24 +357,40 @@ class Shop:
         """
         Completes the sale of an item to an NPC after haggling.
         Assumes item_instance_to_sell is the correct instance from inventory.
+        It now also takes quantity_sold which comes from the haggle session.
         """
-        if not item_instance_to_sell or item_instance_to_sell not in self.inventory:
-            print(f"SHOP: Error finalizing sale. Item '{item_instance_to_sell.name if item_instance_to_sell else 'Unknown'}' not found in stock.")
+        if not item_instance_to_sell or item_instance_to_sell not in self.inventory: # Check if the instance is in inventory
+            print(f"SHOP: Error finalizing sale. Item instance '{item_instance_to_sell.name if item_instance_to_sell else 'Unknown'}' not found in stock by reference.")
             return False
+
+        if quantity_sold <= 0:
+            print(f"SHOP: Error finalizing sale. Quantity to sell for '{item_instance_to_sell.name}' is {quantity_sold}.")
+            return False
+
+        if item_instance_to_sell.quantity < quantity_sold:
+            print(f"SHOP: Error finalizing sale. Shop only has {item_instance_to_sell.quantity} of '{item_instance_to_sell.name}', but NPC tried to buy {quantity_sold}.")
+            return False # Should not happen if haggle was initiated correctly with available quantity
 
         self.gold += final_selling_price
-        # remove_item_from_inventory can take the instance directly
-        removed_item = self.remove_item_from_inventory(item_instance_to_sell.name, specific_item_to_remove=item_instance_to_sell)
 
-        if not removed_item:
-            # This should not happen if item_instance_to_sell was correctly from inventory
-            print(f"SHOP: CRITICAL ERROR - Failed to remove sold item '{item_instance_to_sell.name}' from inventory. Reverting gold.")
-            self.gold -= final_selling_price
+        # Use the modified remove_item_from_inventory with quantity
+        # Pass specific_item_to_remove to ensure we're acting on the correct stack.
+        item_representing_sold_portion = self.remove_item_from_inventory(
+            item_name=item_instance_to_sell.name,
+            quantity_to_remove=quantity_sold,
+            specific_item_to_remove=item_instance_to_sell
+        )
+
+        if not item_representing_sold_portion:
+            # This implies an issue with remove_item_from_inventory or inconsistent state
+            print(f"SHOP: CRITICAL ERROR - Failed to remove/decrement {quantity_sold}x '{item_instance_to_sell.name}' from inventory during sale. Reverting gold.")
+            self.gold -= final_selling_price # Revert gold
             return False
 
-        # Reputation gain logic (same as before)
+        # Reputation gain logic (based on the item sold, not just the portion)
         rep_change = 0
         quality_rep_bonus = {"Rare": 2, "Very Rare": 3, "Legendary": 4, "Mythical": 5}
+        # Use item_instance_to_sell for quality/name as item_representing_sold_portion might be a new object
         if item_instance_to_sell.quality in quality_rep_bonus:
             rep_change += quality_rep_bonus[item_instance_to_sell.quality]
 
@@ -344,9 +402,13 @@ class Shop:
             old_rep = self.reputation
             self.reputation = min(self.reputation + rep_change, self.MAX_REPUTATION)
             if self.reputation != old_rep:
-                print(f"SHOP: Selling {item_instance_to_sell.quality} {item_instance_to_sell.name} improved shop reputation to {self.reputation} (+{self.reputation - old_rep}).")
+                print(f"SHOP: Selling {quantity_sold}x {item_instance_to_sell.quality} {item_instance_to_sell.name} improved shop reputation to {self.reputation} (+{self.reputation - old_rep}).")
 
-        print(f"SHOP: Successfully sold {item_instance_to_sell.name} for {final_selling_price}g after haggling.")
+        print(f"SHOP: Successfully sold {quantity_sold}x {item_instance_to_sell.name} for {final_selling_price}g after haggling. Shop gold: {self.gold}.")
+        if item_instance_to_sell.quantity > 0 : # If stack still exists
+             print(f"SHOP: Remaining quantity of {item_instance_to_sell.name} in shop: {item_instance_to_sell.quantity}.")
+        else: # Stack was fully depleted
+             print(f"SHOP: Sold out of {item_instance_to_sell.name}.")
         return True
 
     # calculate_sale_price is primarily for player buying from this shop, or shop setting its own prices.
