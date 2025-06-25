@@ -890,10 +890,12 @@ def display_game_output():
     # --- End Temporary Debugging ---
 
     # Retrieve haggling state from session for this render
-    haggling_pending_for_template = session.pop('haggling_pending_flag', False)
-    pending_haggling_data_for_template = session.pop('pending_haggling_data', None)
+    # Use .get() here so data remains in session for the haggle choice processing action.
+    # The haggling_pending_flag is still useful to determine if the modal should be *initially* shown.
+    haggling_pending_for_template = session.get('haggling_pending_flag', False)
+    pending_haggling_data_for_template = session.get('pending_haggling_data', None)
 
-    app.logger.info(f"DEBUG_DISPLAY_OUTPUT (SESSION): Values for template -> haggling_pending: {haggling_pending_for_template}, pending_haggling_data_json: {json.dumps(pending_haggling_data_for_template) if pending_haggling_data_for_template else None}")
+    app.logger.info(f"DEBUG_DISPLAY_OUTPUT (SESSION GET): Values for template -> haggling_pending: {haggling_pending_for_template}, pending_haggling_data_json: {json.dumps(pending_haggling_data_for_template) if pending_haggling_data_for_template else None}")
 
 
     return render_template('index.html',
@@ -1023,6 +1025,23 @@ def perform_action():
     from flask import g # Access g for current request context
     # output_stream, player_char, game_manager_instance are now on g.
 
+    action_name = request.form.get('action_name')
+    action_details_str = request.form.get('action_details', '{}')
+
+    # --- Restore active_haggling_session from Flask session if this is a haggle choice action ---
+    if action_name in ["PROCESS_PLAYER_HAGGLE_CHOICE_SELL", "PROCESS_PLAYER_HAGGLE_CHOICE_BUY"]:
+        if hasattr(g, 'game_manager') and g.game_manager:
+            haggling_data_from_session = session.get('pending_haggling_data')
+            if haggling_data_from_session:
+                g.game_manager.active_haggling_session = haggling_data_from_session
+                app.logger.info(f"PERFORM_ACTION: Restored active_haggling_session from session for action '{action_name}'. Data: {haggling_data_from_session}")
+            else:
+                app.logger.warning(f"PERFORM_ACTION: Action '{action_name}' received, but no 'pending_haggling_data' found in session.")
+        else:
+            app.logger.error(f"PERFORM_ACTION: GameManager not available on g for haggle choice action '{action_name}'.")
+    # --- End Restore ---
+
+
     # Diagnostic prints using g
     # print(f"DEBUG /action route: g.output_stream ID is {id(g.output_stream)}")
     # print(f"DEBUG /action route: id(g.game_manager) is {id(g.game_manager)}")
@@ -1150,6 +1169,18 @@ def perform_action():
                 session.pop('awaiting_event_choice', None)
                 session.pop('pending_event_data', None)
                 flash(f"Action '{action_name_display}' processed (unknown result type). Check Journal or Game Log.", "warning")
+
+            # --- Clear session haggling data if haggle concluded ---
+            if action_name in ["PROCESS_PLAYER_HAGGLE_CHOICE_SELL", "PROCESS_PLAYER_HAGGLE_CHOICE_BUY"]:
+                if hasattr(g, 'game_manager') and g.game_manager and not g.game_manager.active_haggling_session:
+                    session.pop('pending_haggling_data', None)
+                    session.pop('haggling_pending_flag', None)
+                    app.logger.info(f"PERFORM_ACTION: Cleared session haggling data after concluding action '{action_name}'.")
+                elif hasattr(g, 'game_manager') and g.game_manager and g.game_manager.active_haggling_session:
+                    # If haggle is still active (e.g. after a persuasion attempt that doesn't end it),
+                    # update the session data with the potentially modified active_haggling_session from GameManager.
+                    session['pending_haggling_data'] = g.game_manager.active_haggling_session
+                    app.logger.info(f"PERFORM_ACTION: Updated session's pending_haggling_data after action '{action_name}' as haggle continues.")
 
 
         # ---- START SAVE LOGIC (using g.player_char and g.game_manager) ----
