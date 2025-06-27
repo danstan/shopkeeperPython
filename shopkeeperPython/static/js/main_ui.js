@@ -1945,8 +1945,7 @@ function main() {
              DOM.itemDetailsModalWrapper.classList.add('hidden');
         }
     }
-    }
-};
+} // Removed extra brace and semicolon
 
 
 const UISkillAllocation = {
