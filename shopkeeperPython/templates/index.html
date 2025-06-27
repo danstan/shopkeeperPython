@@ -659,5 +659,44 @@
             </div>
         </div>
     </div>
+
+    {# Item Details Modal #}
+    <div id="item-details-modal-wrapper" class="hidden">
+        <div id="item-details-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="item-details-modal-title">
+            <div class="modal-content">
+                <button class="close-button" id="close-item-details-modal" aria-label="Close Item Details">&times;</button>
+                <h3 id="item-details-modal-title">Item Details</h3>
+
+                <div class="item-details-main-section">
+                    <div id="item-details-icon" class="item-icon-large-placeholder" aria-hidden="true">ICON</div>
+                    <div class="item-details-name-desc">
+                        <h4 id="item-details-name">Item Name</h4>
+                        <p id="item-details-description">Item description goes here.</p>
+                    </div>
+                </div>
+
+                <div class="item-details-grid">
+                    <div class="item-detail-entry"><strong>Type:</strong> <span id="item-details-type">N/A</span></div>
+                    <div class="item-detail-entry"><strong>Quality:</strong> <span id="item-details-quality">N/A</span></div>
+                    <div class="item-detail-entry"><strong>Value:</strong> <span id="item-details-value">N/A</span> G</div>
+                    <div class="item-detail-entry"><strong>Weight:</strong> <span id="item-details-weight">N/A</span> lbs</div>
+                    <div class="item-detail-entry"><strong>Quantity:</strong> <span id="item-details-quantity">N/A</span></div>
+                </div>
+
+                <div id="item-details-effects-section" class="details-section">
+                    <h4>Effects / Stats</h4>
+                    <ul id="item-details-effects-list" role="list">
+                        <!-- Effects will be populated by JS -->
+                        <li role="listitem">No special effects.</li>
+                    </ul>
+                </div>
+
+                <div id="item-details-actions-container" class="action-buttons-container button-list">
+                    <!-- Contextual action buttons will be populated by JS -->
+                    <p>No actions available for this item in the current context.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

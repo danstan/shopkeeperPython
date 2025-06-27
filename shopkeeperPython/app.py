@@ -737,12 +737,18 @@ def display_game_output():
                     current_town_sub_locations = g.game_manager.current_town.sub_locations
                 for town_obj in g.game_manager.towns_map.values(): # towns_map is on GM instance
                     all_towns_data[town_obj.name] = {"sub_locations": town_obj.sub_locations}
-                shop_items = {}
+                shop_items = {} # For the summarized display
+                shop_inventory_full_data_for_template = [] # For the detailed modal logic
                 if g.game_manager.shop: # Check if shop exists on GM instance
-                    for item_in_shop in g.game_manager.shop.inventory: # Use item_in_shop to avoid conflict
-                        shop_items[item_in_shop.name] = shop_items.get(item_in_shop.name, 0) + 1
+                    for item_in_shop in g.game_manager.shop.inventory:
+                        shop_items[item_in_shop.name] = shop_items.get(item_in_shop.name, 0) + item_in_shop.quantity # Sum quantities
+                        shop_inventory_full_data_for_template.append(item_in_shop.to_dict())
                 shop_inventory_display = [f"{name} (x{qty})" for name, qty in shop_items.items()] or ["Empty"]
-                player_inventory_display = [item.name for item in g.player_char.inventory] or ["Empty"]
+
+                # For player inventory, pass full item dicts for JS modal and cues
+                player_inventory_for_template = [item.to_dict() for item in g.player_char.inventory] if g.player_char and g.player_char.inventory else []
+                player_inventory_display = player_inventory_for_template # JS will now use this directly for names and data
+
                 # current_game_output will be built from g.output_stream at the end
                 if g.game_manager.shop:
                     available_recipes = g.game_manager.shop.BASIC_RECIPES # Assuming this is a static/class member or simple property
@@ -920,8 +926,9 @@ def display_game_output():
                            player_attunement_slots_max=g.player_char.attunement_slots if g.player_char else 3,
                            current_time=current_time_display,
                            current_town_name=current_town_display,
-                           shop_inventory=shop_inventory_display,
-                           player_inventory=player_inventory_display,
+                           shop_inventory=shop_inventory_display, # Summarized for mini-panel
+                           shop_inventory_full_data=shop_inventory_full_data_for_template, # Full data for JS
+                           player_inventory=player_inventory_display, # Now contains full item data
                            google_auth_is_configured=google_auth_is_configured, # Module global constant
                            available_towns=available_towns,
                            current_town_sub_locations_json=json.dumps(current_town_sub_locations),
