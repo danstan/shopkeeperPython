@@ -826,3 +826,201 @@ body.event-active #toast-container {
 #shop-management-details select {
     margin-bottom: 0; /* Remove bottom margin if it's inline with a button */
 }
+
+/* Item Details Modal Styles */
+#item-details-modal-wrapper {
+    /* Uses existing .hidden class for visibility */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex; /* Use flex to center modal */
+    align-items: center;
+    justify-content: center;
+    z-index: 1060; /* Ensure it's above other general modals but potentially below critical alerts if any */
+}
+
+#item-details-modal .modal-content {
+    background-color: var(--color-aged-paper); /* Consistent with other modals */
+    padding: var(--spacing-unit, 20px); /* Use CSS var, fallback 20px */
+    border: 2px solid var(--color-deep-brown-border);
+    border-radius: 8px; /* Consistent border-radius */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 550px; /* Adjusted max width for item details */
+    max-height: 85vh; /* Max height */
+    overflow-y: auto; /* Scroll if content exceeds max height */
+    position: relative; /* For close button positioning */
+    color: var(--color-dark-ink);
+}
+
+#item-details-modal .modal-content h3#item-details-modal-title {
+    margin-top: 0;
+    font-family: var(--font-primary);
+    color: var(--color-deep-brown-border);
+    border-bottom: 1px solid var(--color-light-border);
+    padding-bottom: 10px; /* Use var if available or fixed */
+    margin-bottom: 15px; /* Use var or fixed */
+    text-align: center;
+}
+
+#item-details-modal .modal-content h4 { /* Sub-headings within the modal */
+    font-family: var(--font-primary);
+    color: var(--color-deep-brown-border);
+    margin-top: 15px; /* Use var or fixed */
+    margin-bottom: 8px; /* Use var or fixed */
+    font-size: 1.1em;
+}
+
+.item-details-main-section {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px; /* Use var or fixed */
+    margin-bottom: 15px; /* Use var or fixed */
+}
+
+.item-icon-large-placeholder {
+    width: 80px;
+    height: 80px;
+    background-color: var(--color-parchment-bg);
+    border: 1px solid var(--color-light-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    color: var(--color-dark-ink);
+    border-radius: 4px; /* Use var or fixed */
+    flex-shrink: 0;
+}
+
+.item-details-name-desc {
+    flex-grow: 1;
+}
+
+.item-details-name-desc h4#item-details-name { /* Specific h4 for item name */
+    margin-top: 0;
+    font-size: 1.3em;
+    color: var(--color-highlight-red); /* Make item name stand out */
+}
+
+#item-details-description {
+    font-family: var(--font-secondary);
+    font-size: 0.9em;
+    line-height: 1.5;
+    margin-top: 5px; /* Use var or fixed */
+}
+
+.item-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px 12px; /* Use var or fixed */
+    padding: 10px 0; /* Use var or fixed */
+    border-top: 1px solid var(--color-light-border);
+    border-bottom: 1px solid var(--color-light-border);
+    margin-bottom: 15px; /* Use var or fixed */
+}
+
+.item-detail-entry {
+    font-family: var(--font-secondary);
+    font-size: 0.85em;
+}
+
+.item-detail-entry strong {
+    font-family: var(--font-primary); /* Primary font for labels */
+    color: var(--color-deep-brown-border);
+}
+
+#item-details-effects-section ul#item-details-effects-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+    font-family: var(--font-secondary);
+}
+
+#item-details-effects-section li {
+    padding: 4px 0; /* Use var or fixed */
+    font-size: 0.85em;
+    border-bottom: 1px dashed var(--color-light-border);
+}
+#item-details-effects-section li:last-child {
+    border-bottom: none;
+}
+
+
+#item-details-actions-container {
+    margin-top: 20px; /* Use var or fixed */
+    text-align: center; /* Center action buttons */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px; /* Use var or fixed */
+    justify-content: center;
+}
+
+#item-details-actions-container .action-button {
+    /* Inherits .action-button style, can add specifics if needed */
+    /* e.g., slightly larger padding for modal buttons */
+    padding: 10px 18px;
+}
+
+
+/* Inventory Item Card Visual Cues */
+.inventory-item-card.attuned-item {
+    border-left: 4px solid var(--color-highlight-gold); /* Gold border for attuned */
+    box-shadow: 0 0 6px rgba(255, 215, 0, 0.5); /* Gold glow */
+    background-color: #fdf5e6; /* Lighter parchment/linen for attuned items */
+}
+.inventory-item-card.attuned-item .item-name {
+    color: var(--color-highlight-red); /* Attuned item names stand out a bit */
+}
+
+
+.inventory-item-card.magical-item .item-icon-placeholder {
+    /* Example: Add a subtle glow or border to the icon placeholder for magical items */
+    outline: 2px solid rgba(128, 0, 128, 0.6); /* Purple outline for magical */
+    outline-offset: 2px;
+}
+.inventory-item-card.magical-item .item-name {
+    /* color: purple; */ /* Using outline on icon is more subtle than changing text color */
+    /* font-style: italic; */ /* Optional: italic for magical items */
+}
+
+/* Consumable Item Cue */
+.inventory-item-card.is-consumable .item-name::before {
+    content: "C"; /* Simple text cue, can be replaced with icon */
+    font-family: var(--font-primary);
+    font-size: 0.7em;
+    color: #fff;
+    background-color: var(--color-deep-brown-border);
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-right: 5px;
+    vertical-align: middle;
+}
+
+
+/* Ensure close button in item details modal is styled like other close buttons */
+#item-details-modal .close-button {
+    position: absolute;
+    top: 12px; /* Use var or fixed */
+    right: 15px; /* Use var or fixed */
+    font-size: 1.8em;
+    font-weight: bold;
+    color: var(--color-dark-ink);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+#item-details-modal .close-button:hover,
+#item-details-modal .close-button:focus {
+    color: var(--color-highlight-red);
+}
+
+/* Ensure the new modal also gets hidden by body.event-active if another event pops up */
+body.event-active #item-details-modal-wrapper {
+    pointer-events: none !important;
+    /* opacity: 0.5; */ /* Optional dimming, but primary event modal should be the focus */
+}
