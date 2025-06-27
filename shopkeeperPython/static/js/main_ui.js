@@ -29,7 +29,7 @@ const CONSTANTS = {
         HEMLOCK_HUT: "Old Man Hemlock's Hut",
         BORIN_SMITHY: "Borin Stonebeard's Smithy",
     }
-// Removed extraneous closing bracket and semicolon
+}; // Added missing closing brace and semicolon
 
 const UIAsiFeatChoice = {
     selectedMainChoice: null, // 'asi' or 'feat'
