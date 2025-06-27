@@ -621,6 +621,7 @@ def display_game_output():
     dead_characters_info = []
     character_creation_stats_display = None
     pending_char_name_display = None
+    shop_inventory_full_data_for_template = [] # Initialize here
 
     # available_towns will be derived from g.game_manager later
     available_towns = list(g.game_manager.towns_map.keys()) if g.game_manager else []
